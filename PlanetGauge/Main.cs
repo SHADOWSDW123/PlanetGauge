@@ -14,7 +14,7 @@ namespace PlanetGauge
             "0C50DDAE9052612AA29D1BFF8878A006A23D8E6AC1105E0C61B78A8A4964D42B";
 
         // 디버그용: false로 바꾸면 CheckPostHoldFail의 바닐라 실패 복구 보정만 비활성화된다.
-        private const bool EnableMissAngleRecovery = true;
+        private static readonly bool EnableMissAngleRecovery = true;
 
         private static Harmony harmony;
         private static bool registeredWithGame;
@@ -144,7 +144,6 @@ namespace PlanetGauge
                 typeof(scrPlayer),
                 nameof(scrPlayer.Die),
                 new[] { typeof(bool), typeof(bool), typeof(string), typeof(bool) });
-            RequireMethod(typeof(scrPlayer), "CheckPostHoldFail", Type.EmptyTypes);
             RequireMethod(
                 typeof(scrController),
                 nameof(scrController.Restart),
@@ -249,7 +248,30 @@ namespace PlanetGauge
 
             private static MethodBase TargetMethod()
             {
-                return AccessTools.Method(typeof(scrPlayer), "CheckPostHoldFail", Type.EmptyTypes);
+                return FindMethodByName(typeof(scrPlayer), "CheckPostHoldFail");
+            }
+
+            [HarmonyPrepare]
+            private static bool Prepare()
+            {
+                if (!EnableMissAngleRecovery)
+                {
+                    return false;
+                }
+
+                if (FindMethodByName(typeof(scrPlayer), "CheckPostHoldFail") != null)
+                {
+                    return true;
+                }
+
+                if (Logger != null)
+                {
+                    Logger.Log(
+                        "[경고] 이 게임 버전에는 scrPlayer.CheckPostHoldFail 메서드가 없습니다. "
+                        + "모드는 계속 실행하지만 놓침 각도 복구 보정은 비활성화합니다.");
+                }
+
+                return false;
             }
 
             [HarmonyPrefix]
@@ -372,6 +394,25 @@ namespace PlanetGauge
                     state.RestoreTemporaryNoFail = false;
                 }
             }
+        }
+
+        private static MethodInfo FindMethodByName(Type type, string name)
+        {
+            MethodInfo[] methods = type.GetMethods(
+                BindingFlags.Instance
+                | BindingFlags.Static
+                | BindingFlags.Public
+                | BindingFlags.NonPublic);
+
+            for (int index = 0; index < methods.Length; index++)
+            {
+                if (string.Equals(methods[index].Name, name, StringComparison.Ordinal))
+                {
+                    return methods[index];
+                }
+            }
+
+            return null;
         }
 
         internal static void LogException(string message, Exception exception)
