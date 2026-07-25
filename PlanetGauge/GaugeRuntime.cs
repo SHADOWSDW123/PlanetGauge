@@ -16,13 +16,14 @@ namespace PlanetGauge
         internal const float PerfectDelta = 0.1f;
         internal const float EarlyPerfectDelta = -0.5f;
         internal const float LatePerfectDelta = -0.5f;
-        internal const float VeryEarlyDelta = -4f;
-        internal const float VeryLateDelta = -4f;
-        internal const float TooEarlyDelta = -7f;
-        internal const float TooLateDelta = -18f;
-        internal const float FailMissDelta = -18f;
-        internal const float FailOverloadDelta = -18f;
-
+        internal const float VeryEarlyDelta = -2f;
+        internal const float VeryLateDelta = -2f;
+        internal const float TooEarlyDelta = -5f;
+        internal const float TooLateDelta = 0f;
+        internal const float FailMissDelta = -10f;
+        internal const float FailOverloadDelta = -10f;
+        // 1차 수정 / 놓침,오버로드 18->12, 놓침 감소량 삭제
+        // 2차 수정 / 놓침,오버로드 -10으로 통일, 매빠 -5로 변경, 빠름!,느림! -5로 변경, 빠름/늦음 -2로 변경
         private static bool frozen;
         private static bool nextDieAlreadyCharged;
         private static int failureRecoveryDepth;
