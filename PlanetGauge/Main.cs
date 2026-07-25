@@ -63,7 +63,7 @@ namespace PlanetGauge
                 return;
             }
 
-            ValidateGameAssembly();
+            ValidateGameCompatibility();
 
             harmony = new Harmony(modEntry.Info.Id);
             harmony.PatchAll(typeof(Main).Assembly);
@@ -82,35 +82,99 @@ namespace PlanetGauge
             Logger.Log("PlanetGauge가 활성화되었습니다.");
         }
 
-        private static void ValidateGameAssembly()
+        private static void ValidateGameCompatibility()
         {
+            ValidateRequiredGameApi();
+
             string assemblyPath = typeof(scrController).Assembly.Location;
             if (string.IsNullOrEmpty(assemblyPath) || !File.Exists(assemblyPath))
             {
-                throw new InvalidOperationException(
-                    "현재 Assembly-CSharp.dll 경로를 확인할 수 없어 안전하게 패치할 수 없습니다.");
+                Logger.Log(
+                    "[경고] 현재 Assembly-CSharp.dll의 해시를 확인할 수 없습니다. "
+                    + "필수 API 검사만 통과한 상태로 실행합니다.");
+                return;
             }
 
-            string actualHash;
-            using (SHA256 sha256 = SHA256.Create())
-            using (FileStream stream = File.OpenRead(assemblyPath))
+            try
             {
-                actualHash = BitConverter.ToString(sha256.ComputeHash(stream)).Replace("-", string.Empty);
-            }
+                string actualHash;
+                using (SHA256 sha256 = SHA256.Create())
+                using (FileStream stream = File.OpenRead(assemblyPath))
+                {
+                    actualHash = BitConverter.ToString(sha256.ComputeHash(stream))
+                        .Replace("-", string.Empty);
+                }
 
-            if (!string.Equals(
-                actualHash,
-                ExpectedGameAssemblySha256,
-                StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(
+                    actualHash,
+                    ExpectedGameAssemblySha256,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    Logger.Log(
+                        "[경고] 검증된 버전과 다른 Assembly-CSharp.dll입니다. "
+                        + "필수 API가 존재하므로 호환 모드로 계속 실행합니다."
+                        + Environment.NewLine
+                        + "Expected: "
+                        + ExpectedGameAssemblySha256
+                        + Environment.NewLine
+                        + "Actual:   "
+                        + actualHash);
+                }
+            }
+            catch (Exception exception)
             {
-                throw new InvalidOperationException(
-                    "지원하지 않는 Assembly-CSharp.dll입니다."
+                Logger.Log(
+                    "[경고] Assembly-CSharp.dll 해시 계산에 실패했습니다. "
+                    + "필수 API 검사만 통과한 상태로 실행합니다."
                     + Environment.NewLine
-                    + "Expected: "
-                    + ExpectedGameAssemblySha256
-                    + Environment.NewLine
-                    + "Actual:   "
-                    + actualHash);
+                    + exception.Message);
+            }
+        }
+
+        private static void ValidateRequiredGameApi()
+        {
+            RequireMethod(typeof(scnEditor), nameof(scnEditor.Play), Type.EmptyTypes);
+            RequireMethod(typeof(scrPlanet), nameof(scrPlanet.SwitchChosen), Type.EmptyTypes);
+            RequireMethod(
+                typeof(scrPlayer),
+                nameof(scrPlayer.Die),
+                new[] { typeof(bool), typeof(bool), typeof(string), typeof(bool) });
+            RequireMethod(
+                typeof(scrController),
+                nameof(scrController.Restart),
+                new[] { typeof(bool) });
+            RequireMethod(
+                typeof(scrController),
+                nameof(scrController.ResetCustomLevel),
+                new[] { typeof(bool) });
+
+            RequireField(typeof(scnEditor), nameof(scnEditor.buttonNoFail));
+            RequireField(typeof(scrController), nameof(scrController.noFail));
+            RequireField(typeof(scrController), nameof(scrController.noFailInfiniteMargin));
+            RequireField(typeof(scrPlayer), nameof(scrPlayer.failBar));
+        }
+
+        private static void RequireMethod(Type type, string name, Type[] parameterTypes)
+        {
+            if (AccessTools.Method(type, name, parameterTypes) == null)
+            {
+                throw new MissingMethodException(
+                    "호환성에 필요한 게임 메서드를 찾을 수 없습니다: "
+                    + type.FullName
+                    + "."
+                    + name);
+            }
+        }
+
+        private static void RequireField(Type type, string name)
+        {
+            if (AccessTools.Field(type, name) == null)
+            {
+                throw new MissingFieldException(
+                    "호환성에 필요한 게임 필드를 찾을 수 없습니다: "
+                    + type.FullName
+                    + "."
+                    + name);
             }
         }
 
