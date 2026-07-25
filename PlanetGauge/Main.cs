@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 using System.Security.Cryptography;
 using HarmonyLib;
 using UnityModManagerNet;
@@ -12,8 +13,12 @@ namespace PlanetGauge
         internal const string ExpectedGameAssemblySha256 =
             "0C50DDAE9052612AA29D1BFF8878A006A23D8E6AC1105E0C61B78A8A4964D42B";
 
+        // 디버그용: false로 바꾸면 CheckPostHoldFail의 바닐라 실패 복구 보정만 비활성화된다.
+        private const bool EnableMissAngleRecovery = true;
+
         private static Harmony harmony;
         private static bool registeredWithGame;
+        private static int temporaryMissRecoveryDepth;
 
         public static bool IsEnabled { get; private set; }
 
@@ -139,6 +144,7 @@ namespace PlanetGauge
                 typeof(scrPlayer),
                 nameof(scrPlayer.Die),
                 new[] { typeof(bool), typeof(bool), typeof(string), typeof(bool) });
+            RequireMethod(typeof(scrPlayer), "CheckPostHoldFail", Type.EmptyTypes);
             RequireMethod(
                 typeof(scrController),
                 nameof(scrController.Restart),
@@ -212,6 +218,160 @@ namespace PlanetGauge
         {
             EditorGaugeEnabled = enabled;
             GaugeRuntime.Reset();
+        }
+
+        [HarmonyPatch(typeof(GaugeRuntime), nameof(GaugeRuntime.ApplyJudgement))]
+        private static class IgnoreTooLateGaugePatch
+        {
+            private static bool Prefix(HitMargin judgement, ref bool __result)
+            {
+                if (judgement != HitMargin.TooLate || !GaugeRuntime.ShouldHandle())
+                {
+                    return true;
+                }
+
+                // TooLate는 입력을 진행시키지 못한 중간 상태다.
+                // 이 시점에는 차감하지 않고, 뒤이어 확정되는 FailMiss 한 번만 반영한다.
+                GaugeRuntime.ClearPendingDieCharge();
+                __result = false;
+                return false;
+            }
+        }
+
+        [HarmonyPatch]
+        private static class CheckPostHoldFailRecoveryPatch
+        {
+            private struct RecoveryState
+            {
+                internal scrController Controller;
+                internal bool RestoreNoFail;
+            }
+
+            private static MethodBase TargetMethod()
+            {
+                return AccessTools.Method(typeof(scrPlayer), "CheckPostHoldFail", Type.EmptyTypes);
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix(scrPlayer __instance, ref RecoveryState __state)
+            {
+                __state = default(RecoveryState);
+
+                if (!EnableMissAngleRecovery
+                    || GaugeRuntime.Current <= 0f
+                    || !GaugeRuntime.ShouldHandle(__instance))
+                {
+                    return;
+                }
+
+                scrController controller = scrController.instance;
+                if (controller == null || controller.noFail)
+                {
+                    return;
+                }
+
+                __state.Controller = controller;
+                __state.RestoreNoFail = true;
+                temporaryMissRecoveryDepth++;
+                controller.noFail = true;
+            }
+
+            [HarmonyPostfix]
+            private static void Postfix(ref RecoveryState __state)
+            {
+                RestoreTemporaryNoFail(ref __state);
+            }
+
+            [HarmonyFinalizer]
+            private static Exception Finalizer(Exception __exception, ref RecoveryState __state)
+            {
+                RestoreTemporaryNoFail(ref __state);
+                return __exception;
+            }
+
+            private static void RestoreTemporaryNoFail(ref RecoveryState state)
+            {
+                if (!state.RestoreNoFail)
+                {
+                    return;
+                }
+
+                if (state.Controller != null)
+                {
+                    state.Controller.noFail = false;
+                }
+
+                if (temporaryMissRecoveryDepth > 0)
+                {
+                    temporaryMissRecoveryDepth--;
+                }
+
+                state.RestoreNoFail = false;
+            }
+        }
+
+        [HarmonyPatch(typeof(scrPlayer), nameof(scrPlayer.Die))]
+        private static class TemporaryNoFailDieBridgePatch
+        {
+            private struct BridgeState
+            {
+                internal scrController Controller;
+                internal bool RestoreTemporaryNoFail;
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix(
+                scrPlayer __instance,
+                bool hitbox,
+                ref BridgeState __state)
+            {
+                __state = default(BridgeState);
+
+                if (temporaryMissRecoveryDepth <= 0
+                    || hitbox
+                    || !GaugeRuntime.ShouldHandle(__instance))
+                {
+                    return;
+                }
+
+                scrController controller = scrController.instance;
+                if (controller == null || !controller.noFail)
+                {
+                    return;
+                }
+
+                // CheckPostHoldFail에 빌려준 noFail은 실제 실패 방지 설정보다 우선하면 안 된다.
+                // Die 패치가 FailMiss를 차감한 뒤, 게이지가 남았을 때만 다시 noFail 복구로 진입한다.
+                __state.Controller = controller;
+                __state.RestoreTemporaryNoFail = true;
+                controller.noFail = false;
+            }
+
+            [HarmonyPostfix]
+            [HarmonyPriority(Priority.First)]
+            private static void Postfix(ref BridgeState __state)
+            {
+                RestoreTemporaryNoFail(ref __state);
+            }
+
+            [HarmonyFinalizer]
+            [HarmonyPriority(Priority.First)]
+            private static Exception Finalizer(Exception __exception, ref BridgeState __state)
+            {
+                RestoreTemporaryNoFail(ref __state);
+                return __exception;
+            }
+
+            private static void RestoreTemporaryNoFail(ref BridgeState state)
+            {
+                if (state.RestoreTemporaryNoFail && state.Controller != null)
+                {
+                    state.Controller.noFail = true;
+                    state.RestoreTemporaryNoFail = false;
+                }
+            }
         }
 
         internal static void LogException(string message, Exception exception)
