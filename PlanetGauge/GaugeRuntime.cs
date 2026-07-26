@@ -22,8 +22,7 @@ namespace PlanetGauge
         internal const float TooLateDelta = 0f;
         internal const float FailMissDelta = -8f;
         internal const float FailOverloadDelta = -8f;
-        // 1차 수정 / 놓침,오버로드 18->12, 놓침 감소량 삭제
-        // 2차 수정 / 놓침,오버로드 -10으로 통일, 매빠 -5로 변경, 빠름!,느림! -5로 변경, 빠름/늦음 -2로 변경
+
         private static bool frozen;
         private static bool nextDieAlreadyCharged;
         private static int failureRecoveryDepth;

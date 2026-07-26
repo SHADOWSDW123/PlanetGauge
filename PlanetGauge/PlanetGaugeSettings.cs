@@ -6,12 +6,12 @@ namespace PlanetGauge
     public sealed class PlanetGaugeSettings : UnityModManager.ModSettings
     {
         public float MainGaugeOffsetX;
-        public float MainGaugeOffsetY;
-        public float MainGaugeWidthPercent = 100f;
+        public float MainGaugeOffsetY = -158f;
+        public float MainGaugeWidthPercent = 83f;
 
         public float MainGaugeValueOffsetX;
-        public float MainGaugeValueOffsetY;
-        public float MainGaugeValueSizePercent = 100f;
+        public float MainGaugeValueOffsetY = -14f;
+        public float MainGaugeValueSizePercent = 111f;
         public bool MainGaugeShowDecimalValue;
 
         public int MainGaugeColorR = 255;
