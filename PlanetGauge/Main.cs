@@ -30,13 +30,37 @@ namespace PlanetGauge
             get { return GaugeRuntime.Current; }
         }
 
+        internal static PlanetGaugeSettings Settings { get; private set; }
+
         internal static UnityModManager.ModEntry.ModLogger Logger { get; private set; }
 
         public static bool Load(UnityModManager.ModEntry modEntry)
         {
             Logger = modEntry.Logger;
+            Settings = UnityModManager.ModSettings.Load<PlanetGaugeSettings>(modEntry)
+                ?? new PlanetGaugeSettings();
+            Settings.Sanitize();
             modEntry.OnToggle = OnToggle;
+            modEntry.OnGUI = OnGui;
+            modEntry.OnSaveGUI = OnSaveGui;
             return true;
+        }
+
+        private static void OnGui(UnityModManager.ModEntry modEntry)
+        {
+            if (Settings != null)
+            {
+                Settings.DrawGui();
+            }
+        }
+
+        private static void OnSaveGui(UnityModManager.ModEntry modEntry)
+        {
+            if (Settings != null)
+            {
+                Settings.Sanitize();
+                Settings.Save(modEntry);
+            }
         }
 
         private static bool OnToggle(UnityModManager.ModEntry modEntry, bool enabled)

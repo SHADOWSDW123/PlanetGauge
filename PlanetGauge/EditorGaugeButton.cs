@@ -1,4 +1,3 @@
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,14 +5,24 @@ namespace PlanetGauge
 {
     internal static class EditorGaugeButton
     {
-        private static readonly Color DisabledColor = new Color(0.22f, 0.22f, 0.22f, 0.9f);
-        private static readonly Color EnabledColor = new Color(0.1f, 0.65f, 0.9f, 1f);
+        /*
+         * UI 위치/크기 직접 조정 지점
+         * - BarWidth, BarHeight: 체력 바 자체의 크기
+         * - GapAboveShield: 실패 방지 방패의 위쪽 끝과 체력 바 사이 간격
+         * - ManualPositionOffset: 게임 버전별 UI 차이가 있을 때 마지막으로 더할 수동 보정값
+         */
+        private const float BarWidth = 72f;
+        private const float BarHeight = 14f;
+        private const float GapAboveShield = 8f;
+        private static readonly Vector2 ManualPositionOffset = new Vector2(0f, 0f);
 
         private static scnEditor owner;
         private static GameObject buttonObject;
         private static Button button;
-        private static Image image;
-        private static TMP_Text label;
+        private static GaugeBarGraphic gaugeGraphic;
+        private static RectTransform buttonRect;
+        private static RectTransform shieldRect;
+        private static readonly Vector3[] ShieldWorldCorners = new Vector3[4];
 
         internal static void Ensure(scnEditor editor)
         {
@@ -30,44 +39,48 @@ namespace PlanetGauge
             Destroy();
             owner = editor;
 
-            Button template = editor.buttonNoFail;
-            Transform parent = template.transform.parent;
-            buttonObject = Object.Instantiate(template.gameObject, parent, false);
-            buttonObject.name = "Button_PlanetGauge";
-            buttonObject.transform.SetSiblingIndex(template.transform.GetSiblingIndex() + 1);
+            Button shieldButton = editor.buttonNoFail;
+            Transform parent = shieldButton.transform.parent;
+            buttonObject = new GameObject(
+                "Button_PlanetGaugeBar",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(GaugeBarGraphic),
+                typeof(Button),
+                typeof(LayoutElement));
+            buttonObject.transform.SetParent(parent, false);
+            buttonObject.transform.SetSiblingIndex(shieldButton.transform.GetSiblingIndex() + 1);
 
+            buttonRect = buttonObject.GetComponent<RectTransform>();
+            buttonRect.anchorMin = new Vector2(0.5f, 0.5f);
+            buttonRect.anchorMax = new Vector2(0.5f, 0.5f);
+            buttonRect.pivot = new Vector2(0.5f, 0.5f);
+            buttonRect.sizeDelta = new Vector2(BarWidth, BarHeight);
+            buttonRect.localRotation = Quaternion.identity;
+            buttonRect.localScale = Vector3.one;
+
+            LayoutElement layoutElement = buttonObject.GetComponent<LayoutElement>();
+            layoutElement.ignoreLayout = true;
+
+            shieldRect = shieldButton.GetComponent<RectTransform>();
             button = buttonObject.GetComponent<Button>();
-            if (button == null)
-            {
-                button = buttonObject.AddComponent<Button>();
-            }
-
-            button.onClick.RemoveAllListeners();
             button.onClick.AddListener(Toggle);
+            button.transition = Selectable.Transition.None;
+            Navigation navigation = button.navigation;
+            navigation.mode = Navigation.Mode.None;
+            button.navigation = navigation;
 
-            image = buttonObject.GetComponent<Image>();
-            if (image == null)
-            {
-                image = buttonObject.AddComponent<Image>();
-            }
-
-            image.sprite = null;
-            image.type = Image.Type.Simple;
-            button.targetGraphic = image;
-
-            for (int index = buttonObject.transform.childCount - 1; index >= 0; index--)
-            {
-                Object.Destroy(buttonObject.transform.GetChild(index).gameObject);
-            }
-
-            CreateLabel(buttonObject.transform);
-            OffsetIfParentHasNoLayout(template);
+            gaugeGraphic = buttonObject.GetComponent<GaugeBarGraphic>();
+            button.targetGraphic = gaugeGraphic;
             Sync();
         }
 
         internal static void Sync()
         {
-            if (buttonObject == null || button == null || owner == null)
+            if (buttonObject == null
+                || button == null
+                || gaugeGraphic == null
+                || owner == null)
             {
                 return;
             }
@@ -82,13 +95,14 @@ namespace PlanetGauge
             if (owner.buttonNoFail != null)
             {
                 button.interactable = owner.buttonNoFail.interactable;
+                shieldRect = owner.buttonNoFail.GetComponent<RectTransform>();
+                PositionAboveShield();
             }
 
-            image.color = Main.EditorGaugeEnabled ? EnabledColor : DisabledColor;
-            if (label != null)
-            {
-                label.text = Main.EditorGaugeEnabled ? "PG ON" : "PG";
-            }
+            float normalizedValue = GaugeRuntime.MaximumGauge <= 0f
+                ? 0f
+                : GaugeRuntime.Current / GaugeRuntime.MaximumGauge;
+            gaugeGraphic.SetState(Main.EditorGaugeEnabled, normalizedValue);
         }
 
         internal static void Destroy()
@@ -101,8 +115,9 @@ namespace PlanetGauge
             owner = null;
             buttonObject = null;
             button = null;
-            image = null;
-            label = null;
+            gaugeGraphic = null;
+            buttonRect = null;
+            shieldRect = null;
         }
 
         private static void Toggle()
@@ -119,54 +134,28 @@ namespace PlanetGauge
             }
         }
 
-        private static void CreateLabel(Transform parent)
+        private static void PositionAboveShield()
         {
-            GameObject labelObject = new GameObject(
-                "PlanetGaugeLabel",
-                typeof(RectTransform),
-                typeof(CanvasRenderer),
-                typeof(TextMeshProUGUI));
-            labelObject.transform.SetParent(parent, false);
-
-            RectTransform rect = labelObject.GetComponent<RectTransform>();
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-
-            label = labelObject.GetComponent<TextMeshProUGUI>();
-            label.alignment = TextAlignmentOptions.Center;
-            label.fontSize = 15f;
-            label.fontStyle = FontStyles.Bold;
-            label.color = Color.white;
-            label.textWrappingMode = TextWrappingModes.NoWrap;
-            label.raycastTarget = false;
-
-            if (TMP_Settings.defaultFontAsset != null)
-            {
-                label.font = TMP_Settings.defaultFontAsset;
-            }
-        }
-
-        private static void OffsetIfParentHasNoLayout(Button template)
-        {
-            Transform parent = template.transform.parent;
-            if (parent.GetComponent<HorizontalOrVerticalLayoutGroup>() != null
-                || parent.GetComponent<GridLayoutGroup>() != null)
+            if (buttonRect == null || shieldRect == null || shieldRect.parent == null)
             {
                 return;
             }
 
-            RectTransform templateRect = template.GetComponent<RectTransform>();
-            RectTransform buttonRect = buttonObject.GetComponent<RectTransform>();
-            if (templateRect != null && buttonRect != null)
-            {
-                float width = templateRect.rect.width > 0f
-                    ? templateRect.rect.width
-                    : templateRect.sizeDelta.x;
-                buttonRect.anchoredPosition = templateRect.anchoredPosition
-                    + new Vector2(width + 6f, 0f);
-            }
+            // 방패의 실제 월드 모서리를 매 프레임 읽으므로 레이아웃/해상도/방패 애니메이션을 따라간다.
+            shieldRect.GetWorldCorners(ShieldWorldCorners);
+            Vector3 shieldTopCenterWorld = (ShieldWorldCorners[1] + ShieldWorldCorners[2]) * 0.5f;
+            Vector3 shieldTopCenterLocal =
+                shieldRect.parent.InverseTransformPoint(shieldTopCenterWorld);
+            Vector3 manualOffset = new Vector3(
+                ManualPositionOffset.x,
+                ManualPositionOffset.y,
+                0f);
+
+            buttonRect.localPosition = shieldTopCenterLocal
+                + new Vector3(0f, GapAboveShield + BarHeight * 0.5f, 0f)
+                + manualOffset;
+            buttonRect.localRotation = Quaternion.identity;
+            buttonRect.localScale = Vector3.one;
         }
     }
 }

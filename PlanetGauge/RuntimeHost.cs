@@ -7,7 +7,7 @@ namespace PlanetGauge
         private static RuntimeHost instance;
 
         private scnEditor observedEditor;
-        private GaugeDebugOverlay overlay;
+        private MainGaugeHud mainGaugeHud;
 
         internal static void Create()
         {
@@ -35,7 +35,7 @@ namespace PlanetGauge
 
         private void Awake()
         {
-            overlay = new GaugeDebugOverlay(transform);
+            mainGaugeHud = new MainGaugeHud();
         }
 
         private void Update()
@@ -61,18 +61,24 @@ namespace PlanetGauge
             {
                 EditorGaugeButton.Destroy();
             }
+        }
 
-            overlay.Update();
+        private void LateUpdate()
+        {
+            if (mainGaugeHud != null)
+            {
+                mainGaugeHud.Update();
+            }
         }
 
         private void OnDestroy()
         {
             EditorGaugeButton.Destroy();
 
-            if (overlay != null)
+            if (mainGaugeHud != null)
             {
-                overlay.Dispose();
-                overlay = null;
+                mainGaugeHud.Dispose();
+                mainGaugeHud = null;
             }
 
             if (instance == this)
