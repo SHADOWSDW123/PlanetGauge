@@ -1,0 +1,98 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>PlanetGauge</AssemblyName>
+    <RootNamespace>PlanetGauge</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Deterministic>true</Deterministic>
+
+    <!--
+      유지보수 시 게임 설치 위치가 바뀌면 이 값만 바꾸거나
+      `dotnet build /p:GameManagedDir="...\A Dance of Fire and Ice_Data\Managed"`로 덮어쓴다.
+    -->
+    <GameManagedDir Condition="'$(GameManagedDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\A Dance of Fire and Ice\A Dance of Fire and Ice_Data\Managed</GameManagedDir>
+    <UnityModManagerDir Condition="'$(UnityModManagerDir)' == ''">$(GameManagedDir)\UnityModManager</UnityModManagerDir>
+    <ModOutputDir Condition="'$(ModOutputDir)' == ''">$(MSBuildProjectDirectory)\..\dist\PlanetGauge</ModOutputDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>$(UnityModManagerDir)\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityModManager">
+      <HintPath>$(UnityModManagerDir)\UnityModManager.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(GameManagedDir)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>$(GameManagedDir)\Assembly-CSharp-firstpass.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="RDTools">
+      <HintPath>$(GameManagedDir)\RDTools.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <Reference Include="UnityEngine">
+      <HintPath>$(GameManagedDir)\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(GameManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>$(GameManagedDir)\UnityEngine.AudioModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(GameManagedDir)\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(GameManagedDir)\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(GameManagedDir)\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(GameManagedDir)\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Info.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <Target Name="ValidateGameReferences" BeforeTargets="ResolveReferences">
+    <Error
+      Condition="!Exists('$(GameManagedDir)\Assembly-CSharp.dll')"
+      Text="Assembly-CSharp.dll을 찾을 수 없습니다. /p:GameManagedDir=게임의 Managed 폴더 경로를 지정하세요." />
+    <Error
+      Condition="!Exists('$(UnityModManagerDir)\0Harmony.dll')"
+      Text="0Harmony.dll을 찾을 수 없습니다. /p:UnityModManagerDir=UnityModManager DLL 폴더를 지정하세요." />
+    <Error
+      Condition="!Exists('$(UnityModManagerDir)\UnityModManager.dll')"
+      Text="UnityModManager.dll을 찾을 수 없습니다. /p:UnityModManagerDir=UnityModManager DLL 폴더를 지정하세요." />
+  </Target>
+
+  <Target Name="StageModPackage" AfterTargets="Build">
+    <MakeDir Directories="$(ModOutputDir)" />
+    <Copy
+      SourceFiles="$(TargetPath);$(MSBuildProjectDirectory)\Info.json"
+      DestinationFolder="$(ModOutputDir)"
+      SkipUnchangedFiles="true" />
+  </Target>
+</Project>
