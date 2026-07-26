@@ -2,7 +2,7 @@
   "Id": "PlanetGauge",
   "DisplayName": "Planet Gauge",
   "Author": "PlanetGauge contributors",
-  "Version": "1.0.0",
+  "Version": "0.0.3",
   "ManagerVersion": "0.32.5",
   "AssemblyName": "PlanetGauge.dll",
   "EntryMethod": "PlanetGauge.Main.Load"
