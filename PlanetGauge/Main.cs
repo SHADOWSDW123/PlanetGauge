@@ -11,7 +11,7 @@ namespace PlanetGauge
     {
         internal const string ModId = "PlanetGauge";
         internal const string ExpectedGameAssemblySha256 =
-            "0C50DDAE9052612AA29D1BFF8878A006A23D8E6AC1105E0C61B78A8A4964D42B";
+            "684EE0D58A3551690100C15879FBEC3D6B0FBE1CA1CAA441ED786A38BE82033E";
 
         // 디버그용: false로 바꾸면 CheckPostHoldFail의 바닐라 실패 복구 보정만 비활성화된다.
         private static readonly bool EnableMissAngleRecovery = true;
@@ -234,6 +234,88 @@ namespace PlanetGauge
                 GaugeRuntime.ClearPendingDieCharge();
                 __result = false;
                 return false;
+            }
+        }
+
+        [HarmonyPatch]
+        private static class DetailedResultsFailureRowsPatch
+        {
+            private struct ResultsState
+            {
+                internal scrController Controller;
+                internal bool RestoreNoFail;
+            }
+
+            private static MethodBase TargetMethod()
+            {
+                return AccessTools.Method(
+                    typeof(DetailedResults),
+                    "GenerateResults",
+                    new[] { typeof(scrMarginTracker) });
+            }
+
+            [HarmonyPrepare]
+            private static bool Prepare()
+            {
+                if (TargetMethod() != null)
+                {
+                    return true;
+                }
+
+                if (Logger != null)
+                {
+                    Logger.Log(
+                        "[경고] 이 게임 버전에는 DetailedResults.GenerateResults 메서드가 없습니다. "
+                        + "모드는 계속 실행하지만 결과 화면의 실패 상세 행 보정은 비활성화합니다.");
+                }
+
+                return false;
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix(ref ResultsState __state)
+            {
+                __state = default(ResultsState);
+
+                if (!GaugeRuntime.ShouldHandle())
+                {
+                    return;
+                }
+
+                scrController controller = scrController.instance;
+                if (controller == null || controller.noFail)
+                {
+                    return;
+                }
+
+                // GenerateResults는 noFail일 때만 놓침/과부하 행을 만든다.
+                // 결과 문자열을 만드는 동안에만 플래그를 빌려 일반 클리어/저장 판정은 유지한다.
+                __state.Controller = controller;
+                __state.RestoreNoFail = true;
+                controller.noFail = true;
+            }
+
+            [HarmonyPostfix]
+            private static void Postfix(ref ResultsState __state)
+            {
+                RestoreNoFail(ref __state);
+            }
+
+            [HarmonyFinalizer]
+            private static Exception Finalizer(Exception __exception, ref ResultsState __state)
+            {
+                RestoreNoFail(ref __state);
+                return __exception;
+            }
+
+            private static void RestoreNoFail(ref ResultsState state)
+            {
+                if (state.RestoreNoFail && state.Controller != null)
+                {
+                    state.Controller.noFail = false;
+                    state.RestoreNoFail = false;
+                }
             }
         }
 

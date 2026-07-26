@@ -180,6 +180,17 @@ namespace PlanetGauge
                 return;
             }
 
+            if (overload)
+            {
+                // 놓침은 아래 바닐라 복구의 Hit(false)가 FailMiss를 기록한다.
+                // 과부하는 Die의 noFail 분기가 타일을 진행시키지 않으므로 여기서 한 번 기록한다.
+                scrMarginTracker marginTracker = __instance.marginTracker;
+                if (marginTracker != null)
+                {
+                    marginTracker.AddHit(HitMargin.FailOverload);
+                }
+            }
+
             // 게이지가 남아 있는 동안만 원본 실패 방지 동작을 빌린다.
             __state.Controller = controller;
             __state.RestoreNoFail = true;
