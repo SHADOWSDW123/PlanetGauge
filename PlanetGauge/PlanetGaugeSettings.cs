@@ -37,7 +37,7 @@ namespace PlanetGauge
             GUILayout.Space(96f);
             if (GUILayout.Button("Reset width", GUILayout.Width(140f)))
             {
-                MainGaugeWidthPercent = 100f;
+                MainGaugeWidthPercent = 83f;
             }
             GUILayout.EndHorizontal();
 
@@ -59,7 +59,7 @@ namespace PlanetGauge
             if (GUILayout.Button("Reset position", GUILayout.Width(140f)))
             {
                 MainGaugeOffsetX = 0f;
-                MainGaugeOffsetY = 0f;
+                MainGaugeOffsetY = -158f;
             }
             GUILayout.EndHorizontal();
 
@@ -87,8 +87,8 @@ namespace PlanetGauge
             if (GUILayout.Button("Reset text", GUILayout.Width(140f)))
             {
                 MainGaugeValueOffsetX = 0f;
-                MainGaugeValueOffsetY = 0f;
-                MainGaugeValueSizePercent = 100f;
+                MainGaugeValueOffsetY = -14f;
+                MainGaugeValueSizePercent = 111f;
             }
             GUILayout.EndHorizontal();
 
