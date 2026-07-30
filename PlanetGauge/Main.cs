@@ -163,6 +163,10 @@ namespace PlanetGauge
         private static void ValidateRequiredGameApi()
         {
             RequireMethod(typeof(scnEditor), nameof(scnEditor.Play), Type.EmptyTypes);
+            RequireMethod(
+                typeof(scnEditor),
+                nameof(scnEditor.SwitchToEditMode),
+                new[] { typeof(bool) });
             RequireMethod(typeof(scrPlanet), nameof(scrPlanet.SwitchChosen), Type.EmptyTypes);
             RequireMethod(
                 typeof(scrPlayer),
@@ -248,7 +252,9 @@ namespace PlanetGauge
         {
             private static bool Prefix(HitMargin judgement, ref bool __result)
             {
-                if (judgement != HitMargin.TooLate || !GaugeRuntime.ShouldHandle())
+                if (judgement != HitMargin.TooLate
+                    || GaugeRuntime.IsAutoPlay()
+                    || !GaugeRuntime.ShouldHandle())
                 {
                     return true;
                 }
@@ -388,6 +394,7 @@ namespace PlanetGauge
 
                 if (!EnableMissAngleRecovery
                     || GaugeRuntime.Current <= 0f
+                    || GaugeRuntime.IsAutoPlay(__instance)
                     || !GaugeRuntime.ShouldHandle(__instance))
                 {
                     return;
@@ -459,6 +466,7 @@ namespace PlanetGauge
 
                 if (temporaryMissRecoveryDepth <= 0
                     || hitbox
+                    || GaugeRuntime.IsAutoPlay(__instance)
                     || !GaugeRuntime.ShouldHandle(__instance))
                 {
                     return;

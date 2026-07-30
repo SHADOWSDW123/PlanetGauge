@@ -16,6 +16,18 @@ namespace PlanetGauge
         }
     }
 
+    [HarmonyPatch(typeof(scnEditor), nameof(scnEditor.SwitchToEditMode))]
+    internal static class EditorSwitchToEditModePatch
+    {
+        private static void Postfix()
+        {
+            if (Main.IsEnabled && Main.EditorGaugeEnabled)
+            {
+                GaugeRuntime.Reset();
+            }
+        }
+    }
+
     [HarmonyPatch(typeof(scrController), nameof(scrController.Restart))]
     internal static class ControllerRestartPatch
     {
@@ -77,8 +89,7 @@ namespace PlanetGauge
 
             scrFloor nextFloor = currentFloor.nextfloor;
             bool autoFloor = nextFloor != null && nextFloor.auto;
-            if (RDC.auto
-                || (__instance.player != null && __instance.player.auto)
+            if (GaugeRuntime.IsAutoPlay(__instance.player)
                 || (autoFloor && !RDC.useOldAuto)
                 || (__instance.player != null && __instance.player.midspinInfiniteMargin))
             {
@@ -102,7 +113,10 @@ namespace PlanetGauge
 
         private static void Postfix(SwitchState __state)
         {
-            if (!__state.Track || __state.Player == null || !GaugeRuntime.ShouldHandle(__state.Player))
+            if (!__state.Track
+                || __state.Player == null
+                || GaugeRuntime.IsAutoPlay(__state.Player)
+                || !GaugeRuntime.ShouldHandle(__state.Player))
             {
                 return;
             }
@@ -158,6 +172,12 @@ namespace PlanetGauge
                 || hitbox
                 || !GaugeRuntime.ShouldHandle(__instance))
             {
+                return;
+            }
+
+            if (GaugeRuntime.IsAutoPlay(__instance))
+            {
+                GaugeRuntime.ClearPendingDieCharge();
                 return;
             }
 

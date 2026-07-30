@@ -76,12 +76,33 @@ namespace PlanetGauge
             return true;
         }
 
+        internal static bool IsAutoPlay(scrPlayer player = null)
+        {
+            if (RDC.auto)
+            {
+                return true;
+            }
+
+            scrController controller = scrController.instance;
+            scrPlayer targetPlayer = player;
+            if (targetPlayer == null && controller != null)
+            {
+                targetPlayer = controller.playerOne;
+            }
+
+            return targetPlayer != null && targetPlayer.auto;
+        }
+
         internal static bool ApplyJudgement(HitMargin judgement)
         {
-            if (!ShouldHandle() || frozen)
+            if (!ShouldHandle() || IsAutoPlay())
             {
-                return frozen
-                    && scrController.instance != null
+                return false;
+            }
+
+            if (frozen)
+            {
+                return scrController.instance != null
                     && !scrController.instance.noFail
                     && Current <= 0f;
             }

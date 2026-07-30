@@ -11,6 +11,8 @@ namespace PlanetGauge
     internal sealed class GaugeBarGraphic : MaskableGraphic
     {
         private const int HorizontalSegments = 32;
+        private const float MiddleColorPosition = 0.35f;
+        private const float MiddleColorFalloff = 2f;
 
         private bool gaugeEnabled;
         private float normalizedValue = 1f;
@@ -292,12 +294,21 @@ namespace PlanetGauge
                 : ((x - referenceRect.xMin) + (y - referenceRect.yMin)) / denominator;
             float t = Mathf.Clamp01(projection);
 
-            if (t <= 0.5f)
+            if (t <= MiddleColorPosition)
             {
-                return Color32.Lerp(lowColor, middleColor, t * 2f);
+                float blend = t / MiddleColorPosition;
+                return Color32.Lerp(
+                    lowColor,
+                    middleColor,
+                    Mathf.Pow(blend, MiddleColorFalloff));
             }
 
-            return Color32.Lerp(middleColor, highColor, (t - 0.5f) * 2f);
+            float highBlend =
+                (t - MiddleColorPosition) / (1f - MiddleColorPosition);
+            return Color32.Lerp(
+                middleColor,
+                highColor,
+                1f - Mathf.Pow(1f - highBlend, MiddleColorFalloff));
         }
 
         private static void GetVerticalBounds(
