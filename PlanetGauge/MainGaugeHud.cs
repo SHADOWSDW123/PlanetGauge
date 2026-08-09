@@ -6,6 +6,10 @@ using UnityEngine.UI;
 
 namespace PlanetGauge
 {
+    /// <summary>
+    /// 플레이 중 판정 오차 미터 위에 표시되는 메인 게이지의 생성, 배치, 값 갱신을 담당한다.
+    /// 장면 객체를 소유하므로 호스트가 파괴될 때 반드시 <see cref="Dispose"/>해야 한다.
+    /// </summary>
     internal sealed class MainGaugeHud : IDisposable
     {
         private const float BaseBarHeight = 18f;
@@ -49,6 +53,7 @@ namespace PlanetGauge
             }
 
             SetVisible(true);
+            // 스타일은 값 캐시로 변경 시에만 메시를 갱신하고, 레이아웃은 게임 UI를 따라 매 프레임 계산한다.
             UpdateStyle();
             UpdateLayout(meter, meterRect);
             UpdateValue();
@@ -72,6 +77,7 @@ namespace PlanetGauge
 
         private void EnsureCreated(scrHitErrorMeter meter)
         {
+            // scaler 아래에 두어 게임의 판정 미터 확대/축소와 동일한 좌표계를 사용한다.
             Transform desiredParent = meter.scaler != null
                 ? meter.scaler.transform
                 : meter.wrapperRectTransform.parent;
@@ -84,6 +90,7 @@ namespace PlanetGauge
                 && rootObject != null
                 && rootObject.transform.parent == desiredParent)
             {
+                // 다른 HUD가 런타임에 추가되어도 게이지가 가려지지 않게 렌더 순서를 복구한다.
                 rootObject.transform.SetAsLastSibling();
                 return;
             }
@@ -178,6 +185,7 @@ namespace PlanetGauge
             Transform parent = rootRect.parent;
             meterRect.GetWorldCorners(meterWorldCorners);
 
+            // 월드 모서리를 게이지 부모의 로컬 좌표로 변환해 해상도와 Canvas 스케일 변화에 대응한다.
             float minimumX = float.PositiveInfinity;
             float maximumX = float.NegativeInfinity;
             float maximumY = float.NegativeInfinity;
@@ -236,7 +244,7 @@ namespace PlanetGauge
         private void UpdateValue()
         {
             float normalizedValue = GaugeRuntime.MaximumGauge <= 0f
-                ? 0f
+                ? 0f 
                 : GaugeRuntime.Current / GaugeRuntime.MaximumGauge;
             gaugeGraphic.SetState(true, normalizedValue);
 
@@ -254,6 +262,7 @@ namespace PlanetGauge
                 formattedValue,
                 StringComparison.Ordinal))
             {
+                // TMP 텍스트 재빌드는 비용이 있으므로 표시 문자열이 달라질 때만 할당한다.
                 lastDisplayedValue = formattedValue;
                 valueText.text = formattedValue;
             }
@@ -292,7 +301,7 @@ namespace PlanetGauge
                 return false;
             }
 
-            if (meter.straightMeter != null && meter.straightMeter.activeInHierarchy)
+            if (meter.straightMeter != null && meter.straightMeter.activeInHierarchy) 
             {
                 meterRect = meter.straightMeter.GetComponent<RectTransform>();
             }
@@ -303,6 +312,7 @@ namespace PlanetGauge
 
             if (meterRect == null)
             {
+                // 게임 버전별 세부 미터 구조가 달라도 공통 wrapper를 최후 기준점으로 사용한다.
                 meterRect = meter.wrapperRectTransform;
             }
 

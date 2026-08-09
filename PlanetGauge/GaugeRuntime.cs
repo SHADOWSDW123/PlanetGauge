@@ -3,6 +3,10 @@ using UnityEngine;
 
 namespace PlanetGauge
 {
+    /// <summary>
+    /// 판정에 따른 게이지 상태 전이와 실패 복구 중 재진입 방지 상태를 관리한다.
+    /// Harmony 패치들은 게임 이벤트를 해석하고, 실제 수치 변경은 이 클래스에만 위임한다.
+    /// </summary>
     internal static class GaugeRuntime
     {
         /*
@@ -42,6 +46,7 @@ namespace PlanetGauge
 
         internal static void Reset()
         {
+            // 새 플레이 세션은 보류 중인 Die 차감과 중첩 복구 상태까지 모두 초기화한다.
             Current = InitialGauge;
             frozen = false;
             nextDieAlreadyCharged = false;
@@ -51,6 +56,7 @@ namespace PlanetGauge
 
         internal static bool ShouldHandle(scrPlayer player = null)
         {
+            // 모드는 에디터의 1인 실제 플레이에서만 원본 실패 흐름을 변경한다.
             if (!Main.IsEnabled || !Main.EditorGaugeEnabled)
             {
                 return false;
@@ -102,6 +108,7 @@ namespace PlanetGauge
 
             if (frozen)
             {
+                // 소진 이후에는 값을 다시 변경하지 않고, 실제 실패가 필요한지만 재보고한다.
                 return scrController.instance != null
                     && !scrController.instance.noFail
                     && Current <= 0f;
@@ -136,6 +143,7 @@ namespace PlanetGauge
 
         internal static void MarkNextDieAlreadyCharged()
         {
+            // SwitchChosen 직후 같은 실패를 알리는 Die가 이어질 수 있어 1회성 토큰으로 중복 차감을 막는다.
             nextDieAlreadyCharged = true;
         }
 
@@ -153,6 +161,7 @@ namespace PlanetGauge
 
         internal static void BeginFailureRecovery()
         {
+            // 실패 복구 중 SwitchChosen이 재진입할 수 있으므로 bool 대신 중첩 가능한 깊이를 사용한다.
             failureRecoveryDepth++;
         }
 

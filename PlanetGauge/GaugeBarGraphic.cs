@@ -120,6 +120,7 @@ namespace PlanetGauge
             }
 
             float outerRadius = Mathf.Min(outerRect.width, outerRect.height) * 0.5f;
+            // 바깥 도형, 빈 트랙, 현재 값 채움 순서로 메시를 겹쳐 테두리를 만든다.
             AddBarRect(vertexHelper, outerRect, outerRadius, borderColor, false, outerRect);
 
             float actualBorder = Mathf.Min(
@@ -197,6 +198,7 @@ namespace PlanetGauge
                 0f,
                 Mathf.Min(rect.width, rect.height) * 0.5f);
 
+            // 가로 스트립을 분할하고 각 x의 원호 높이를 구해 둥근 직사각형을 근사한다.
             for (int segment = 0; segment < HorizontalSegments; segment++)
             {
                 float x0 = Mathf.Lerp(rect.xMin, rect.xMax, segment / (float)HorizontalSegments);
@@ -269,6 +271,7 @@ namespace PlanetGauge
                 : solidColor;
             vertexHelper.AddVert(center, centerColor, Vector2.one * 0.5f);
 
+            // 중심과 외곽 꼭짓점을 잇는 삼각형 팬으로 볼록한 팔각형을 구성한다.
             for (int index = 0; index < points.Length; index++)
             {
                 Vector2 point = points[index];
@@ -288,6 +291,7 @@ namespace PlanetGauge
 
         private Color32 EvaluateGradient(float x, float y, Rect referenceRect)
         {
+            // 채움 폭과 무관한 전체 트랙 좌표를 기준으로 색을 계산해 값 변화 때 색 경계가 움직이지 않게 한다.
             float denominator = referenceRect.width + referenceRect.height;
             float projection = denominator <= 0f
                 ? 0f

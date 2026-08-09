@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace PlanetGauge
 {
+    // 세션 경계 패치: 이전 플레이의 게이지 및 보류 상태가 다음 시도에 누출되지 않게 한다.
     [HarmonyPatch(typeof(scnEditor), nameof(scnEditor.Play))]
     internal static class EditorPlayPatch
     {
@@ -52,11 +53,16 @@ namespace PlanetGauge
         }
     }
 
+    /// <summary>
+    /// 타일 전환 직전 판정을 계산해 게이지에 반영한다.
+    /// Prefix에서 원본 메서드가 바꿀 수 있는 값을 캡처하고 Postfix에서 최종 실패 여부를 결정한다.
+    /// </summary>
     [HarmonyPatch(typeof(scrPlanet), nameof(scrPlanet.SwitchChosen))]
     internal static class SwitchChosenPatch
     {
         private struct SwitchState
         {
+            // Harmony의 __state는 같은 원본 호출의 Prefix/Postfix 사이에서만 전달된다.
             internal bool Track;
             internal bool NoFailAtStart;
             internal HitMargin Judgement;
@@ -99,6 +105,7 @@ namespace PlanetGauge
             double marginScale = nextFloor == null ? 1d : nextFloor.marginScale;
             float effectiveBpm = (float)((double)conductor.bpm * planetarySystem.speed);
 
+            // 원본 SwitchChosen 실행 후에도 판정 기준이 변하지 않도록 필요한 입력을 미리 확정한다.
             __state.Track = true;
             __state.NoFailAtStart = controller.noFail;
             __state.Player = __instance.player;
@@ -148,6 +155,10 @@ namespace PlanetGauge
         }
     }
 
+    /// <summary>
+    /// 원본 사망 요청을 게이지 차감으로 변환하고, 게이지가 남으면 게임의 noFail 복구 경로를 빌린다.
+    /// 임시 플래그는 Postfix와 Finalizer 양쪽에서 복원해 원본 예외 발생 시에도 상태 누출을 막는다.
+    /// </summary>
     [HarmonyPatch(typeof(scrPlayer), nameof(scrPlayer.Die))]
     internal static class PlayerDiePatch
     {
@@ -232,6 +243,7 @@ namespace PlanetGauge
 
         private static void RestoreTemporaryNoFail(ref DieState state)
         {
+            // 이 메서드는 Postfix와 Finalizer에서 모두 호출될 수 있으므로 반드시 멱등이어야 한다.
             if (state.RestoreNoFail && state.Controller != null)
             {
                 state.Controller.noFail = false;

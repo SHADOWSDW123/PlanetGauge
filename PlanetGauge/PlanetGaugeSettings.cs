@@ -3,6 +3,10 @@ using UnityModManagerNet;
 
 namespace PlanetGauge
 {
+    /// <summary>
+    /// Unity Mod Manager가 직렬화하는 사용자 설정과 설정 GUI를 소유한다.
+    /// public 필드 이름은 저장 파일의 키이므로 이름 변경 시 기존 설정 마이그레이션이 필요하다.
+    /// </summary>
     public sealed class PlanetGaugeSettings : UnityModManager.ModSettings
     {
         public float MainGaugeOffsetX;
@@ -25,6 +29,7 @@ namespace PlanetGauge
 
         internal void DrawGui()
         {
+            // UMM의 OnGUI에서 매 프레임 호출되는 즉시 모드(IMGUI) 설정 화면이다.
             GUILayout.Label("Main gauge size");
             MainGaugeWidthPercent = DrawFloatSlider(
                 "Width",
@@ -119,6 +124,7 @@ namespace PlanetGauge
 
         internal void Sanitize()
         {
+            // 저장 파일을 사용자가 직접 수정했거나 이전 버전 값이 남아 있어도 UI 범위를 보장한다.
             MainGaugeOffsetX = Mathf.Clamp(MainGaugeOffsetX, -500f, 500f);
             MainGaugeOffsetY = Mathf.Clamp(MainGaugeOffsetY, -300f, 300f);
             MainGaugeWidthPercent = Mathf.Clamp(
@@ -144,6 +150,7 @@ namespace PlanetGauge
 
         internal Color32 GetMainGaugeColor()
         {
+            // Sanitize 이후 호출된다는 전제에서 int 설정값을 손실 없이 byte로 변환한다.
             return new Color32(
                 (byte)MainGaugeColorR,
                 (byte)MainGaugeColorG,

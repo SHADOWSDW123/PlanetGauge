@@ -3,24 +3,26 @@ using UnityEngine.UI;
 
 namespace PlanetGauge
 {
+    /// <summary>
+    /// 에디터의 실패 방지 버튼을 기준점으로 삼아 게이지 토글 버튼을 생성하고 동기화한다.
+    /// 에디터 인스턴스는 장면 전환 때 교체되므로 모든 Unity 참조는 <see cref="Destroy"/>에서 함께 해제한다.
+    /// </summary>
     internal static class EditorGaugeButton
     {
         /*
          * UI 위치/크기 직접 조정 지점
          * - BarWidth, BarHeight: 체력 바 자체의 크기
          * - GapAboveShield: 실패 방지 방패의 위쪽 끝과 체력 바 사이 간격
-         * - ManualPositionOffset: 게임 버전별 UI 차이가 있을 때 마지막으로 더할 수동 보정값
          */
         private const float BarWidth = 72f;
         private const float BarHeight = 14f;
         private const float GapAboveShield = 8f;
-        private static readonly Vector2 ManualPositionOffset = new Vector2(0f, 0f);
 
         private static scnEditor owner;
         private static GameObject buttonObject;
         private static Button button;
         private static GaugeBarGraphic gaugeGraphic;
-        private static RectTransform buttonRect;
+        private static RectTransform buttonRect; 
         private static RectTransform shieldRect;
         private static readonly Vector3[] ShieldWorldCorners = new Vector3[4];
 
@@ -39,6 +41,7 @@ namespace PlanetGauge
             Destroy();
             owner = editor;
 
+            // 원본 실패 방지 버튼과 같은 부모/형제 계층을 사용해 UI 스케일 체계를 공유한다.
             Button shieldButton = editor.buttonNoFail;
             Transform parent = shieldButton.transform.parent;
             buttonObject = new GameObject(
@@ -87,6 +90,7 @@ namespace PlanetGauge
 
             bool templateActive = owner.buttonNoFail != null
                 && owner.buttonNoFail.gameObject.activeSelf;
+            // 게임이 실패 방지 버튼을 숨기는 화면에서는 모드 버튼도 함께 숨긴다.
             if (buttonObject.activeSelf != templateActive)
             {
                 buttonObject.SetActive(templateActive);
@@ -107,6 +111,7 @@ namespace PlanetGauge
 
         internal static void Destroy()
         {
+            // Object.Destroy는 프레임 끝에 처리되므로 정적 참조는 즉시 비워 재사용을 막는다.
             if (buttonObject != null)
             {
                 Object.Destroy(buttonObject);
@@ -146,14 +151,9 @@ namespace PlanetGauge
             Vector3 shieldTopCenterWorld = (ShieldWorldCorners[1] + ShieldWorldCorners[2]) * 0.5f;
             Vector3 shieldTopCenterLocal =
                 shieldRect.parent.InverseTransformPoint(shieldTopCenterWorld);
-            Vector3 manualOffset = new Vector3(
-                ManualPositionOffset.x,
-                ManualPositionOffset.y,
-                0f);
 
             buttonRect.localPosition = shieldTopCenterLocal
-                + new Vector3(0f, GapAboveShield + BarHeight * 0.5f, 0f)
-                + manualOffset;
+                + new Vector3(0f, GapAboveShield + BarHeight * 0.5f, 0f);
             buttonRect.localRotation = Quaternion.identity;
             buttonRect.localScale = Vector3.one;
         }

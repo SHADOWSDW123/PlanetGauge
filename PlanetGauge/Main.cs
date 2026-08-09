@@ -1,17 +1,17 @@
 using System;
-using System.IO;
 using System.Reflection;
-using System.Security.Cryptography;
 using HarmonyLib;
 using UnityModManagerNet;
 
 namespace PlanetGauge
 {
+    /// <summary>
+    /// Unity Mod Manager 진입점이며 모드 활성화, Harmony 패치 수명, 필수 API 검사를 조정한다.
+    /// 게임별 동작은 패치와 <see cref="GaugeRuntime"/>에 위임하고 전역 수명만 소유한다.
+    /// </summary>
     public static class Main
     {
         internal const string ModId = "PlanetGauge";
-        internal const string ExpectedGameAssemblySha256 =
-            "684EE0D58A3551690100C15879FBEC3D6B0FBE1CA1CAA441ED786A38BE82033E";
 
         // 디버그용: false로 바꾸면 CheckPostHoldFail의 바닐라 실패 복구 보정만 비활성화된다.
         private static readonly bool EnableMissAngleRecovery = true;
@@ -36,6 +36,7 @@ namespace PlanetGauge
 
         public static bool Load(UnityModManager.ModEntry modEntry)
         {
+            // Load는 등록만 수행한다. 게임 코드를 바꾸는 패치는 사용자가 모드를 켤 때 적용한다.
             Logger = modEntry.Logger;
             Settings = UnityModManager.ModSettings.Load<PlanetGaugeSettings>(modEntry)
                 ?? new PlanetGaugeSettings();
@@ -92,8 +93,9 @@ namespace PlanetGauge
                 return;
             }
 
-            ValidateGameCompatibility();
+            ValidateRequiredGameApi();
 
+            // 필수 API 확인이 끝난 뒤에만 패치해 부분 활성화 상태를 만들지 않는다.
             harmony = new Harmony(modEntry.Info.Id);
             harmony.PatchAll(typeof(Main).Assembly);
 
@@ -109,55 +111,6 @@ namespace PlanetGauge
             }
 
             Logger.Log("PlanetGauge가 활성화되었습니다.");
-        }
-
-        private static void ValidateGameCompatibility()
-        {
-            ValidateRequiredGameApi();
-
-            string assemblyPath = typeof(scrController).Assembly.Location;
-            if (string.IsNullOrEmpty(assemblyPath) || !File.Exists(assemblyPath))
-            {
-                Logger.Log(
-                    "[경고] 현재 Assembly-CSharp.dll의 해시를 확인할 수 없습니다. "
-                    + "필수 API 검사만 통과한 상태로 실행합니다.");
-                return;
-            }
-
-            try
-            {
-                string actualHash;
-                using (SHA256 sha256 = SHA256.Create())
-                using (FileStream stream = File.OpenRead(assemblyPath))
-                {
-                    actualHash = BitConverter.ToString(sha256.ComputeHash(stream))
-                        .Replace("-", string.Empty);
-                }
-
-                if (!string.Equals(
-                    actualHash,
-                    ExpectedGameAssemblySha256,
-                    StringComparison.OrdinalIgnoreCase))
-                {
-                    Logger.Log(
-                        "[경고] 검증된 버전과 다른 Assembly-CSharp.dll입니다. "
-                        + "필수 API가 존재하므로 호환 모드로 계속 실행합니다."
-                        + Environment.NewLine
-                        + "Expected: "
-                        + ExpectedGameAssemblySha256
-                        + Environment.NewLine
-                        + "Actual:   "
-                        + actualHash);
-                }
-            }
-            catch (Exception exception)
-            {
-                Logger.Log(
-                    "[경고] Assembly-CSharp.dll 해시 계산에 실패했습니다. "
-                    + "필수 API 검사만 통과한 상태로 실행합니다."
-                    + Environment.NewLine
-                    + exception.Message);
-            }
         }
 
         private static void ValidateRequiredGameApi()
@@ -223,6 +176,7 @@ namespace PlanetGauge
             GaugeRuntime.Reset();
             RuntimeHost.DestroyHost();
 
+            // 이 Harmony ID가 설치한 패치만 제거해 다른 모드의 패치를 보존한다.
             if (harmony != null)
             {
                 harmony.UnpatchAll(harmony.Id);
@@ -247,6 +201,9 @@ namespace PlanetGauge
             GaugeRuntime.Reset();
         }
 
+        /// <summary>
+        /// TooLate 중간 판정을 무시하고 뒤이어 확정되는 FailMiss만 차감하도록 하는 게이지 전처리다.
+        /// </summary>
         [HarmonyPatch(typeof(GaugeRuntime), nameof(GaugeRuntime.ApplyJudgement))]
         private static class IgnoreTooLateGaugePatch
         {
@@ -267,6 +224,10 @@ namespace PlanetGauge
             }
         }
 
+        /// <summary>
+        /// 결과 문자열을 생성하는 짧은 구간에만 noFail을 켜 실패 상세 행을 포함시킨다.
+        /// 실제 클리어 및 저장 판정에는 영향을 주지 않도록 호출 종료 시 즉시 원복한다.
+        /// </summary>
         [HarmonyPatch]
         private static class DetailedResultsFailureRowsPatch
         {
@@ -349,6 +310,10 @@ namespace PlanetGauge
             }
         }
 
+        /// <summary>
+        /// 놓침 뒤 바닐라의 후처리가 멈추지 않도록 CheckPostHoldFail 실행 중에만 noFail을 대여한다.
+        /// 중첩 호출은 <see cref="temporaryMissRecoveryDepth"/>로 추적한다.
+        /// </summary>
         [HarmonyPatch]
         private static class CheckPostHoldFailRecoveryPatch
         {
@@ -446,6 +411,9 @@ namespace PlanetGauge
             }
         }
 
+        /// <summary>
+        /// 위 복구 구간에서 호출된 Die가 실제 noFail 설정으로 오인되지 않도록 임시 플래그를 잠시 해제한다.
+        /// </summary>
         [HarmonyPatch(typeof(scrPlayer), nameof(scrPlayer.Die))]
         private static class TemporaryNoFailDieBridgePatch
         {
