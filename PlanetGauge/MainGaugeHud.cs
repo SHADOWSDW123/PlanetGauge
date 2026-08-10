@@ -161,7 +161,7 @@ namespace PlanetGauge
 
         private void UpdateStyle()
         {
-            PlanetGaugeSettings settings = Main.Settings ?? new PlanetGaugeSettings();
+            PlanetGaugeSettings settings = Main.Settings;
             Color32 gaugeColor = settings.GetMainGaugeColor();
             if (hasLastGaugeColor && lastGaugeColor.Equals(gaugeColor))
             {
@@ -198,7 +198,7 @@ namespace PlanetGauge
             }
 
             float meterScale = Mathf.Clamp(Mathf.Abs(meter.meterScale), 0.5f, 2.5f);
-            PlanetGaugeSettings settings = Main.Settings ?? new PlanetGaugeSettings();
+            PlanetGaugeSettings settings = Main.Settings;
             float widthScale = settings.MainGaugeWidthPercent / 100f;
             float barWidth = Mathf.Max(
                 48f,
@@ -252,7 +252,7 @@ namespace PlanetGauge
                 GaugeRuntime.Current,
                 0f,
                 GaugeRuntime.MaximumGauge);
-            PlanetGaugeSettings settings = Main.Settings ?? new PlanetGaugeSettings();
+            PlanetGaugeSettings settings = Main.Settings;
             string formattedValue = settings.MainGaugeShowDecimalValue
                 ? displayValue.ToString("0.0", CultureInfo.InvariantCulture)
                 : Mathf.RoundToInt(displayValue).ToString(

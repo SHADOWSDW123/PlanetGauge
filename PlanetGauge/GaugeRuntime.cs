@@ -23,7 +23,6 @@ namespace PlanetGauge
         internal const float VeryEarlyDelta = -1.5f;
         internal const float VeryLateDelta = -1.5f;
         internal const float TooEarlyDelta = -3f;
-        internal const float TooLateDelta = 0f;
         internal const float FailMissDelta = -8f;
         internal const float FailOverloadDelta = -8f;
 
@@ -233,9 +232,6 @@ namespace PlanetGauge
                 case HitMargin.TooEarly:
                     delta = TooEarlyDelta;
                     return true;
-                case HitMargin.TooLate:
-                    delta = TooLateDelta;
-                    return true;
                 case HitMargin.FailMiss:
                     delta = FailMissDelta;
                     return true;
@@ -243,7 +239,7 @@ namespace PlanetGauge
                     delta = FailOverloadDelta;
                     return true;
                 default:
-                    // Auto, Multipress, OverPress 등은 게이지를 바꾸지 않는다.
+                    // TooLate, Auto, Multipress, OverPress 등은 게이지를 바꾸지 않는다.
                     delta = 0f;
                     return false;
             }

@@ -1,6 +1,5 @@
 using System;
 using HarmonyLib;
-using UnityEngine;
 
 namespace PlanetGauge
 {
@@ -140,11 +139,17 @@ namespace PlanetGauge
                 judgement = HitMargin.FailOverload;
             }
 
-            if (judgement == HitMargin.TooLate
-                || judgement == HitMargin.FailMiss
+            if (judgement == HitMargin.TooLate)
+            {
+                // TooLate는 같은 타일에 머무는 중간 판정이다. 뒤이어 확정되는 FailMiss가 직접 차감한다.
+                GaugeRuntime.ClearPendingDieCharge();
+                return;
+            }
+
+            if (judgement == HitMargin.FailMiss
                 || judgement == HitMargin.FailOverload)
             {
-                // 이 판정 직후 원본 Die가 이어질 때 -18이 두 번 적용되지 않게 한다.
+                // 이 판정 직후 원본 Die가 이어질 때 같은 실패를 두 번 차감하지 않게 한다.
                 GaugeRuntime.MarkNextDieAlreadyCharged();
             }
 

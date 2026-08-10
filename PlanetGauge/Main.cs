@@ -13,9 +13,6 @@ namespace PlanetGauge
     {
         internal const string ModId = "PlanetGauge";
 
-        // 디버그용: false로 바꾸면 CheckPostHoldFail의 바닐라 실패 복구 보정만 비활성화된다.
-        private static readonly bool EnableMissAngleRecovery = true;
-
         private static Harmony harmony;
         private static bool registeredWithGame;
         private static int temporaryMissRecoveryDepth;
@@ -23,12 +20,6 @@ namespace PlanetGauge
         public static bool IsEnabled { get; private set; }
 
         public static bool EditorGaugeEnabled { get; private set; }
-
-        // 디버거나 다른 모드 코드에서 현재 값을 읽을 수 있도록 공개한다.
-        public static float CurrentGauge
-        {
-            get { return GaugeRuntime.Current; }
-        }
 
         internal static PlanetGaugeSettings Settings { get; private set; }
 
@@ -202,29 +193,6 @@ namespace PlanetGauge
         }
 
         /// <summary>
-        /// TooLate 중간 판정을 무시하고 뒤이어 확정되는 FailMiss만 차감하도록 하는 게이지 전처리다.
-        /// </summary>
-        [HarmonyPatch(typeof(GaugeRuntime), nameof(GaugeRuntime.ApplyJudgement))]
-        private static class IgnoreTooLateGaugePatch
-        {
-            private static bool Prefix(HitMargin judgement, ref bool __result)
-            {
-                if (judgement != HitMargin.TooLate
-                    || GaugeRuntime.IsAutoPlay()
-                    || !GaugeRuntime.ShouldHandle())
-                {
-                    return true;
-                }
-
-                // TooLate는 입력을 진행시키지 못한 중간 상태다.
-                // 이 시점에는 차감하지 않고, 뒤이어 확정되는 FailMiss 한 번만 반영한다.
-                GaugeRuntime.ClearPendingDieCharge();
-                __result = false;
-                return false;
-            }
-        }
-
-        /// <summary>
         /// 결과 문자열을 생성하는 짧은 구간에만 noFail을 켜 실패 상세 행을 포함시킨다.
         /// 실제 클리어 및 저장 판정에는 영향을 주지 않도록 호출 종료 시 즉시 원복한다.
         /// </summary>
@@ -331,11 +299,6 @@ namespace PlanetGauge
             [HarmonyPrepare]
             private static bool Prepare()
             {
-                if (!EnableMissAngleRecovery)
-                {
-                    return false;
-                }
-
                 if (FindMethodByName(typeof(scrPlayer), "CheckPostHoldFail") != null)
                 {
                     return true;
@@ -357,8 +320,7 @@ namespace PlanetGauge
             {
                 __state = default(RecoveryState);
 
-                if (!EnableMissAngleRecovery
-                    || GaugeRuntime.Current <= 0f
+                if (GaugeRuntime.Current <= 0f
                     || GaugeRuntime.IsAutoPlay(__instance)
                     || !GaugeRuntime.ShouldHandle(__instance))
                 {

@@ -26,16 +26,6 @@ namespace PlanetGauge
         private Color32 middleColor = new Color32(248, 173, 0, 255);
         private Color32 highColor = new Color32(57, 146, 255, 255);
 
-        internal bool GaugeEnabled
-        {
-            get { return gaugeEnabled; }
-        }
-
-        internal float NormalizedValue
-        {
-            get { return normalizedValue; }
-        }
-
         protected override void Awake()
         {
             base.Awake();
