@@ -19,6 +19,20 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 해당 체력 바를 눌러 PlanetGauge를 활성화할 수 있습니다.
 체력 바가 무지개로 빛난다면 활성화 성공!
 
+# PlanetGauge 설정 이벤트
+<img width="500" height="868" alt="wip_setgauge" src="https://github.com/user-attachments/assets/5bf46a38-33f6-4d96-a6bf-c763351ea0a9" />
+
+* 게이지 증감률 증폭, 회복 차단, 체력상한 설정, 실패방지 오프(게이지 모드에서만) 등과 같은 내용들을 인게임에서 설정할 수 있습니다. 
+# 게이지 설정에 따른 체력바 변형
+* 게이지 속성에 따라 체력과 텍스트의 색상이 변화합니다.
+* 속성이 다음과 같이 기재됩니다.
+
+> - 체력 회복 차단: Increase Disabled
+> - 체력 회복량 증폭: Increase Amplified
+> - 체력 감소량 증폭: Decrease Amplified
+> - 체력 증감량 증폭: Rate Amplified
+> - 실패방지 해제: No-Fail Disabled (*PlanetGauge 모드의 실패방지만 해제됩니다.)
+> - 체력 상한 설정: Increase Limited
 
 # 난이도 조정 
 다음과 같은 레벨들에서 난이도가 다소 낮아집니다.
@@ -37,6 +51,5 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 - 레벨을 팔때 어디서 막히는지 감을 잡고 싶으신 분들
 - 판정을 전체적으로 개선하고 싶으신 분들
 - 무한리트가 싫으신 분들
-
 ---
 본 프로젝트는 생성형 인공지능을 사용하여 제작되었습니다.
