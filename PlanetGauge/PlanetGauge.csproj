@@ -65,6 +65,9 @@
     <None Update="Info.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Assets\Gaugeline.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <Target Name="ValidateGameReferences" BeforeTargets="ResolveReferences">
@@ -81,9 +84,14 @@
 
   <Target Name="StageModPackage" AfterTargets="Build">
     <MakeDir Directories="$(ModOutputDir)" />
+    <MakeDir Directories="$(ModOutputDir)\Assets" />
     <Copy
       SourceFiles="$(TargetPath);$(MSBuildProjectDirectory)\Info.json"
       DestinationFolder="$(ModOutputDir)"
+      SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="$(MSBuildProjectDirectory)\Assets\Gaugeline.png"
+      DestinationFolder="$(ModOutputDir)\Assets"
       SkipUnchangedFiles="true" />
   </Target>
 </Project>

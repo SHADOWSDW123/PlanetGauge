@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using ADOFAI;
 using ADOFAI.LevelEditor.Controls;
@@ -126,10 +127,16 @@ namespace PlanetGauge
         internal const string MultiplierReuseNoteKey = "multiplierReuseNote";
         internal const string MultiplierReuseLocalizationKey = "planetGauge.multiplierReuseNote";
 
+        private const string IconRelativePath = "Assets/Gaugeline.png";
+        private const float IconPixelsPerUnit = 128f;
+
         internal static readonly LevelEventType EventType = (LevelEventType)NumericEventId;
 
         private static LevelEventInfo eventInfo;
-        private static Sprite borrowedIcon;
+        private static Sprite registeredIcon;
+        private static Sprite customIcon;
+        private static Texture2D customIconTexture;
+        private static bool customIconLoadAttempted;
 
         internal static LevelEventInfo EventInfo
         {
@@ -230,17 +237,19 @@ namespace PlanetGauge
                 }
             }
 
-            if (GCS.levelEventIcons != null && borrowedIcon != null)
+            if (GCS.levelEventIcons != null && registeredIcon != null)
             {
-                Sprite registeredIcon;
-                if (GCS.levelEventIcons.TryGetValue(EventType, out registeredIcon)
-                    && ReferenceEquals(registeredIcon, borrowedIcon))
+                Sprite currentIcon;
+                if (GCS.levelEventIcons.TryGetValue(EventType, out currentIcon)
+                    && ReferenceEquals(currentIcon, registeredIcon))
                 {
                     GCS.levelEventIcons.Remove(EventType);
                 }
-
-                borrowedIcon = null;
             }
+
+            registeredIcon = null;
+            DestroyCustomIcon();
+            customIconLoadAttempted = false;
         }
 
         internal static void EnsureIcon()
@@ -250,7 +259,14 @@ namespace PlanetGauge
                 return;
             }
 
-            Sprite icon;
+            Sprite icon = GetCustomIcon();
+            if (icon != null)
+            {
+                registeredIcon = icon;
+                GCS.levelEventIcons[EventType] = icon;
+                return;
+            }
+
             if (!GCS.levelEventIcons.TryGetValue(LevelEventType.EventSettings, out icon)
                 && !GCS.levelEventIcons.TryGetValue(LevelEventType.SetSpeed, out icon))
             {
@@ -263,9 +279,129 @@ namespace PlanetGauge
 
             if (icon != null)
             {
-                // 전용 에셋을 추가하기 전까지 게임의 설정 이벤트 아이콘을 빌린다.
-                borrowedIcon = icon;
+                // 외부 아이콘이 없거나 손상된 경우에만 게임의 설정 이벤트 아이콘을 빌린다.
+                registeredIcon = icon;
                 GCS.levelEventIcons[EventType] = icon;
+            }
+        }
+
+        private static Sprite GetCustomIcon()
+        {
+            if (customIcon != null)
+            {
+                return customIcon;
+            }
+
+            if (customIconLoadAttempted)
+            {
+                return null;
+            }
+
+            customIconLoadAttempted = true;
+            string iconPath = string.IsNullOrEmpty(Main.ModDirectory)
+                ? null
+                : Path.Combine(Main.ModDirectory, IconRelativePath);
+            if (string.IsNullOrEmpty(iconPath) || !File.Exists(iconPath))
+            {
+                if (Main.Logger != null)
+                {
+                    Main.Logger.Warning(
+                        "PlanetGauge 이벤트 아이콘을 찾지 못해 기본 아이콘을 사용합니다: "
+                        + (iconPath ?? IconRelativePath));
+                }
+
+                return null;
+            }
+
+            Texture2D texture = null;
+            try
+            {
+                byte[] pngBytes = File.ReadAllBytes(iconPath);
+                texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                texture.name = "PlanetGauge.EventIcon.Texture";
+                texture.wrapMode = TextureWrapMode.Clamp;
+                texture.filterMode = FilterMode.Bilinear;
+                if (!LoadPng(texture, pngBytes))
+                {
+                    throw new InvalidDataException("PNG 데이터를 Unity Texture2D로 변환하지 못했습니다.");
+                }
+
+                /*
+                 * 원본이 현재 300x300이어도 에디터의 고정 아이콘 슬롯이 크기를 맞춘다.
+                 * 128 PPU를 사용해 추후 128x128 파일로 교체해도 동일한 스케일 계약을 유지한다.
+                 */
+                customIcon = Sprite.Create(
+                    texture,
+                    new Rect(0f, 0f, texture.width, texture.height),
+                    new Vector2(0.5f, 0.5f),
+                    IconPixelsPerUnit);
+                if (customIcon == null)
+                {
+                    throw new InvalidOperationException("Texture2D에서 Sprite를 생성하지 못했습니다.");
+                }
+
+                customIcon.name = "PlanetGauge.EventIcon";
+                customIconTexture = texture;
+                return customIcon;
+            }
+            catch (Exception exception)
+            {
+                if (customIcon != null)
+                {
+                    UnityEngine.Object.Destroy(customIcon);
+                }
+
+                if (texture != null)
+                {
+                    UnityEngine.Object.Destroy(texture);
+                }
+
+                customIcon = null;
+                customIconTexture = null;
+                Main.LogException(
+                    "PlanetGauge 이벤트 아이콘 로드에 실패해 기본 아이콘을 사용합니다: " + iconPath,
+                    exception);
+                return null;
+            }
+        }
+
+        private static bool LoadPng(Texture2D texture, byte[] pngBytes)
+        {
+            // 설치본의 ImageConversionModule은 netstandard 2.1을 참조하므로 net48에서 직접 참조하지 않는다.
+            // 아이콘은 선택 기능이므로 확인된 정확한 오버로드만 런타임에 찾아 호출하고, 없으면 폴백한다.
+            Type imageConversionType = Type.GetType(
+                "UnityEngine.ImageConversion, UnityEngine.ImageConversionModule",
+                false);
+            MethodInfo loadImage = imageConversionType == null
+                ? null
+                : imageConversionType.GetMethod(
+                    "LoadImage",
+                    BindingFlags.Public | BindingFlags.Static,
+                    null,
+                    new[] { typeof(Texture2D), typeof(byte[]), typeof(bool) },
+                    null);
+            if (loadImage == null)
+            {
+                throw new MissingMethodException(
+                    "UnityEngine.ImageConversion.LoadImage(Texture2D, byte[], bool)을 찾을 수 없습니다.");
+            }
+
+            object result = loadImage.Invoke(null, new object[] { texture, pngBytes, true });
+            return result is bool && (bool)result;
+        }
+
+        private static void DestroyCustomIcon()
+        {
+            if (customIcon != null)
+            {
+                UnityEngine.Object.Destroy(customIcon);
+                customIcon = null;
+            }
+
+            if (customIconTexture != null)
+            {
+                UnityEngine.Object.Destroy(customIconTexture);
+                customIconTexture = null;
             }
         }
 

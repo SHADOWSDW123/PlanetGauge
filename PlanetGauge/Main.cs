@@ -25,10 +25,13 @@ namespace PlanetGauge
 
         internal static UnityModManager.ModEntry.ModLogger Logger { get; private set; }
 
+        internal static string ModDirectory { get; private set; }
+
         public static bool Load(UnityModManager.ModEntry modEntry)
         {
             // Load는 등록만 수행한다. 게임 코드를 바꾸는 패치는 사용자가 모드를 켤 때 적용한다.
             Logger = modEntry.Logger;
+            ModDirectory = modEntry.Path;
             Settings = UnityModManager.ModSettings.Load<PlanetGaugeSettings>(modEntry)
                 ?? new PlanetGaugeSettings();
             Settings.Sanitize();

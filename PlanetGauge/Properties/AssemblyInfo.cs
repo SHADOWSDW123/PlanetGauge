@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 // 이러한 특성 값을 변경하세요.
 [assembly: AssemblyTitle("PlanetGauge")]
 [assembly: AssemblyProduct("PlanetGauge")]
-[assembly: AssemblyCopyright("Copyright ©  2026")]
+[assembly: AssemblyCopyright("Copyright ©SHADOW_SDW.2026")]
 
 // ComVisible을 false로 설정하면 이 어셈블리의 형식이 COM 구성 요소에 
 // 표시되지 않습니다. COM에서 이 어셈블리의 형식에 액세스하려면
@@ -20,5 +20,5 @@ using System.Runtime.InteropServices;
 //      빌드 번호
 //      수정 버전
 //
-[assembly: AssemblyVersion("0.0.12")]
-[assembly: AssemblyFileVersion("0.0.12")]
+[assembly: AssemblyVersion("0.1.0")]
+[assembly: AssemblyFileVersion("0.1.0")]
