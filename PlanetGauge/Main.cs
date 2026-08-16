@@ -86,19 +86,50 @@ namespace PlanetGauge
 
             ValidateRequiredGameApi();
 
-            // 필수 API 확인이 끝난 뒤에만 패치해 부분 활성화 상태를 만들지 않는다.
+            // 등록부터 런타임 호스트 생성까지 하나의 트랜잭션으로 취급한다.
             harmony = new Harmony(modEntry.Info.Id);
-            harmony.PatchAll(typeof(Main).Assembly);
-
-            IsEnabled = true;
-            EditorGaugeEnabled = false;
-            GaugeRuntime.Reset();
-            RuntimeHost.Create();
-
-            if (!registeredWithGame)
+            bool eventWasRegistered = PlanetGaugeLevelEventRegistry.IsRegistered;
+            try
             {
-                ADOStartup.ModWasAdded(ModId);
-                registeredWithGame = true;
+                harmony.PatchAll(typeof(Main).Assembly);
+
+                IsEnabled = true;
+                EditorGaugeEnabled = false;
+                GaugeRuntime.Reset();
+                RuntimeHost.Create();
+
+                bool eventRegistered = PlanetGaugeLevelEventRegistry.TryRegister();
+                if (!eventRegistered && Logger != null)
+                {
+                    Logger.Log(
+                        "레벨 이벤트 사전 초기화를 기다립니다. "
+                        + "ADOStartup.SetupLevelEventsInfo 완료 후 PlanetGauge 설정 이벤트를 등록합니다.");
+                }
+                else if (eventRegistered && !eventWasRegistered && Logger != null)
+                {
+                    Logger.Log("PlanetGauge 설정 이벤트를 즉시 등록했습니다.");
+                }
+
+                if (!registeredWithGame)
+                {
+                    ADOStartup.ModWasAdded(ModId);
+                    registeredWithGame = true;
+                }
+            }
+            catch
+            {
+                IsEnabled = false;
+                EditorGaugeEnabled = false;
+                GaugeRuntime.Reset();
+                RuntimeHost.DestroyHost();
+                harmony.UnpatchAll(harmony.Id);
+                harmony = null;
+                if (!eventWasRegistered)
+                {
+                    PlanetGaugeLevelEventRegistry.RollbackRegistration();
+                }
+
+                throw;
             }
 
             Logger.Log("PlanetGauge가 활성화되었습니다.");
@@ -129,6 +160,8 @@ namespace PlanetGauge
             RequireField(typeof(scrController), nameof(scrController.noFail));
             RequireField(typeof(scrController), nameof(scrController.noFailInfiniteMargin));
             RequireField(typeof(scrPlayer), nameof(scrPlayer.failBar));
+
+            PlanetGaugeLevelEventRegistry.ValidateRequiredGameApi();
         }
 
         private static void RequireMethod(Type type, string name, Type[] parameterTypes)
@@ -166,6 +199,9 @@ namespace PlanetGauge
             EditorGaugeEnabled = false;
             GaugeRuntime.Reset();
             RuntimeHost.DestroyHost();
+
+            // 레벨/버튼이 이미 이 메타데이터를 참조할 수 있어 현재 프로세스에서는 등록 사전을 유지한다.
+            // Harmony와 런타임 호스트는 제거되므로 비활성 상태에서는 이벤트가 실행되지 않는다.
 
             // 이 Harmony ID가 설치한 패치만 제거해 다른 모드의 패치를 보존한다.
             if (harmony != null)

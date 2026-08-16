@@ -33,6 +33,9 @@ namespace PlanetGauge
 
         internal static float Current { get; private set; } = InitialGauge;
 
+        internal static PlanetGaugeEventSettings EventSettings { get; private set; }
+            = PlanetGaugeEventSettings.Default;
+
         internal static bool IsRecoveringFailure
         {
             get { return failureRecoveryDepth > 0; }
@@ -51,6 +54,13 @@ namespace PlanetGauge
             nextDieAlreadyCharged = false;
             failureRecoveryDepth = 0;
             forcingDeath = false;
+            EventSettings = PlanetGaugeEventSettings.Default;
+        }
+
+        internal static void ApplyEventSettings(PlanetGaugeEventSettings settings)
+        {
+            // 이벤트 타임라인의 최신 값을 보관한다. 판정/실패/상한 로직 연결은 다음 구현 단계의 범위다.
+            EventSettings = settings;
         }
 
         internal static bool ShouldHandle(scrPlayer player = null)

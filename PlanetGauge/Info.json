@@ -2,7 +2,7 @@
   "Id": "PlanetGauge",
   "DisplayName": "PlanetGauge",
   "Author": "SHADOW_SDW",
-  "Version": "0.0.8",
+  "Version": "0.0.10",
   "AssemblyName": "PlanetGauge.dll",
   "EntryMethod": "PlanetGauge.Main.Load"
 }
