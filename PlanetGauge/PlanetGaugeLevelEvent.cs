@@ -442,7 +442,8 @@ namespace PlanetGauge
             recoveryCap.unit = "%";
             recoveryCap.float_min = 0.1f;
             recoveryCap.float_max = 100f;
-            recoveryCap.showIfVals.Add(Tuple.Create(RecoveryCapEnabledKey, bool.TrueString));
+            // PropertyInfo.ValueMatch는 Bool 조건에서 소문자 "true"를 요구한다.
+            recoveryCap.showIfVals.Add(Tuple.Create(RecoveryCapEnabledKey, "true"));
             AddProperty(info, recoveryCap, 5);
 
             ADOFAI.PropertyInfo forceCap = CreateProperty(
@@ -451,7 +452,7 @@ namespace PlanetGauge
                 "Bool",
                 true,
                 "체력 상한 강제 제한");
-            MakeOptional(forceCap, false);
+            forceCap.showIfVals.Add(Tuple.Create(RecoveryCapEnabledKey, "true"));
             AddProperty(info, forceCap, 6);
 
             return info;
@@ -562,7 +563,8 @@ namespace PlanetGauge
                 RecoveryCapPercent = recoveryCap,
                 ForceRecoveryCap = IsPropertyEnabled(
                     levelEvent,
-                    PlanetGaugeLevelEventRegistry.ForceRecoveryCapKey)
+                    PlanetGaugeLevelEventRegistry.RecoveryCapEnabledKey)
+                    && recoveryCapEnabled
                     && forceRecoveryCap
             };
         }
@@ -946,7 +948,7 @@ namespace PlanetGauge
                 PlanetGaugeLevelEventRegistry.MultiplierReuseLocalizationKey,
                 StringComparison.Ordinal))
             {
-                localized = "증폭값 설정이 X이면 이전에 설정된 증폭값을 사용합니다.";
+                localized = "X면 이전 증폭값을 사용합니다.";
                 return true;
             }
 
