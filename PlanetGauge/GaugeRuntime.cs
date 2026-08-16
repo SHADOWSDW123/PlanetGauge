@@ -57,10 +57,38 @@ namespace PlanetGauge
             EventSettings = PlanetGaugeEventSettings.Default;
         }
 
-        internal static void ApplyEventSettings(PlanetGaugeEventSettings settings)
+        internal static void ApplyEventSettings(PlanetGaugeEventCommand command)
         {
-            // 이벤트 타임라인의 최신 값을 보관한다. 판정/실패/상한 로직 연결은 다음 구현 단계의 범위다.
-            EventSettings = settings;
+            PlanetGaugeEventSettings current = EventSettings;
+            PlanetGaugeAttributeMode attributeMode = command.ApplyAttributeMode
+                ? command.AttributeMode
+                : current.AttributeMode;
+            float multiplierPercent = command.ApplyMultiplier
+                ? PlanetGaugeValueRules.SanitizeMultiplier(command.MultiplierPercent)
+                : current.MultiplierPercent;
+            bool failureProtection = command.ApplyFailureProtection
+                ? command.FailureProtection
+                : current.FailureProtection;
+            bool recoveryCapEnabled = command.ApplyRecoveryCap
+                ? command.RecoveryCapEnabled
+                : current.RecoveryCapEnabled;
+            float recoveryCapPercent = command.ApplyRecoveryCap
+                ? PlanetGaugeValueRules.SanitizeRecoveryCap(command.RecoveryCapPercent)
+                : current.RecoveryCapPercent;
+
+            EventSettings = new PlanetGaugeEventSettings(
+                attributeMode,
+                multiplierPercent,
+                failureProtection,
+                recoveryCapEnabled,
+                recoveryCapPercent);
+
+            if (command.ForceRecoveryCap
+                && recoveryCapEnabled
+                && Current > recoveryCapPercent)
+            {
+                Current = recoveryCapPercent;
+            }
         }
 
         internal static bool ShouldHandle(scrPlayer player = null)
@@ -123,20 +151,50 @@ namespace PlanetGauge
                     && Current <= 0f;
             }
 
+            scrController controller = scrController.instance;
+            if (IsFailureJudgement(judgement)
+                && !EventSettings.FailureProtection
+                && (controller == null || !controller.noFail))
+            {
+                // 이벤트의 실패 방지가 꺼져 있으면 게이지로 흡수하지 않고 원본 사망 경로로 보낸다.
+                return true;
+            }
+
             float delta;
             if (!TryGetDelta(judgement, out delta) || Mathf.Approximately(delta, 0f))
             {
                 return false;
             }
 
-            float next = Mathf.Min(MaximumGauge, Current + delta);
+            delta = TransformDelta(delta);
+            if (Mathf.Approximately(delta, 0f))
+            {
+                return false;
+            }
+
+            float next;
+            if (delta > 0f)
+            {
+                float recoveryMaximum = EventSettings.RecoveryCapEnabled
+                    ? PlanetGaugeValueRules.SanitizeRecoveryCap(EventSettings.RecoveryCapPercent)
+                    : MaximumGauge;
+
+                // 강제 제한을 선택하지 않았다면 이미 상한보다 높은 체력을 회복 시점에 낮추지 않는다.
+                next = Current >= recoveryMaximum
+                    ? Current
+                    : Mathf.Min(recoveryMaximum, Current + delta);
+            }
+            else
+            {
+                next = Current + delta;
+            }
+
             if (next > 0f)
             {
                 Current = next;
                 return false;
             }
 
-            scrController controller = scrController.instance;
             if (controller != null && controller.noFail)
             {
                 // 실패 방지가 우선이다. 최저 -5까지만 허용한 뒤 변동을 정지한다.
@@ -253,6 +311,40 @@ namespace PlanetGauge
                     delta = 0f;
                     return false;
             }
+        }
+
+        private static float TransformDelta(float delta)
+        {
+            PlanetGaugeEventSettings settings = EventSettings;
+            switch (settings.AttributeMode)
+            {
+                case PlanetGaugeAttributeMode.BlockRecovery:
+                    return delta > 0f ? 0f : delta;
+
+                case PlanetGaugeAttributeMode.AmplifyDecrease:
+                    return delta < 0f ? delta * GetMultiplier(settings) : delta;
+
+                case PlanetGaugeAttributeMode.AmplifyIncrease:
+                    return delta > 0f ? delta * GetMultiplier(settings) : delta;
+
+                case PlanetGaugeAttributeMode.AmplifyBoth:
+                    return delta * GetMultiplier(settings);
+
+                case PlanetGaugeAttributeMode.Normal:
+                default:
+                    return delta;
+            }
+        }
+
+        private static float GetMultiplier(PlanetGaugeEventSettings settings)
+        {
+            return PlanetGaugeValueRules.SanitizeMultiplier(settings.MultiplierPercent) / 100f;
+        }
+
+        private static bool IsFailureJudgement(HitMargin judgement)
+        {
+            return judgement == HitMargin.FailMiss
+                || judgement == HitMargin.FailOverload;
         }
     }
 }

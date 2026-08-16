@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using ADOFAI;
+using ADOFAI.LevelEditor.Controls;
 using HarmonyLib;
 using UnityEngine;
 
@@ -9,14 +10,15 @@ namespace PlanetGauge
 {
     /// <summary>
     /// 레벨 이벤트의 "속성 설정" 드롭다운에 저장되는 값이다.
-    /// 실제 판정값 반영은 후속 단계에서 <see cref="GaugeRuntime"/>에 연결한다.
+    /// 실제 판정값 반영은 <see cref="GaugeRuntime"/>가 담당한다.
     /// </summary>
     internal enum PlanetGaugeAttributeMode
     {
         Normal,
         BlockRecovery,
         AmplifyDecrease,
-        AmplifyIncrease
+        AmplifyIncrease,
+        AmplifyBoth
     }
 
     internal struct PlanetGaugeEventSettings
@@ -26,23 +28,20 @@ namespace PlanetGauge
             100f,
             true,
             false,
-            100f,
-            false);
+            100f);
 
         internal PlanetGaugeEventSettings(
             PlanetGaugeAttributeMode attributeMode,
             float multiplierPercent,
             bool failureProtection,
             bool recoveryCapEnabled,
-            float recoveryCapPercent,
-            bool forceRecoveryCap)
+            float recoveryCapPercent)
         {
             AttributeMode = attributeMode;
             MultiplierPercent = multiplierPercent;
             FailureProtection = failureProtection;
             RecoveryCapEnabled = recoveryCapEnabled;
             RecoveryCapPercent = recoveryCapPercent;
-            ForceRecoveryCap = forceRecoveryCap;
         }
 
         internal PlanetGaugeAttributeMode AttributeMode { get; }
@@ -55,7 +54,58 @@ namespace PlanetGauge
 
         internal float RecoveryCapPercent { get; }
 
-        internal bool ForceRecoveryCap { get; }
+    }
+
+    /// <summary>
+    /// 이벤트 하나가 현재 런타임 설정 중 어떤 값만 바꿀지 나타낸다.
+    /// PropertyInfo의 O/X 상태는 LevelEvent.disabled에 저장되며 여기서 한 번만 해석한다.
+    /// </summary>
+    internal struct PlanetGaugeEventCommand
+    {
+        internal bool ApplyAttributeMode;
+        internal PlanetGaugeAttributeMode AttributeMode;
+        internal bool ApplyMultiplier;
+        internal float MultiplierPercent;
+        internal bool ApplyFailureProtection;
+        internal bool FailureProtection;
+        internal bool ApplyRecoveryCap;
+        internal bool RecoveryCapEnabled;
+        internal float RecoveryCapPercent;
+        internal bool ForceRecoveryCap;
+    }
+
+    internal static class PlanetGaugeValueRules
+    {
+        internal static float SanitizeMultiplier(float value)
+        {
+            return SanitizePercent(value, 100f, 0f, 1000f);
+        }
+
+        internal static float SanitizeRecoveryCap(float value)
+        {
+            return SanitizePercent(value, 100f, 0.1f, 100f);
+        }
+
+        internal static bool IsAmplificationMode(PlanetGaugeAttributeMode mode)
+        {
+            return mode == PlanetGaugeAttributeMode.AmplifyDecrease
+                || mode == PlanetGaugeAttributeMode.AmplifyIncrease
+                || mode == PlanetGaugeAttributeMode.AmplifyBoth;
+        }
+
+        private static float SanitizePercent(
+            float value,
+            float fallback,
+            float minimum,
+            float maximum)
+        {
+            if (float.IsNaN(value) || float.IsInfinity(value))
+            {
+                return fallback;
+            }
+
+            return Mathf.Clamp(value, minimum, maximum);
+        }
     }
 
     /// <summary>
@@ -73,6 +123,8 @@ namespace PlanetGauge
         internal const string RecoveryCapEnabledKey = "recoveryCapEnabled";
         internal const string RecoveryCapPercentKey = "recoveryCapPercent";
         internal const string ForceRecoveryCapKey = "forceRecoveryCap";
+        internal const string MultiplierReuseNoteKey = "multiplierReuseNote";
+        internal const string MultiplierReuseLocalizationKey = "planetGauge.multiplierReuseNote";
 
         internal static readonly LevelEventType EventType = (LevelEventType)NumericEventId;
 
@@ -230,6 +282,14 @@ namespace PlanetGauge
                 nameof(InspectorPanel.ShowTabsForFloor),
                 new[] { typeof(int) });
             RequireMethod(
+                typeof(ADOFAI.PropertyInfo),
+                nameof(ADOFAI.PropertyInfo.Validate),
+                new[] { typeof(float) });
+            RequireMethod(
+                typeof(PropertyControl_Toggle),
+                nameof(PropertyControl_Toggle.SelectVar),
+                new[] { typeof(string) });
+            RequireMethod(
                 typeof(scnGame),
                 nameof(scnGame.ApplyEvent),
                 new[]
@@ -322,38 +382,56 @@ namespace PlanetGauge
                 propertiesInfo = new Dictionary<string, ADOFAI.PropertyInfo>()
             };
 
-            AddProperty(
+            ADOFAI.PropertyInfo attributeMode = CreateProperty(
                 info,
-                CreateProperty(
-                    info,
-                    AttributeModeKey,
-                    "Enum:" + typeof(PlanetGaugeAttributeMode).AssemblyQualifiedName,
-                    PlanetGaugeAttributeMode.Normal.ToString(),
-                    "속성 설정"),
-                0);
+                AttributeModeKey,
+                "Enum:" + typeof(PlanetGaugeAttributeMode).AssemblyQualifiedName,
+                PlanetGaugeAttributeMode.Normal.ToString(),
+                "속성 설정");
+            MakeOptional(attributeMode, true);
+            AddProperty(info, attributeMode, 0);
 
             ADOFAI.PropertyInfo multiplier = CreateProperty(
                 info,
                 MultiplierPercentKey,
                 "Float",
                 100f,
-                "증폭률");
+                "증폭값 설정");
             multiplier.unit = "%";
             multiplier.float_min = 0f;
             multiplier.float_max = 1000f;
             multiplier.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyDecrease.ToString()));
             multiplier.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyIncrease.ToString()));
+            multiplier.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyBoth.ToString()));
+            MakeOptional(multiplier, false);
             AddProperty(info, multiplier, 1);
 
-            AddProperty(
+            ADOFAI.PropertyInfo multiplierNote = CreateNoteProperty(
                 info,
-                CreateProperty(info, FailureProtectionKey, "Bool", true, "실패 방지"),
-                2);
+                MultiplierReuseNoteKey,
+                MultiplierReuseLocalizationKey);
+            multiplierNote.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyDecrease.ToString()));
+            multiplierNote.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyIncrease.ToString()));
+            multiplierNote.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyBoth.ToString()));
+            AddProperty(info, multiplierNote, 2);
 
-            AddProperty(
+            ADOFAI.PropertyInfo failureProtection = CreateProperty(
                 info,
-                CreateProperty(info, RecoveryCapEnabledKey, "Bool", false, "회복 상한 제한"),
-                3);
+                FailureProtectionKey,
+                "Bool",
+                true,
+                "실패 방지");
+            MakeOptional(failureProtection, false);
+            AddProperty(info, failureProtection, 3);
+
+            ADOFAI.PropertyInfo recoveryCapEnabled = CreateProperty(
+                info,
+                RecoveryCapEnabledKey,
+                "Bool",
+                false,
+                "회복 상한 제한");
+            MakeOptional(recoveryCapEnabled, false);
+            AddProperty(info, recoveryCapEnabled, 4);
 
             ADOFAI.PropertyInfo recoveryCap = CreateProperty(
                 info,
@@ -362,19 +440,19 @@ namespace PlanetGauge
                 100f,
                 "회복 상한");
             recoveryCap.unit = "%";
-            recoveryCap.float_min = 0f;
+            recoveryCap.float_min = 0.1f;
             recoveryCap.float_max = 100f;
             recoveryCap.showIfVals.Add(Tuple.Create(RecoveryCapEnabledKey, bool.TrueString));
-            AddProperty(info, recoveryCap, 4);
+            AddProperty(info, recoveryCap, 5);
 
             ADOFAI.PropertyInfo forceCap = CreateProperty(
                 info,
                 ForceRecoveryCapKey,
                 "Bool",
-                false,
-                "체력 강제 제한");
-            forceCap.showIfVals.Add(Tuple.Create(RecoveryCapEnabledKey, bool.TrueString));
-            AddProperty(info, forceCap, 5);
+                true,
+                "체력 상한 강제 제한");
+            MakeOptional(forceCap, false);
+            AddProperty(info, forceCap, 6);
 
             return info;
         }
@@ -397,6 +475,28 @@ namespace PlanetGauge
             return new ADOFAI.PropertyInfo(schema, info);
         }
 
+        private static ADOFAI.PropertyInfo CreateNoteProperty(
+            LevelEventInfo info,
+            string name,
+            string noteKey)
+        {
+            Dictionary<string, object> schema = new Dictionary<string, object>
+            {
+                { "name", name },
+                { "type", "Note" },
+                { "noteKey", noteKey },
+                { "encode", false }
+            };
+
+            return new ADOFAI.PropertyInfo(schema, info);
+        }
+
+        private static void MakeOptional(ADOFAI.PropertyInfo property, bool startEnabled)
+        {
+            property.canBeDisabled = true;
+            property.startEnabled = startEnabled;
+        }
+
         private static void AddProperty(LevelEventInfo info, ADOFAI.PropertyInfo property, int order)
         {
             property.order = order;
@@ -415,59 +515,72 @@ namespace PlanetGauge
 
     internal sealed class PlanetGaugeLevelEventEffect : ffxPlusBase
     {
-        private PlanetGaugeEventSettings settings;
+        private PlanetGaugeEventCommand command;
 
         public override void Decode(LevelEvent levelEvent)
         {
             PlanetGaugeAttributeMode mode = levelEvent.Get<PlanetGaugeAttributeMode>(
                 PlanetGaugeLevelEventRegistry.AttributeModeKey,
                 PlanetGaugeAttributeMode.Normal);
+            if (!Enum.IsDefined(typeof(PlanetGaugeAttributeMode), mode))
+            {
+                mode = PlanetGaugeAttributeMode.Normal;
+            }
 
-            float multiplier = SanitizePercent(
-                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.MultiplierPercentKey, 100f),
-                100f,
-                1000f);
+            float multiplier = PlanetGaugeValueRules.SanitizeMultiplier(
+                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.MultiplierPercentKey, 100f));
             bool failureProtection = levelEvent.Get<bool>(
                 PlanetGaugeLevelEventRegistry.FailureProtectionKey,
                 true);
             bool recoveryCapEnabled = levelEvent.Get<bool>(
                 PlanetGaugeLevelEventRegistry.RecoveryCapEnabledKey,
                 false);
-            float recoveryCap = SanitizePercent(
-                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.RecoveryCapPercentKey, 100f),
-                100f,
-                100f);
+            float recoveryCap = PlanetGaugeValueRules.SanitizeRecoveryCap(
+                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.RecoveryCapPercentKey, 100f));
             bool forceRecoveryCap = levelEvent.Get<bool>(
                 PlanetGaugeLevelEventRegistry.ForceRecoveryCapKey,
-                false);
+                true);
 
-            settings = new PlanetGaugeEventSettings(
-                mode,
-                multiplier,
-                failureProtection,
-                recoveryCapEnabled,
-                recoveryCap,
-                forceRecoveryCap);
+            command = new PlanetGaugeEventCommand
+            {
+                ApplyAttributeMode = IsPropertyEnabled(
+                    levelEvent,
+                    PlanetGaugeLevelEventRegistry.AttributeModeKey),
+                AttributeMode = mode,
+                ApplyMultiplier = IsPropertyEnabled(
+                    levelEvent,
+                    PlanetGaugeLevelEventRegistry.MultiplierPercentKey),
+                MultiplierPercent = multiplier,
+                ApplyFailureProtection = IsPropertyEnabled(
+                    levelEvent,
+                    PlanetGaugeLevelEventRegistry.FailureProtectionKey),
+                FailureProtection = failureProtection,
+                ApplyRecoveryCap = IsPropertyEnabled(
+                    levelEvent,
+                    PlanetGaugeLevelEventRegistry.RecoveryCapEnabledKey),
+                RecoveryCapEnabled = recoveryCapEnabled,
+                RecoveryCapPercent = recoveryCap,
+                ForceRecoveryCap = IsPropertyEnabled(
+                    levelEvent,
+                    PlanetGaugeLevelEventRegistry.ForceRecoveryCapKey)
+                    && forceRecoveryCap
+            };
         }
 
         public override void StartEffect(scrPlanet planet)
         {
             if (GaugeRuntime.ShouldHandle())
             {
-                // 이번 단계는 이벤트 계약과 타임라인 실행기까지 만든다.
-                // 판정 배율/실패/상한에 실제로 개입하는 코드는 후속 단계에서 이 상태를 소비한다.
-                GaugeRuntime.ApplyEventSettings(settings);
+                GaugeRuntime.ApplyEventSettings(command);
             }
         }
 
-        private static float SanitizePercent(float value, float fallback, float maximum)
+        private static bool IsPropertyEnabled(LevelEvent levelEvent, string propertyName)
         {
-            if (float.IsNaN(value) || float.IsInfinity(value))
-            {
-                return fallback;
-            }
-
-            return Mathf.Clamp(value, 0f, maximum);
+            bool disabled;
+            return levelEvent.disabled == null
+                || !levelEvent.disabled.TryGetValue(propertyName, out disabled)
+                || !disabled;
         }
     }
 
@@ -551,6 +664,25 @@ namespace PlanetGauge
             return AccessTools.Method(typeof(LevelEvent), nameof(LevelEvent.Encode), new[] { typeof(bool) });
         }
 
+        private static void Prefix(LevelEvent __instance)
+        {
+            if (!Main.IsEnabled
+                || __instance == null
+                || __instance.eventType != PlanetGaugeLevelEventRegistry.EventType)
+            {
+                return;
+            }
+
+            SanitizeStoredFloat(
+                __instance,
+                PlanetGaugeLevelEventRegistry.MultiplierPercentKey,
+                PlanetGaugeValueRules.SanitizeMultiplier);
+            SanitizeStoredFloat(
+                __instance,
+                PlanetGaugeLevelEventRegistry.RecoveryCapPercentKey,
+                PlanetGaugeValueRules.SanitizeRecoveryCap);
+        }
+
         private static void Postfix(LevelEvent __instance, Dictionary<string, object> __result)
         {
             if (Main.IsEnabled
@@ -560,6 +692,139 @@ namespace PlanetGauge
             {
                 // 정의되지 않은 enum의 ToString()은 숫자를 반환하므로 사람이 읽을 수 있는 계약명으로 저장한다.
                 __result["eventType"] = PlanetGaugeLevelEventRegistry.EventName;
+            }
+        }
+
+        private static void SanitizeStoredFloat(
+            LevelEvent levelEvent,
+            string key,
+            Func<float, float> sanitize)
+        {
+            float value = levelEvent.Get<float>(key, 100f);
+            levelEvent[key] = sanitize(value);
+        }
+    }
+
+    /// <summary>
+    /// Float 입력이 확정되는 순간 PlanetGauge 값만 보정한다.
+    /// NaN/Infinity는 100으로 복구하고 회복 상한의 0 이하는 0.1로 올린다.
+    /// </summary>
+    [HarmonyPatch(typeof(ADOFAI.PropertyInfo), nameof(ADOFAI.PropertyInfo.Validate), typeof(float))]
+    internal static class PlanetGaugeFloatValidationPatch
+    {
+        private static void Prefix(float value, out float __state)
+        {
+            __state = value;
+        }
+
+        private static void Postfix(
+            ADOFAI.PropertyInfo __instance,
+            float __state,
+            ref float __result)
+        {
+            if (!Main.IsEnabled
+                || __instance == null
+                || !ReferenceEquals(__instance.levelEventInfo, PlanetGaugeLevelEventRegistry.EventInfo))
+            {
+                return;
+            }
+
+            if (string.Equals(
+                __instance.name,
+                PlanetGaugeLevelEventRegistry.MultiplierPercentKey,
+                StringComparison.Ordinal))
+            {
+                __result = PlanetGaugeValueRules.SanitizeMultiplier(__state);
+            }
+            else if (string.Equals(
+                __instance.name,
+                PlanetGaugeLevelEventRegistry.RecoveryCapPercentKey,
+                StringComparison.Ordinal))
+            {
+                __result = PlanetGaugeValueRules.SanitizeRecoveryCap(__state);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 사용자가 증폭 모드를 직접 선택하면 같은 이벤트의 증폭값 O/X를 O로 전환한다.
+    /// 패널 초기 표시 중 SelectVar가 호출되는 경우는 실제 값이 바뀌지 않으므로 제외된다.
+    /// </summary>
+    [HarmonyPatch(typeof(PropertyControl_Toggle), nameof(PropertyControl_Toggle.SelectVar), typeof(string))]
+    internal static class PlanetGaugeAmplificationSelectionPatch
+    {
+        private struct SelectionState
+        {
+            internal bool Track;
+            internal LevelEvent LevelEvent;
+            internal PlanetGaugeAttributeMode PreviousMode;
+        }
+
+        private static void Prefix(PropertyControl_Toggle __instance, ref SelectionState __state)
+        {
+            __state = default(SelectionState);
+            if (!Main.IsEnabled
+                || __instance == null
+                || __instance.propertyInfo == null
+                || !string.Equals(
+                    __instance.propertyInfo.name,
+                    PlanetGaugeLevelEventRegistry.AttributeModeKey,
+                    StringComparison.Ordinal)
+                || __instance.propertiesPanel == null
+                || __instance.propertiesPanel.inspectorPanel == null)
+            {
+                return;
+            }
+
+            LevelEvent levelEvent = __instance.propertiesPanel.inspectorPanel.selectedEvent;
+            if (levelEvent == null
+                || levelEvent.eventType != PlanetGaugeLevelEventRegistry.EventType)
+            {
+                return;
+            }
+
+            __state.Track = true;
+            __state.LevelEvent = levelEvent;
+            __state.PreviousMode = levelEvent.Get<PlanetGaugeAttributeMode>(
+                PlanetGaugeLevelEventRegistry.AttributeModeKey,
+                PlanetGaugeAttributeMode.Normal);
+        }
+
+        private static void Postfix(
+            PropertyControl_Toggle __instance,
+            string var,
+            SelectionState __state)
+        {
+            PlanetGaugeAttributeMode selectedMode;
+            if (!__state.Track
+                || __state.LevelEvent == null
+                || !Enum.TryParse(var, out selectedMode)
+                || selectedMode == __state.PreviousMode
+                || !PlanetGaugeValueRules.IsAmplificationMode(selectedMode)
+                || __state.LevelEvent.disabled == null)
+            {
+                return;
+            }
+
+            bool disabled;
+            if (!__state.LevelEvent.disabled.TryGetValue(
+                    PlanetGaugeLevelEventRegistry.MultiplierPercentKey,
+                    out disabled)
+                || !disabled
+                || __instance.propertiesPanel == null)
+            {
+                return;
+            }
+
+            ADOFAI.Property multiplierProperty;
+            if (__instance.propertiesPanel.properties.TryGetValue(
+                    PlanetGaugeLevelEventRegistry.MultiplierPercentKey,
+                    out multiplierProperty)
+                && multiplierProperty != null
+                && multiplierProperty.enabledButton != null)
+            {
+                // 바닐라 버튼 경로를 사용해 O/X 표시, Undo, 타일 갱신을 함께 처리한다.
+                multiplierProperty.enabledButton.onClick.Invoke();
             }
         }
     }
@@ -676,6 +941,15 @@ namespace PlanetGauge
 
         private static bool TryGetLocalization(string key, out string localized)
         {
+            if (string.Equals(
+                key,
+                PlanetGaugeLevelEventRegistry.MultiplierReuseLocalizationKey,
+                StringComparison.Ordinal))
+            {
+                localized = "증폭값 설정이 X이면 이전에 설정된 증폭값을 사용합니다.";
+                return true;
+            }
+
             if (string.Equals(key, "editor." + PlanetGaugeLevelEventRegistry.NumericEventId, StringComparison.Ordinal)
                 || string.Equals(key, "editor." + PlanetGaugeLevelEventRegistry.EventName, StringComparison.Ordinal))
             {
@@ -706,6 +980,12 @@ namespace PlanetGauge
                 if (key.EndsWith(".AmplifyIncrease", StringComparison.Ordinal))
                 {
                     localized = "증가율 증폭";
+                    return true;
+                }
+
+                if (key.EndsWith(".AmplifyBoth", StringComparison.Ordinal))
+                {
+                    localized = "증가·감소율 증폭";
                     return true;
                 }
             }

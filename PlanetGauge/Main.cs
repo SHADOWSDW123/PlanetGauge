@@ -356,7 +356,8 @@ namespace PlanetGauge
             {
                 __state = default(RecoveryState);
 
-                if (GaugeRuntime.Current <= 0f
+                if (!GaugeRuntime.EventSettings.FailureProtection
+                    || GaugeRuntime.Current <= 0f
                     || GaugeRuntime.IsAutoPlay(__instance)
                     || !GaugeRuntime.ShouldHandle(__instance))
                 {
