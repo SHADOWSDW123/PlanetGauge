@@ -1,98 +1,79 @@
 # PlanetGauge 개발 인수인계
 
-최종 갱신: 2026-08-10  
-대상 게임: A Dance of Fire and Ice(얼불춤)  
+최종 갱신: 2026-08-17
+
+대상 게임: A Dance of Fire and Ice(얼불춤)
+
 모드 로더: Unity Mod Manager + Harmony
 
-이 문서는 저장소 루트 기준으로 작성한다. PC별 드라이브 문자, 사용자 폴더, 게임 설치 절대 경로는 기록하지 않는다.
+저장소 기준 경로: 이 문서가 있는 저장소 루트
 
-## 1. 현재 상태
+PC별 절대 경로와 설치 DLL 해시는 장기 호환성 근거로 사용하지 않는다. 다음 작업자는 현재 체크아웃한 소스, 현재 설치된 게임 DLL, 실게임 재현 결과 순서로 사실을 다시 확인한다.
+
+## 1. 현재 스냅샷
 
 | 항목 | 현재 값 |
 |---|---|
 | 브랜치 | `main` |
-| 커밋된 HEAD | `6d7cc69` (`불필요한 백엔드 기능 제거`) |
-| 원격 기준 | `origin/main`과 같은 커밋 |
-| 태그 | `beta` → `2ade381`, `V0.0.7` → `e191923` |
-| 모드 버전 | 미커밋 변경 기준 `0.0.8` |
+| HEAD | `88a772e` (`0.1.0 / 이벤트 -완-`) |
+| 원격 | 갱신 직전 `origin/main`과 동일 |
+| 모드 버전 | `0.1.0` |
 | 타깃 | .NET Framework 4.8 / C# 7.3 |
-| 최근 빌드 | Release, 경고 0개, 오류 0개 |
-| 자동 테스트 | 없음 |
+| 최신 빌드 | Release, 경고 0개·오류 0개 |
+| 자동 테스트 프로젝트 | 없음 |
+| 전용 이벤트 | `SetPlanetGauge`, 숫자 ID `0x5047` (`20551`) |
 
-2026-08-10 기준으로 추적 파일 8개에 아직 커밋·스테이징되지 않은 정리 변경이 있다. 다음 작업을 시작할 때 반드시 먼저 확인한다.
+`88a772e`에는 커스텀 이벤트, 런타임 동작, HUD 상태색/문구, 전용 아이콘까지 포함되어 있다. 갱신 직전 작업 트리는 깨끗했으며, 이 문서 수정 자체가 새 미커밋 변경으로 남는다.
+
+다음 작업 시작 시 먼저 실행한다.
 
 ```powershell
 git status --short --branch
 git diff
 ```
 
-## 2. 사실 확인 우선순위
-
-1. 현재 체크아웃한 소스와 Git 상태
-2. 해당 PC에 현재 설치된 게임 DLL
-3. 실제 게임 플레이 재현 결과
-4. 보조 분석 문서와 과거 커밋
-5. 이 핸드오프에 적힌 과거 관찰
-
-게임 업데이트 후에는 과거에 복사한 DLL이나 해시를 호환성 근거로 사용하지 않는다. 현재 모드도 DLL 해시를 검사하지 않고 필수 API 존재 여부를 확인한다.
-
-## 3. 모드 목적과 적용 범위
+## 2. 모드 목적과 적용 범위
 
 PlanetGauge는 레벨 에디터의 1인 테스트 플레이에 체력형 게이지를 추가한다.
 
-- 실패 방지 버튼 위의 작은 게이지를 눌러 켜고 끈다.
+- 에디터의 작은 게이지 버튼으로 PlanetGauge 동작을 켜고 끈다.
 - 새 에디터 세션에서는 기본 OFF다.
 - 에디터의 1인 실제 플레이에서만 판정과 실패 흐름을 변경한다.
-- 일반 플레이와 협동 플레이에는 적용하지 않는다.
-- 자동 플레이, 자동 타일, `midspinInfiniteMargin`, `noFailInfiniteMargin` 구간은 건너뛴다.
-- 판정 오차 미터 위에 메인 체력 바와 숫자를 표시한다.
-- UMM 설정에서 HUD 크기·위치·텍스트·색상을 조절한다.
+- 일반 플레이, 협동 플레이, 자동 플레이에는 적용하지 않는다.
+- 판정 오차 미터 위에 체력 바, 숫자, 활성 효과 문구를 표시한다.
+- 레벨 에디터의 `PlanetGauge 설정` 이벤트로 플레이 중 규칙을 변경한다.
+- 게이지 스킨 기능은 아직 구현하지 않았다.
 
-실패 처리 우선순위:
+실패 처리 우선순위는 다음과 같다.
 
 ```text
 게임의 실제 실패 방지 > PlanetGauge 체력 > 일반 게임오버
 ```
 
-- 실제 `controller.noFail`이 켜졌으면 게임 실패 방지가 우선한다.
-- 실제 실패 방지가 꺼졌고 체력이 남으면 PlanetGauge가 실패를 흡수한다.
-- 체력이 소진되면 원본 `scrPlayer.Die()` 경로로 사망한다.
+- 실제 `controller.noFail`이 켜졌으면 바닐라 실패 방지가 우선한다.
+- PlanetGauge의 실패 방지가 켜져 있고 체력이 남으면 실패를 흡수한다.
+- 체력이 소진되거나 이벤트로 PlanetGauge 실패 방지를 끄면 원본 `scrPlayer.Die()` 경로를 사용한다.
 - `hitbox` 사망은 흡수하지 않는다.
 - 실제 실패 방지 상태에서 체력이 바닥에 닿으면 최저 `-5`에서 동결한다.
 
-## 4. 현재 게이지 규칙
-
-`PlanetGauge/GaugeRuntime.cs`가 단일 기준이다.
-
-| `HitMargin` | 변화량 |
-|---|---:|
-| `Perfect` | `+0.1` |
-| `EarlyPerfect` | `-0.5` |
-| `LatePerfect` | `-0.5` |
-| `VeryEarly` | `-1.5` |
-| `VeryLate` | `-1.5` |
-| `TooEarly` | `-3` |
-| `TooLate` | `0`, 즉시 반환 |
-| `FailMiss` | `-8` |
-| `FailOverload` | `-8` |
-| `Multipress`, `Auto`, `OverPress`, 기타 | 직접 변화 없음 |
-
-- 시작·최대 체력은 `100`이다.
-- `Perfect` 회복으로 100을 넘지 않는다.
-- `TooLate`는 중간 상태이므로 차감하지 않고, 이후 확정되는 `FailMiss`만 한 번 반영한다.
-
-## 5. 파일 구조와 책임
+## 3. 파일 구조와 책임
 
 ```text
 .
 ├─ DEVELOPMENT_HANDOFF.md
 ├─ PlanetGauge.slnx
 ├─ README.md
-├─ dist/PlanetGauge/                 # 빌드 스테이징, Git ignore
+├─ dist/PlanetGauge/                     # 빌드 스테이징, Git ignore
+│  ├─ PlanetGauge.dll
+│  ├─ Info.json
+│  ├─ Assets/Gaugeline.png
+│  └─ PlanetGauge.zip                    # 현재 빌드가 갱신하지 않는 수동 산출물
 └─ PlanetGauge/
+   ├─ Assets/Gaugeline.png               # 커스텀 이벤트 아이콘 원본
    ├─ Main.cs
    ├─ GaugeRuntime.cs
    ├─ Patches.cs
+   ├─ PlanetGaugeLevelEvent.cs
    ├─ RuntimeHost.cs
    ├─ EditorGaugeButton.cs
    ├─ MainGaugeHud.cs
@@ -105,228 +86,266 @@ PlanetGauge는 레벨 에디터의 1인 테스트 플레이에 체력형 게이�
 
 | 파일 | 역할 |
 |---|---|
-| `Main.cs` | UMM 진입점, 설정·토글·Harmony 수명, API 검사, 결과 및 놓침 복구 패치 |
-| `GaugeRuntime.cs` | 체력 상태, 판정 변화량, 중복 차감 토큰, 복구 깊이, 강제 사망 |
+| `Main.cs` | UMM 진입점, 모드 경로, 설정·토글·Harmony 수명, API 검사, 결과/놓침 복구 패치 |
+| `GaugeRuntime.cs` | 체력과 현재 이벤트 설정의 단일 기준, 판정 변화, 강제 사망 |
 | `Patches.cs` | 세션 초기화, `SwitchChosen` 판정, `scrPlayer.Die` 흡수 |
-| `RuntimeHost.cs` | 에디터 감지와 UI 갱신을 연결하는 Unity 호스트 |
-| `EditorGaugeButton.cs` | 에디터 게이지 토글 생성·배치·동기화 |
-| `MainGaugeHud.cs` | 플레이 중 메인 게이지와 수치 텍스트 |
-| `GaugeBarGraphic.cs` | 둥근/모따기 게이지 메시와 그라데이션 |
-| `PlanetGaugeSettings.cs` | UMM 직렬화 설정과 IMGUI 화면 |
-| `PlanetGauge.csproj` | 게임·Unity·UMM 참조와 `dist` 스테이징 |
-| `Info.json` | UMM 패키지 메타데이터 |
+| `PlanetGaugeLevelEvent.cs` | 이벤트 스키마, 등록, JSON 왕복, 편집기 보정, 런타임 효과 생성, 아이콘 |
+| `RuntimeHost.cs` | 장면 전환을 감시하고 버튼/HUD 수명을 관리하는 단일 Unity 호스트 |
+| `EditorGaugeButton.cs` | 에디터 활성화 버튼 생성·배치·동기화 |
+| `MainGaugeHud.cs` | 체력 바·숫자·효과 문구와 상태색 |
+| `GaugeBarGraphic.cs` | 모따기 게이지 메시와 색상 렌더링 |
+| `PlanetGaugeSettings.cs` | UMM 직렬화 설정과 IMGUI |
+| `PlanetGauge.csproj` | 게임/Unity/UMM 참조와 DLL·Info·아이콘 스테이징 |
 
-과거의 `GaugeDebugOverlay.cs`는 현재 존재하지 않는다. `MainGaugeHud.cs`가 해당 역할을 대체한다.
+## 4. 기본 체력 규칙
 
-## 6. 핵심 런타임 흐름
+`GaugeRuntime.cs`가 단일 기준이다.
 
-### 모드 수명
+| `HitMargin` | 변화량 |
+|---|---:|
+| `Perfect` | `+0.1` |
+| `EarlyPerfect` | `-0.5` |
+| `LatePerfect` | `-0.5` |
+| `VeryEarly` | `-1.5` |
+| `VeryLate` | `-1.5` |
+| `TooEarly` | `-3` |
+| `FailMiss` | `-8` |
+| `FailOverload` | `-8` |
+| `TooLate`, `Multipress`, `Auto`, `OverPress`, 기타 | 직접 변화 없음 |
 
-1. `Main.Load`가 설정과 UMM 콜백을 등록한다.
-2. 모드를 켜면 필수 게임 API를 검사하고 Harmony 패치를 적용한다.
-3. `RuntimeHost`가 에디터 버튼과 HUD를 갱신한다.
-4. 모드를 끄면 UI를 제거하고 이 모드의 Harmony ID만 언패치한다.
+- 시작·기본 최대 체력은 `100`이다.
+- 기본 회복은 100을 넘지 않는다.
+- `TooLate`는 중간 상태라 직접 차감하지 않고 이후 확정되는 `FailMiss`만 반영한다.
+- 기존 중복 차감 토큰과 복구 깊이 카운터는 유지된다.
 
-### 세션 초기화
+## 5. 커스텀 이벤트 계약
 
-다음 네 경로가 각각 체력과 보류 상태를 초기화한다.
+### 식별자와 실행 시점
 
-- `scnEditor.Play` Prefix
-- `scnEditor.SwitchToEditMode` Postfix
-- `scrController.Restart` Prefix
-- `scrController.ResetCustomLevel` Prefix
+- 내부 이름: `SetPlanetGauge`
+- 화면 이름: `PlanetGauge 설정`
+- 숫자 enum ID: `0x5047` (`20551`)
+- 카테고리: `Gameplay`
+- 실행 시점: `OnBar`
+- 첫 타일 허용: 예
+- 같은 타일 중복 허용 여부는 바닐라 `LevelEventInfo` 기본 동작을 따른다.
 
-### 판정 적용
+### 속성 스키마
 
-`SwitchChosenPatch`:
+| 표시 이름 | 키 | 기본값 | 새 이벤트의 O/X | 동작 |
+|---|---|---:|---|---|
+| 속성 설정 | `attributeMode` | `Normal` | O | 아래 모드 중 하나 선택 |
+| 증폭값 설정 | `multiplierPercent` | `100%` | X | O일 때만 저장된 증폭률을 교체 |
+| 실패 방지 | `failureProtection` | 켜짐 | X | O일 때 현재 실패 방지 상태 교체 |
+| 회복 상한 제한 | `recoveryCapEnabled` | 꺼짐 | X | O일 때 상한 제한 상태와 상한값 교체 |
+| 회복 상한 | `recoveryCapPercent` | `100%` | 그룹 하위 | 상한 제한 값이 켜짐일 때만 표시 |
+| 체력 상한 강제 제한 | `forceRecoveryCap` | 켜짐 | 별도 O/X 없음 | 상한 제한이 켜진 이벤트에서 즉시 체력을 상한까지 내릴지 결정 |
 
-1. Prefix에서 각도, 회전 방향, BPM·속도, pitch, `marginScale`로 판정을 계산한다.
-2. 원본 `SwitchChosen`이 게임 상태와 실패 바를 갱신한다.
-3. Postfix에서 `failBar.DidFail(false)`를 확인해 필요하면 `FailOverload`로 승격한다.
-4. `TooLate`면 보류 토큰을 지우고 반환한다.
-5. 확정 실패는 이어질 `Die`의 중복 차감을 막는 토큰을 표시한다.
-6. `ApplyJudgement`가 체력을 변경하고 소진 시 `ForceDie`를 호출한다.
+속성 모드:
 
-과거의 `IgnoreTooLateGaugePatch`는 현재 미커밋 변경에서 제거됐다. `TooLate`는 `SwitchChosenPatch.Postfix`에서 직접 처리한다.
+| 모드 | 런타임 효과 |
+|---|---|
+| `Normal` | 원래 변화량 사용 |
+| `BlockRecovery` / 회복 차단 | 양수 변화량을 0으로 변경 |
+| `AmplifyIncrease` / 증가율 증폭 | 양수 변화량에 `증폭값 / 100` 곱하기 |
+| `AmplifyDecrease` / 감소율 증폭 | 음수 변화량에 `증폭값 / 100` 곱하기 |
+| `AmplifyBoth` / 증가·감소율 증폭 | 모든 변화량에 `증폭값 / 100` 곱하기 |
 
-### 놓침 복구
+중요한 O/X 의미:
 
-- `CheckPostHoldFailRecoveryPatch`는 체력이 남고 실제 실패 방지가 꺼진 동안만 `noFail`을 잠시 빌린다.
-- `CheckPostHoldFail`은 버전 호환성을 위해 정확한 인자형 대신 이름으로 찾는다.
-- 메서드가 없는 게임 버전에서는 해당 패치만 건너뛴다.
-- `TemporaryNoFailDieBridgePatch`는 복구용 임시 `noFail`을 실제 설정과 구분한다.
-- Postfix와 Finalizer 모두에서 임시 상태를 복원한다.
+- O인 속성만 현재 런타임 설정을 바꾼다.
+- X인 속성은 이전 타일에서 설정된 값을 보존한다.
+- 증폭 모드를 사용자가 직접 고르면 `증폭값 설정` O/X는 바닐라 버튼 경로로 자동 O가 된다.
+- 사용자가 이후 증폭값을 X로 바꾸면 기존 증폭값을 계속 사용한다.
+- 실패 방지가 꺼져 있으면 `FailMiss`/`FailOverload`를 게이지로 흡수하지 않고 사망 처리한다. 단, 게임의 실제 no-fail은 우선한다.
+- 회복 상한은 양수 회복에만 적용한다. 이미 상한보다 높은 체력은 강제 제한을 켠 이벤트가 실행될 때만 즉시 낮춘다.
 
-### 사망 흡수
+### 수치 보정
 
-`PlayerDiePatch`:
+- 증폭값: `NaN`/무한대 → `100`, 범위 `0..1000`.
+- 회복 상한: `NaN`/무한대 → `100`, 범위 `0.1..100`.
+- 편집기 입력 확정 시 `PropertyInfo.Validate(float)` Postfix에서 보정한다.
+- 저장 직전 `LevelEvent.Encode(bool)` Prefix에서도 다시 보정한다.
 
-1. 강제 사망, hitbox, 적용 범위 밖, 자동 플레이를 제외한다.
-2. 같은 실패가 이미 차감됐는지 토큰을 소비한다.
-3. 아니면 `overload` 인자로 `FailOverload` 또는 `FailMiss`를 적용한다.
-4. 체력이 남으면 바닐라 noFail 복구 경로를 잠시 빌린다.
-5. 과부하는 noFail 분기에서 결과 판정을 남기지 않으므로 `AddHit(FailOverload)`를 한 번 기록한다.
+## 6. 이벤트 등록과 JSON 왕복
 
-## 7. 결과 화면 보정
+`PlanetGaugeLevelEventRegistry`가 등록을 소유한다.
 
-현재 게임 구현은 일반 플레이에서 결과 화면의 `missFails`와 `overloadFails` 행을 항상 만들지 않는다. `DetailedResultsFailureRowsPatch`는 결과 문자열 생성 중에만 `noFail`을 빌려 해당 행을 표시하고 즉시 원복한다.
+1. 모드 활성화 시 GCS 사전이 준비됐으면 즉시 등록한다.
+2. 아직 준비되지 않았으면 활성화 자체는 성공시키고 `ADOStartup.SetupLevelEventsInfo` Postfix에서 등록한다.
+3. 숫자 ID 충돌과 이름 충돌은 각각 예외로 보고한다.
+4. `levelEventsInfo`에는 숫자 문자열 키 하나만 넣는다. 이름 키까지 넣으면 편집기 버튼이 중복된다.
+5. `levelEventTypeString`에는 숫자 enum 값과 `SetPlanetGauge` 이름을 연결한다.
 
-따라서 다음은 현재 유지 대상이다.
+JSON 계약:
 
-- `DetailedResultsFailureRowsPatch`
-- 과부하 복구 경로의 `marginTracker.AddHit(FailOverload)`
-
-게임 업데이트 후에는 현재 설치 DLL의 `DetailedResults.GenerateResults`와 `scrPlayer.Die`를 다시 확인한다.
-
-## 8. Multipress와 과부하
-
-`Multipress` 한 번은 체력을 직접 바꾸지 않는다. 원본 실패 바 누적을 사용한다.
-
-```text
-Multipress
-→ 원본 OnDamage가 multipress 카운터 누적
-→ SwitchChosen Postfix가 failBar.DidFail(false) 확인
-→ 임계치 초과 시 FailOverload
-→ 체력 -8
+```json
+{
+  "eventType": "SetPlanetGauge"
+}
 ```
 
-확인한 게임 구현에서는 연속 다중입력 카운터가 8을 넘으면 `Die(overload: true, multipress: true, ...)`를 직접 호출한다. `PlayerDiePatch`는 이때 `overload == true`를 보고 과부하로 분류한다.
+- `RDUtils.ParseEnum<LevelEventType>` Prefix가 이름을 숫자 enum 값으로 바꾼다.
+- `LevelEvent.Decode`는 같은 문자열을 enum 파싱과 `levelEventsInfo` 조회에 같이 사용하므로 Decode Prefix에서만 숫자 문자열 `20551`로 교체한다.
+- `LevelEvent` 생성자 Prefix는 커스텀 `LevelEventInfo`를 주입한다.
+- Encode Postfix는 정의되지 않은 enum의 숫자 `ToString()` 대신 다시 `SetPlanetGauge`를 저장한다.
+- 현재 `ADOStartup.ModWasAdded("PlanetGauge")`를 호출한다. 별도 `LevelData.Encode` requiredMods 패치는 없으므로 배포 전 저장된 레벨의 의존성 표기는 실게임으로 확인한다.
 
-### 잠재적 이중 차감
+## 7. 편집기 보정과 해결된 문제
 
-극단적인 연속 다중입력에서는 다음 순서가 가능하다.
+### 초기화 전 등록 실패
+
+과거에는 모드 활성화 시 `ADOStartup.SetupLevelEventsInfo`가 끝나지 않았으면 예외로 모드 전체가 꺼졌다. 현재는 준비 여부를 확인하고 지연 등록한다.
+
+### 빈 인스펙터 패널
+
+정의되지 않은 숫자 enum은 `Enum.GetValues`에 나오지 않는다. 바닐라 `InspectorPanel.ShowTabsForFloor`가 대체 이벤트를 고를 때 커스텀 이벤트만 남으면 `None`을 선택해 패널 본문이 비었다.
+
+현재 Postfix는 다음 조건에서만 `ShowPanel(SetPlanetGauge, 0)`을 호출한다.
+
+- 원본 처리 뒤 선택 타입이 `None`이고
+- 해당 타일에 실제 `SetPlanetGauge` 이벤트가 하나 이상 있을 때
+
+이 좁은 조건으로 이벤트 삭제, 다른 타일 전환, 바닐라 이벤트와의 전환에서 발생하던 빈 패널 문제를 해결했다. 사용자가 이후 실게임에서 정상이라고 확인했다.
+
+### 회복 상한 표시 반전
+
+`PropertyInfo.ValueMatch`의 Bool 조건 문자열은 대소문자를 구분하며 소문자 `"true"`를 요구한다. `bool.TrueString`의 `"True"`를 사용하면 조건이 반전된다. 회복 상한과 강제 제한의 `showIfVals`에는 반드시 소문자 리터럴을 유지한다.
+
+### 런타임 효과 생성
+
+`scnGame.ApplyEvent` Postfix는 바닐라가 처리하지 않아 `__result == null`인 `SetPlanetGauge`만 가로챈다. `PlanetGaugeLevelEventEffect : ffxPlusBase`를 대상 floor에 추가하고 `floorID`, `floors`, `crotchet`, `plusEffects`, 시작 시간, `sourceLevelEvent`를 구성한다. 중간 실패 시 추가한 컴포넌트와 리스트 항목을 롤백한다.
+
+## 8. HUD 상태색과 효과 문구
+
+일반 상태에서는 UMM에서 지정한 사용자 게이지 색을 사용한다. 이벤트 효과가 활성화되면 게이지 바와 숫자 텍스트에 같은 대표색을 적용한다.
+
+| 효과 | 색상 | 문구 |
+|---|---|---|
+| 회복 차단 | `#B02020` | `Increase Disabled` |
+| 증가율 증폭 | `#45D66B` | `Increase Amplified` |
+| 감소율 증폭 | `#FF9F1C` | `Decrease Amplified` |
+| 증가·감소율 증폭 | `#FFE36E` | `Rate Amplified` |
+| 실패 방지 꺼짐 | `#2850A7` | `No-Fail Disabled` |
+| 회복 상한 켜짐 | `#9B59D0` | `Increase Limited` |
+
+- 여러 효과가 동시에 활성화되면 모든 문구를 숫자 위에 한 줄씩 표시하고 각 문구는 자기 색을 유지한다.
+- 게이지/숫자는 한 색만 가질 수 있으므로 대표색 우선순위는 `속성 모드 → 회복 상한 → 실패 방지 꺼짐 → 사용자 색`이다.
+- 색상 상수와 우선순위는 `MainGaugeHud.cs`에 주석으로 표시되어 있다.
+- 상태나 사용자 색이 실제로 바뀔 때만 스타일과 TMP 문구를 다시 만든다. 레이아웃 계산은 게임 HUD 애니메이션을 따라 `LateUpdate`에서 수행한다.
+- UI 크기별 2~3줄 동시 표시의 가독성은 계속 실게임 확인 대상이다.
+
+## 9. 전용 이벤트 아이콘
+
+- 원본: `PlanetGauge/Assets/Gaugeline.png`
+- 현재 이미지: 300×300, 투명 ARGB PNG
+- 배포 위치: `dist/PlanetGauge/Assets/Gaugeline.png`
+- 런타임 경로: `UnityModManager.ModEntry.Path` 기준 `Assets/Gaugeline.png`
+- Sprite 생성: 전체 이미지를 사용하고 128 PPU, 중앙 피벗
+- PNG가 없거나 손상되면 `EventSettings`, 그다음 `SetSpeed`, 마지막으로 첫 가용 바닐라 아이콘을 빌린다.
+
+설치본의 `UnityEngine.ImageConversionModule.dll`은 netstandard 2.1을 참조해 net48 프로젝트에서 직접 참조하면 `CS1705`가 발생한다. 따라서 선택 기능인 아이콘 로더만 확인된 `ImageConversion.LoadImage(Texture2D, byte[], bool)` 오버로드를 런타임 reflection으로 호출한다. API가 없으면 이벤트나 모드 전체를 실패시키지 않고 기본 아이콘으로 폴백한다.
+
+커스텀 Sprite와 Texture는 캐시된다. 같은 게임 프로세스에서 PNG만 교체해도 즉시 다시 읽지 않으므로 파일 교체 후 게임 재시작을 권장한다.
+
+## 10. 모드 수명과 등록 유지 정책
+
+1. `Main.Load`가 `ModDirectory`, 설정, UMM 콜백만 등록한다.
+2. Enable은 필수 API 검사 → Harmony 적용 → 상태 초기화 → 단일 `RuntimeHost` 생성 → 이벤트 등록 순서다.
+3. 부분 실패 시 이 모드의 Harmony ID만 해제하고 호스트·상태·새로 추가한 이벤트 등록을 롤백한다.
+4. 정상 Disable에서는 런타임 호스트와 패치를 제거하지만 이벤트 메타데이터는 현재 프로세스에 유지한다. 에디터와 이미 생성된 `LevelEvent`가 참조할 수 있기 때문이다.
+5. `RuntimeHost.OnDestroy`는 버튼과 HUD를 제거하고 Unity 참조를 비운다.
+
+세션 상태는 에디터 플레이 시작, 편집 모드 복귀, 재시작, 커스텀 레벨 리셋에서 `GaugeRuntime.Reset()`으로 초기화되며 이벤트 설정도 기본값으로 돌아간다.
+
+## 11. 기존 판정/사망 흐름의 주의점
+
+- `SwitchChosenPatch`는 원본 처리 전후 판정과 실패 바 상태를 결합한다.
+- `TooLate`는 직접 차감하지 않는다.
+- 확정 실패 뒤 이어지는 `Die`와의 중복 차감은 1회성 토큰으로 방지한다.
+- 놓침 복구의 임시 no-fail은 깊이 카운터와 Postfix/Finalizer로 복원한다.
+- 결과 문자열 생성 중에만 no-fail을 빌려 놓침/과부하 행을 만들고 즉시 원복한다.
+
+아직 우선 확인할 과거 위험:
 
 ```text
-SwitchChosen 원본 안에서 Die(true, true)
+SwitchChosen 원본 내부의 Die(true, true)
 → PlayerDiePatch에서 -8
 → 바깥 SwitchChosen Postfix가 실패 바를 다시 확인
-→ 추가 -8 가능성
+→ 극단적 Multipress에서 추가 -8 가능성
 ```
 
-현재 중복 방지 토큰은 주로 `SwitchChosen Postfix → 이후 Die` 순서를 방어한다. `Die → 바깥 Postfix` 순서는 실게임에서 검증되지 않았다. 연속 Multipress 9회 이상에서 체력이 정확히 8만 감소하는지 우선 확인한다.
+연속 Multipress 9회 이상에서 체력이 정확히 한 번만 감소하는지 실게임으로 확인한다.
 
-수정한다면 토큰을 무작정 양방향으로 재사용하기보다 `SwitchChosen` 호출별 상태 또는 체력 변경 세대 번호처럼 방향이 명확한 방법을 사용한다.
-
-## 9. 현재 미커밋 변경
-
-| 파일 | 변경 |
-|---|---|
-| `Main.cs` | 미사용 `CurrentGauge`, 항상 true인 디버그 플래그, `IgnoreTooLateGaugePatch` 제거 |
-| `GaugeRuntime.cs` | `TooLateDelta`와 전용 switch 분기 제거 |
-| `Patches.cs` | `TooLate` 직접 처리, 미사용 using 제거, 오래된 `-18` 주석 수정 |
-| `GaugeBarGraphic.cs` | 참조되지 않는 상태 getter 두 개 제거 |
-| `MainGaugeHud.cs` | 도달 불가능한 설정 fallback 제거 |
-| `PlanetGauge.csproj` | 불필요한 `Assembly-CSharp-firstpass`, 통합 `UnityEngine.dll` 참조 제거 |
-| `AssemblyInfo.cs` | 미사용 using, 빈 메타데이터, 불필요한 COM GUID 제거 |
-| `Info.json` | 버전을 `0.0.8`로 통일 |
-
-`RDTools` 참조 제거도 시험했지만 게임 타입의 기반 클래스 `RDBaseDll`을 컴파일할 때 필요해 복원했다.
-
-검증 명령:
+## 12. 빌드와 배포
 
 ```powershell
-dotnet build PlanetGauge.slnx -c Release --no-restore -warnaserror
-git diff --check
+dotnet build PlanetGauge/PlanetGauge.csproj -c Release
 ```
 
-최근 결과는 경고 0개, 오류 0개다.
-
-## 10. 전체 Git 이력
-
-| 날짜 | 커밋 | 제목 |
-|---|---|---|
-| 2026-07-25 | `cf770b4` | `Initial commit` |
-| 2026-07-25 | `08d3c1f` | `initialize commit` |
-| 2026-07-25 | `5ad457a` | `어셈블리 미인식 오류 수정` |
-| 2026-07-25 | `9784d62` | `게이지 업뎃` |
-| 2026-07-25 | `352e0c5` | `배드말림 수정` |
-| 2026-07-26 | `06e12e6` | `버그수정 2` |
-| 2026-07-26 | `313d65b` | `게이지 버프` |
-| 2026-07-26 | `88fb8ee` | `결과화면 놓침 과부하 기재` |
-| 2026-07-26 | `4e99618` | `UI 구현` |
-| 2026-07-26 | `34c0d25` | `UI 기본값 설정(1080p)` |
-| 2026-07-26 | `02038db` | `Create README.md` |
-| 2026-07-26 | `a33e0a3` | `Update README.md` |
-| 2026-07-26 | `2ade381` | `기본개선` (`beta`) |
-| 2026-07-26 | `2fce25d` | `Initial public release` |
-| 2026-07-26 | `ece146d` | `Update README.md` — 생성형 AI 사용 고지 |
-| 2026-07-26 | `444c758` | `AI잡티 제거` — 표시 이름·저자 정리 |
-| 2026-07-26 | `5aabec9` | 원격 `main` 병합 |
-| 2026-07-30 | `a82416c` | 자동 플레이 제외, 게이지 색과 UX 개선 |
-| 2026-08-05 | `e191923` | `Info.json` 0.0.7 (`V0.0.7`) |
-| 2026-08-05 | `8d6b299` | README 사용 방법 추가 |
-| 2026-08-09 | `6d7cc69` | 고정 해시 검사 등 불필요 백엔드 제거 |
-
-커밋 제목은 맥락 요약일 뿐이다. 회귀를 추적할 때는 `git show <commit>`으로 실제 diff를 확인한다.
-
-## 11. 빌드와 배포
+게임 설치 위치가 기본값과 다르면 다음을 사용한다.
 
 ```powershell
-dotnet build PlanetGauge.slnx -c Release
-```
-
-게임 설치 위치가 기본값과 다르면 `GameManagedDir` MSBuild 속성으로 그 PC의 Managed 폴더를 지정한다.
-
-```powershell
-dotnet build PlanetGauge.slnx -c Release `
+dotnet build PlanetGauge/PlanetGauge.csproj -c Release `
   /p:GameManagedDir="<게임 Managed 폴더>"
 ```
 
-빌드 후 갱신되는 파일:
+빌드 타깃이 자동 갱신하는 항목:
 
 ```text
 dist/PlanetGauge/PlanetGauge.dll
 dist/PlanetGauge/Info.json
+dist/PlanetGauge/Assets/Gaugeline.png
 ```
 
-`PlanetGauge.zip`은 빌드 타깃이 자동 생성하지 않는다. 릴리스 전에 현재 DLL과 Info.json으로 ZIP을 새로 만들어야 한다. 게임 DLL과 Unity/UMM DLL은 `Private=false`이므로 배포물에 넣지 않는다.
+- 게임, Unity, Harmony, UMM DLL은 `Private=false`이며 배포물에 넣지 않는다.
+- ZIP은 자동 생성하지 않는다. 릴리스 시 위 세 항목으로 새 ZIP을 만든다.
+- 오래된 ZIP을 dist에 남기지 않는다. 사용자가 구버전을 설치하는 원인이 된다.
+- 2026-08-17 최종 확인 시 현재 ZIP 내부 DLL은 55,808바이트이고 최신 Release DLL은 52,224바이트라 서로 다르다. `dist/PlanetGauge/PlanetGauge.zip`은 재생성 전까지 배포하지 않는다.
+- `Info.json`, `AssemblyVersion`, `AssemblyFileVersion`은 모두 `0.1.0`이다.
 
-현재 직접 참조:
+## 13. 검증 현황
 
-- `0Harmony`
-- `UnityModManager`
-- `Assembly-CSharp`
-- `RDTools`
-- `UnityEngine.CoreModule`
-- `UnityEngine.AudioModule`
-- `UnityEngine.UIModule`
-- `UnityEngine.IMGUIModule`
-- `UnityEngine.UI`
-- `Unity.TextMeshPro`
+완료된 정적/빌드 검증:
 
-## 12. 실게임 테스트 체크리스트
+- 현재 설치된 ADOFAI/Unity/UMM DLL 기준 Release 빌드 성공.
+- 경고 0개, 오류 0개.
+- 커스텀 이벤트 스키마를 reflection으로 생성해 `showIfVals`, O/X 여부를 확인.
+- 일반 및 효과 조합의 HUD 대표색·문구 매핑을 reflection으로 확인.
+- 원본/배포 아이콘 SHA-256 일치 확인.
+- 배포 폴더에 게임/Unity/Harmony/UMM DLL이 없음을 확인.
+- 사용자가 빈 인스펙터와 회복 상한 그룹 표시가 정상화됐다고 보고함.
 
-1. UMM에서 모드가 오류 없이 켜지고 꺼지는가.
-2. 에디터 진입 시 토글이 기본 OFF인가.
-3. 에디터 1인 테스트에서만 메인 게이지가 보이는가.
-4. 자동 플레이와 자동 타일에서 체력이 변하지 않는가.
-5. 각 일반 판정이 현재 표의 값만큼 변하는가.
-6. `TooLate` 자체는 체력을 바꾸지 않는가.
-7. 자동 놓침 `FailMiss`가 정확히 한 번만 -8 되는가.
-8. 놓침 복구 후 다음 타일로 정상 진행하는가.
-9. 일반 과부하가 정확히 한 번만 -8 되는가.
-10. 연속 Multipress 9회 이상에서도 -8 한 번만 적용되는가.
-11. 체력 0에서 실제 사망하는가.
-12. 실제 실패 방지의 우선순위와 -5 동결이 유지되는가.
-13. 결과 화면의 놓침·과부하 행과 횟수가 정확한가.
-14. 홀드 및 Pure Perfect 실패 경로가 정상인가.
-15. 재시작·커스텀 리셋·편집 복귀에서 체력이 100으로 초기화되는가.
-16. 모드를 끈 뒤 UI와 패치 동작이 남지 않는가.
-17. UMM 설정 저장 후 HUD 설정이 유지되는가.
+빌드 성공은 실게임 안정성을 의미하지 않는다. 다음 수동 검증은 계속 유지한다.
 
-## 13. 다음 작업 우선순위
+1. 모드 enable/disable/re-enable에서 UI와 패치가 중복되지 않는가.
+2. 이벤트 생성·복사·삭제·Undo·타일 이동·다른 이벤트 전환이 정상인가.
+3. JSON 저장 → 재로드 → 재저장 시 `SetPlanetGauge`와 속성/O/X가 보존되는가.
+4. 저장된 레벨의 requiredMods에 PlanetGauge 의존성이 기대대로 남는가.
+5. 각 속성 모드가 양수/음수 판정에 정확히 적용되는가.
+6. 증폭값 X가 이전 값을 보존하고 증폭 모드 직접 선택 시 O로 바뀌는가.
+7. 실패 방지 OFF와 게임 실제 no-fail의 우선순위가 맞는가.
+8. 회복 상한, 강제 상한, 0.1 최소값, NaN/무한대 보정이 맞는가.
+9. 재시작·체크포인트·편집 복귀에서 체력과 이벤트 설정이 초기화되는가.
+10. HUD 문구 1~3줄과 상태색이 여러 해상도/UI 배율에서 읽기 좋은가.
+11. `Gaugeline.png`가 실제 이벤트 아이콘으로 보이고 누락/손상 시 폴백하는가.
+12. PACL2/JALib 등 다른 모드와 함께 이벤트 패널 전환이 정상인가.
+13. 연속 Multipress 직접 사망 경로에서 이중 차감이 없는가.
 
-1. 현재 미커밋 정리 변경을 실게임 테스트한다.
-2. 연속 Multipress 직접 사망 경로의 이중 차감 여부를 확인한다.
-3. 결과 화면 판정 횟수가 각각 한 번만 기록되는지 확인한다.
-4. 문제가 없으면 변경과 이 핸드오프를 커밋하고 새 배포 ZIP을 만든다.
-5. 게임 업데이트 후에는 관련 API와 분기를 현재 설치 DLL에서 다시 확인한다.
+## 14. 다음 작업 후보
+
+1. 위 수동 검증표, 특히 requiredMods·Multipress·PACL2 공존을 완료한다.
+2. 아이콘의 실제 크기·여백을 확인하고 필요하면 128×128 PNG로 교체한다.
+3. HUD 효과 3줄 동시 표시의 간격과 잘림을 확인한다.
+4. 게이지 스킨 이벤트 속성은 현재 구조가 안정된 뒤 별도 설계한다.
+5. 배포 전 새 ZIP을 만들고 DLL/Info/Assets 버전이 같은지 확인한다.
 
 ## 다음 채팅용 지시문
 
 ```text
 PlanetGauge 개발을 이어서 진행해줘.
-저장소 루트의 DEVELOPMENT_HANDOFF.md를 읽고 현재 git status와 git diff를 먼저 확인해.
-미커밋 정리 변경을 보존하고 Release 빌드를 검증해.
-특히 연속 Multipress의 Die(true, true)와 SwitchChosen Postfix 사이 이중 차감을 실기 확인해.
+저장소 루트의 DEVELOPMENT_HANDOFF.md를 전부 읽고 git status와 현재 설치 DLL을 먼저 확인해.
+현재 버전은 0.1.0이고 SetPlanetGauge 커스텀 이벤트, HUD 상태색/효과 문구, Gaugeline 아이콘까지 구현돼 있다.
+기존 판정·사망 흐름과 커스텀 이벤트 직렬화 계약을 보존해.
+수정 후에는 설치본 DLL 기준 Release 빌드와 관련 실게임 검증 항목을 구분해서 보고해.
 ```
