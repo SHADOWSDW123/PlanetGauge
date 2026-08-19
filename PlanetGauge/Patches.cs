@@ -59,6 +59,9 @@ namespace PlanetGauge
     [HarmonyPatch(typeof(scrPlanet), nameof(scrPlanet.SwitchChosen))]
     internal static class SwitchChosenPatch
     {
+        private static bool[] judgementAppliedByDieAtDepth = new bool[4];
+        private static int observedSwitchDepth;
+
         private struct SwitchState
         {
             // Harmony의 __state는 같은 원본 호출의 Prefix/Postfix 사이에서만 전달된다.
@@ -66,6 +69,7 @@ namespace PlanetGauge
             internal bool NoFailAtStart;
             internal HitMargin Judgement;
             internal scrPlayer Player;
+            internal int ObservationDepth;
         }
 
         private static void Prefix(scrPlanet __instance, ref SwitchState __state)
@@ -115,15 +119,26 @@ namespace PlanetGauge
                 effectiveBpm,
                 conductor.song.pitch,
                 marginScale);
+            __state.ObservationDepth = BeginObservation();
         }
 
-        private static void Postfix(SwitchState __state)
+        private static void Postfix(ref SwitchState __state)
         {
+            bool judgementAppliedByDie = EndObservation(ref __state);
+
             if (!__state.Track
                 || __state.Player == null
                 || GaugeRuntime.IsAutoPlay(__state.Player)
                 || !GaugeRuntime.ShouldHandle(__state.Player))
             {
+                return;
+            }
+
+            if (judgementAppliedByDie)
+            {
+                // SwitchChosen 원본 내부의 OnDamage가 연속 Multipress로 Die를 호출한 경우,
+                // PlayerDiePatch가 이미 같은 실패를 처리했으므로 Postfix에서 다시 차감하지 않는다.
+                GaugeRuntime.ClearPendingDieCharge();
                 return;
             }
 
@@ -157,6 +172,54 @@ namespace PlanetGauge
             {
                 GaugeRuntime.ForceDie(__state.Player);
             }
+        }
+
+        private static Exception Finalizer(Exception __exception, ref SwitchState __state)
+        {
+            EndObservation(ref __state);
+            return __exception;
+        }
+
+        internal static void MarkJudgementAppliedByDie()
+        {
+            if (observedSwitchDepth > 0)
+            {
+                judgementAppliedByDieAtDepth[observedSwitchDepth - 1] = true;
+            }
+        }
+
+        private static int BeginObservation()
+        {
+            if (observedSwitchDepth == judgementAppliedByDieAtDepth.Length)
+            {
+                Array.Resize(
+                    ref judgementAppliedByDieAtDepth,
+                    judgementAppliedByDieAtDepth.Length * 2);
+            }
+
+            judgementAppliedByDieAtDepth[observedSwitchDepth] = false;
+            observedSwitchDepth++;
+            return observedSwitchDepth;
+        }
+
+        private static bool EndObservation(ref SwitchState state)
+        {
+            if (state.ObservationDepth <= 0)
+            {
+                return false;
+            }
+
+            int index = state.ObservationDepth - 1;
+            bool applied = judgementAppliedByDieAtDepth[index];
+            judgementAppliedByDieAtDepth[index] = false;
+
+            if (observedSwitchDepth == state.ObservationDepth)
+            {
+                observedSwitchDepth--;
+            }
+
+            state.ObservationDepth = 0;
+            return applied;
         }
     }
 
@@ -209,6 +272,11 @@ namespace PlanetGauge
                 : GaugeRuntime.ApplyJudgement(overload
                     ? HitMargin.FailOverload
                     : HitMargin.FailMiss);
+
+            if (!chargedByJudgement)
+            {
+                SwitchChosenPatch.MarkJudgementAppliedByDie();
+            }
 
             // 실패 방지가 가장 높은 우선순위이므로 원본 noFail 분기를 그대로 실행한다.
             if (controller.noFail || shouldDie)

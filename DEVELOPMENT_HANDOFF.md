@@ -1,6 +1,6 @@
 # PlanetGauge 개발 인수인계
 
-최종 갱신: 2026-08-17
+최종 갱신: 2026-08-19
 
 대상 게임: A Dance of Fire and Ice(얼불춤)
 
@@ -15,15 +15,15 @@ PC별 절대 경로와 설치 DLL 해시는 장기 호환성 근거로 사용하
 | 항목 | 현재 값 |
 |---|---|
 | 브랜치 | `main` |
-| HEAD | `88a772e` (`0.1.0 / 이벤트 -완-`) |
-| 원격 | 갱신 직전 `origin/main`과 동일 |
+| HEAD | `1391f2e` (`Merge branch 'main' of https://github.com/SHADOWSDW123/PlanetGauge`) |
+| 원격 | `origin/main` = `1391f2e` |
 | 모드 버전 | `0.1.0` |
 | 타깃 | .NET Framework 4.8 / C# 7.3 |
 | 최신 빌드 | Release, 경고 0개·오류 0개 |
 | 자동 테스트 프로젝트 | 없음 |
 | 전용 이벤트 | `SetPlanetGauge`, 숫자 ID `0x5047` (`20551`) |
 
-`88a772e`에는 커스텀 이벤트, 런타임 동작, HUD 상태색/문구, 전용 아이콘까지 포함되어 있다. 갱신 직전 작업 트리는 깨끗했으며, 이 문서 수정 자체가 새 미커밋 변경으로 남는다.
+`88a772e`에 커스텀 이벤트, 런타임 동작, HUD 상태색/문구, 전용 아이콘까지 포함되었고, 현재 HEAD는 이 커밋을 포함한 `1391f2e`다. 2026-08-19 현재 `Patches.cs`의 Multipress 중복 차감 방지와 이 문서가 미커밋 변경으로 남아 있다.
 
 다음 작업 시작 시 먼저 실행한다.
 
@@ -67,7 +67,7 @@ PlanetGauge는 레벨 에디터의 1인 테스트 플레이에 체력형 게이�
 │  ├─ PlanetGauge.dll
 │  ├─ Info.json
 │  ├─ Assets/Gaugeline.png
-│  └─ PlanetGauge.zip                    # 현재 빌드가 갱신하지 않는 수동 산출물
+│  └─ PlanetGauge.zip                    # 릴리스 시 수동 생성; 현재는 없음
 └─ PlanetGauge/
    ├─ Assets/Gaugeline.png               # 커스텀 이벤트 아이콘 원본
    ├─ Main.cs
@@ -266,16 +266,16 @@ JSON 계약:
 - 놓침 복구의 임시 no-fail은 깊이 카운터와 Postfix/Finalizer로 복원한다.
 - 결과 문자열 생성 중에만 no-fail을 빌려 놓침/과부하 행을 만들고 즉시 원복한다.
 
-아직 우선 확인할 과거 위험:
+해결한 과거 위험:
 
 ```text
-SwitchChosen 원본 내부의 Die(true, true)
-→ PlayerDiePatch에서 -8
-→ 바깥 SwitchChosen Postfix가 실패 바를 다시 확인
-→ 극단적 Multipress에서 추가 -8 가능성
+SwitchChosen 원본 내부의 OnDamage(false/true, ...)
+→ 연속 Multipress 9회 이상에서 Die(true, true, "", false)
+→ PlayerDiePatch에서 FailOverload -8
+→ 바깥 SwitchChosen Postfix가 실패 바를 다시 확인하면 추가 -8 가능
 ```
 
-연속 Multipress 9회 이상에서 체력이 정확히 한 번만 감소하는지 실게임으로 확인한다.
+2026-08-19 설치본 IL에서 위 호출 계약을 확인했다. `SwitchChosenPatch`는 중첩 가능한 호출 깊이별 관찰 상태를 두고, 원본 호출 중 `PlayerDiePatch`가 실패 판정을 적용했으면 Postfix의 재적용을 건너뛴다. Postfix와 Finalizer가 관찰 상태를 멱등으로 종료한다. 연속 Multipress 9회 이상에서 체력이 `100 → 92`로 정확히 한 번만 감소하는지는 실게임으로 마지막 확인한다.
 
 ## 12. 빌드와 배포
 
@@ -301,7 +301,7 @@ dist/PlanetGauge/Assets/Gaugeline.png
 - 게임, Unity, Harmony, UMM DLL은 `Private=false`이며 배포물에 넣지 않는다.
 - ZIP은 자동 생성하지 않는다. 릴리스 시 위 세 항목으로 새 ZIP을 만든다.
 - 오래된 ZIP을 dist에 남기지 않는다. 사용자가 구버전을 설치하는 원인이 된다.
-- 2026-08-17 최종 확인 시 현재 ZIP 내부 DLL은 55,808바이트이고 최신 Release DLL은 52,224바이트라 서로 다르다. `dist/PlanetGauge/PlanetGauge.zip`은 재생성 전까지 배포하지 않는다.
+- 2026-08-19 최신 Release DLL은 52,736바이트, SHA-256 `2405C1FEC4CCA2AED2466028EA6A6BA0D0B92BA62C0F919EC68B99B6E9257085`이다. 기존 `dist/PlanetGauge/PlanetGauge.zip`은 스테이징 DLL보다 오래됐고 Info/DLL이 다르며 아이콘이 없어 제거했다. 릴리스 시 최신 3개 항목으로 새 ZIP을 만든다.
 - `Info.json`, `AssemblyVersion`, `AssemblyFileVersion`은 모두 `0.1.0`이다.
 
 ## 13. 검증 현황
@@ -310,6 +310,9 @@ dist/PlanetGauge/Assets/Gaugeline.png
 
 - 현재 설치된 ADOFAI/Unity/UMM DLL 기준 Release 빌드 성공.
 - 경고 0개, 오류 0개.
+- 오래된 ZIP 제거 후 `Info.json`, `PlanetGauge.dll`, `Assets/Gaugeline.png` 3개만 남겨 엄격 패키지 검증 통과.
+- 설치본의 `scrPlanet.SwitchChosen()` → `scrPlayer.OnDamage(bool,bool,bool,HitMargin)` → `scrPlayer.Die(bool,bool,string,bool)` Multipress 경로를 IL로 확인.
+- 중복 차감 방지 관찰 상태를 reflection으로 검증: Die 없음 `false`, 중첩 내부 Die `true`/외부 `false`, 단일 Die `true`.
 - 커스텀 이벤트 스키마를 reflection으로 생성해 `showIfVals`, O/X 여부를 확인.
 - 일반 및 효과 조합의 HUD 대표색·문구 매핑을 reflection으로 확인.
 - 원본/배포 아이콘 SHA-256 일치 확인.
@@ -330,7 +333,7 @@ dist/PlanetGauge/Assets/Gaugeline.png
 10. HUD 문구 1~3줄과 상태색이 여러 해상도/UI 배율에서 읽기 좋은가.
 11. `Gaugeline.png`가 실제 이벤트 아이콘으로 보이고 누락/손상 시 폴백하는가.
 12. PACL2/JALib 등 다른 모드와 함께 이벤트 패널 전환이 정상인가.
-13. 연속 Multipress 직접 사망 경로에서 이중 차감이 없는가.
+13. 연속 Multipress 9회 이상의 직접 사망 경로에서 체력이 `100 → 92`로 한 번만 감소하는가.
 
 ## 14. 다음 작업 후보
 
