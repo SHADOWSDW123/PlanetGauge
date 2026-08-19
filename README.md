@@ -10,8 +10,8 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 빠름/느림(EPerfect/LPerfect) - -0.5
 빠름!/느림!(Early / Late) - -1.5
 매우 빠름(Too Early) - -3
-놓침 / 과부하(Miss/Overload | Fail) - -8
-
+과부하(Overload | Fail) - -8
+놓침 (Miss | Fail) - -6
 해당 수치는 변동될 수 있습니다.
 
 # 사용 방법
@@ -34,6 +34,18 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 > - 100% 미만의 증감률: Increase/Decrease/Rate Reduced
 > - 실패방지 해제: No-Fail Disabled (*PlanetGauge 모드의 실패방지만 해제됩니다.)
 > - 체력 상한 설정: Increase Limited
+
+
+# 알아두면 좋은 거
+- GUI 창의 설정에서 체력 텍스트를 소수점 단위까지 표시할 수 있습니다.(Show decimal health)
+- Shift+F3를 눌러 디버그 모드를 켤 수 있습니다.
+곡이 끝난 후 판정이 증가시킨 총 체력량을 보며 놀아보세요.
+
+- 게이지랑 무적모드를 동시에 켜서 게이지 폭사 후에도 게임을 계속하실 수 있습니다.
+
+- 인게임에서 게이지 온오프 아이콘도 같이 체력이 변화합니다.
+
+- 게이지 속성이 적용될 때 게이지 바의 색상이 0.5초동안 Out Quad 가감속으로 변합니다.(AI피셜)
 
 # 난이도 조정 
 다음과 같은 레벨들에서 난이도가 다소 낮아집니다.
