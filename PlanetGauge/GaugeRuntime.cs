@@ -14,7 +14,7 @@ namespace PlanetGauge
         internal const float VeryEarlyDelta = -1.5f;
         internal const float VeryLateDelta = -1.5f;
         internal const float TooEarlyDelta = -3f;
-        internal const float FailMissDelta = -8f;
+        internal const float FailMissDelta = -6f;
         internal const float FailOverloadDelta = -8f;
 
         private static bool frozen;
