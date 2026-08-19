@@ -3,20 +3,11 @@ using UnityEngine;
 
 namespace PlanetGauge
 {
-    /// <summary>
-    /// 판정에 따른 게이지 상태 전이와 실패 복구 중 재진입 방지 상태를 관리한다.
-    /// Harmony 패치들은 게임 이벤트를 해석하고, 실제 수치 변경은 이 클래스에만 위임한다.
-    /// </summary>
     internal static class GaugeRuntime
     {
-        /*
-         * 디버그/밸런스 조정 전용 상수.
-         * 판정별 수치를 바꾸려면 Harmony 패치가 아니라 아래 값만 수정하면 된다.
-         */
         internal const float InitialGauge = 100f;
         internal const float MaximumGauge = 100f;
         internal const float NoFailMinimumGauge = -5f;
-
         internal const float PerfectDelta = 0.1f;
         internal const float EarlyPerfectDelta = -0.5f;
         internal const float LatePerfectDelta = -0.5f;
@@ -30,62 +21,111 @@ namespace PlanetGauge
         private static bool nextDieAlreadyCharged;
         private static int failureRecoveryDepth;
         private static bool forcingDeath;
+        private static int styleRevision;
+        private static readonly float[] judgementTotals = new float[8];
+        private static float autoTotal;
 
         internal static float Current { get; private set; } = InitialGauge;
-
-        internal static PlanetGaugeEventSettings EventSettings { get; private set; }
-            = PlanetGaugeEventSettings.Default;
-
-        internal static bool IsRecoveringFailure
+        internal static PlanetGaugeEventSettings EventSettings { get; private set; } = PlanetGaugeEventSettings.Default;
+        internal static bool IsRecoveringFailure { get { return failureRecoveryDepth > 0; } }
+        internal static bool IsForcingDeath { get { return forcingDeath; } }
+        internal static bool IsFrozen { get { return frozen; } }
+        internal static bool HasPendingDieCharge { get { return nextDieAlreadyCharged; } }
+        internal static int FailureRecoveryDepth { get { return failureRecoveryDepth; } }
+        internal static int StyleRevision { get { return styleRevision; } }
+        internal static float AutoTotal { get { return autoTotal; } }
+        internal static float RecoveryMaximum
         {
-            get { return failureRecoveryDepth > 0; }
-        }
-
-        internal static bool IsForcingDeath
-        {
-            get { return forcingDeath; }
+            get
+            {
+                return EventSettings.RecoveryCapEnabled
+                    ? PlanetGaugeValueRules.SanitizeRecoveryCap(EventSettings.RecoveryCapPercent)
+                    : MaximumGauge;
+            }
         }
 
         internal static void Reset()
         {
-            // 새 플레이 세션은 보류 중인 Die 차감과 중첩 복구 상태까지 모두 초기화한다.
             Current = InitialGauge;
             frozen = false;
             nextDieAlreadyCharged = false;
             failureRecoveryDepth = 0;
             forcingDeath = false;
             EventSettings = PlanetGaugeEventSettings.Default;
+            Array.Clear(judgementTotals, 0, judgementTotals.Length);
+            autoTotal = 0f;
+            styleRevision++;
         }
 
         internal static void ApplyEventSettings(PlanetGaugeEventCommand command)
         {
             PlanetGaugeEventSettings current = EventSettings;
-            PlanetGaugeAttributeMode attributeMode = command.ApplyAttributeMode
-                ? command.AttributeMode
-                : current.AttributeMode;
-            float multiplierPercent = command.ApplyMultiplier
-                ? PlanetGaugeValueRules.SanitizeMultiplier(command.MultiplierPercent)
-                : current.MultiplierPercent;
-            bool failureProtection = command.ApplyFailureProtection
-                ? command.FailureProtection
-                : current.FailureProtection;
-            bool recoveryCapEnabled = command.ApplyRecoveryCap
-                ? command.RecoveryCapEnabled
-                : current.RecoveryCapEnabled;
+            bool recoveryBlocked = current.RecoveryBlocked;
+            PlanetGaugeRateChannel recoveryRate = current.RecoveryRate;
+            PlanetGaugeRateChannel damageRate = current.DamageRate;
+            float configuredIncrease = current.ConfiguredIncreasePercent;
+            float configuredDecrease = current.ConfiguredDecreasePercent;
+            float configuredBoth = current.ConfiguredBothPercent;
+
+            if (command.ApplyMultiplier)
+            {
+                float value = PlanetGaugeValueRules.SanitizeMultiplier(command.MultiplierPercent);
+                switch (command.AttributeMode)
+                {
+                    case PlanetGaugeAttributeMode.AmplifyIncrease: configuredIncrease = value; break;
+                    case PlanetGaugeAttributeMode.AmplifyDecrease: configuredDecrease = value; break;
+                    case PlanetGaugeAttributeMode.AmplifyBoth: configuredBoth = value; break;
+                }
+            }
+
+            if (command.ApplyAttributeMode)
+            {
+                if (command.DisableOtherAttributes)
+                {
+                    recoveryBlocked = false;
+                    recoveryRate = PlanetGaugeRateChannel.Disabled;
+                    damageRate = PlanetGaugeRateChannel.Disabled;
+                }
+
+                switch (command.AttributeMode)
+                {
+                    case PlanetGaugeAttributeMode.BlockRecovery:
+                        recoveryBlocked = command.AttributeEnabled;
+                        break;
+                    case PlanetGaugeAttributeMode.AmplifyIncrease:
+                        recoveryRate = command.AttributeEnabled
+                            ? new PlanetGaugeRateChannel(true, configuredIncrease, PlanetGaugeRateSource.Increase)
+                            : PlanetGaugeRateChannel.Disabled;
+                        break;
+                    case PlanetGaugeAttributeMode.AmplifyDecrease:
+                        damageRate = command.AttributeEnabled
+                            ? new PlanetGaugeRateChannel(true, configuredDecrease, PlanetGaugeRateSource.Decrease)
+                            : PlanetGaugeRateChannel.Disabled;
+                        break;
+                    case PlanetGaugeAttributeMode.AmplifyBoth:
+                        PlanetGaugeRateChannel both = command.AttributeEnabled
+                            ? new PlanetGaugeRateChannel(true, configuredBoth, PlanetGaugeRateSource.Both)
+                            : PlanetGaugeRateChannel.Disabled;
+                        recoveryRate = both;
+                        damageRate = both;
+                        break;
+                }
+            }
+
+            bool failureProtection = command.ApplyFailureProtection ? command.FailureProtection : current.FailureProtection;
+            bool recoveryCapEnabled = command.ApplyRecoveryCap ? command.RecoveryCapEnabled : current.RecoveryCapEnabled;
             float recoveryCapPercent = command.ApplyRecoveryCap
                 ? PlanetGaugeValueRules.SanitizeRecoveryCap(command.RecoveryCapPercent)
                 : current.RecoveryCapPercent;
+            bool autoTileRecovery = command.ApplyAutoTileRecovery ? command.AutoTileRecovery : current.AutoTileRecovery;
 
             EventSettings = new PlanetGaugeEventSettings(
-                attributeMode,
-                multiplierPercent,
-                failureProtection,
-                recoveryCapEnabled,
-                recoveryCapPercent);
+                recoveryBlocked, recoveryRate, damageRate,
+                configuredIncrease, configuredDecrease, configuredBoth,
+                failureProtection, recoveryCapEnabled, recoveryCapPercent, autoTileRecovery);
+            styleRevision++;
 
-            if (command.ForceRecoveryCap
-                && recoveryCapEnabled
-                && Current > recoveryCapPercent)
+            if (command.ForceRecoveryCap && recoveryCapEnabled && Current > recoveryCapPercent)
             {
                 Current = recoveryCapPercent;
             }
@@ -93,7 +133,6 @@ namespace PlanetGauge
 
         internal static bool ShouldHandle(scrPlayer player = null)
         {
-            // 모드는 에디터의 1인 실제 플레이에서만 원본 실패 흐름을 변경한다.
             if (!Main.IsEnabled || !Main.EditorGaugeEnabled)
             {
                 return false;
@@ -101,22 +140,22 @@ namespace PlanetGauge
 
             scnEditor editor = scnEditor.instance;
             scrController controller = scrController.instance;
-            if (editor == null || controller == null)
+            if (editor == null || controller == null || controller.paused
+                || !controller.gameworld || scrPlayerManager.playerCount != 1)
             {
                 return false;
             }
 
-            if (controller.paused || !controller.gameworld || scrPlayerManager.playerCount != 1)
-            {
-                return false;
-            }
+            return player == null || controller.playerOne == player;
+        }
 
-            if (player != null && controller.playerOne != player)
-            {
-                return false;
-            }
-
-            return true;
+        internal static bool IsGameplayContext(bool allowPaused)
+        {
+            scrController controller = scrController.instance;
+            return Main.IsEnabled && Main.EditorGaugeEnabled && scnEditor.instance != null
+                && controller != null && controller.gameworld
+                && (allowPaused || !controller.paused)
+                && scrPlayerManager.playerCount == 1;
         }
 
         internal static bool IsAutoPlay(scrPlayer player = null)
@@ -127,12 +166,7 @@ namespace PlanetGauge
             }
 
             scrController controller = scrController.instance;
-            scrPlayer targetPlayer = player;
-            if (targetPlayer == null && controller != null)
-            {
-                targetPlayer = controller.playerOne;
-            }
-
+            scrPlayer targetPlayer = player ?? (controller == null ? null : controller.playerOne);
             return targetPlayer != null && targetPlayer.auto;
         }
 
@@ -145,127 +179,101 @@ namespace PlanetGauge
 
             if (frozen)
             {
-                // 소진 이후에는 값을 다시 변경하지 않고, 실제 실패가 필요한지만 재보고한다.
-                return scrController.instance != null
-                    && !scrController.instance.noFail
-                    && Current <= 0f;
+                return scrController.instance != null && !scrController.instance.noFail && Current <= 0f;
             }
 
             scrController controller = scrController.instance;
-            if (IsFailureJudgement(judgement)
-                && !EventSettings.FailureProtection
+            if (IsFailureJudgement(judgement) && !EventSettings.FailureProtection
                 && (controller == null || !controller.noFail))
             {
-                // 이벤트의 실패 방지가 꺼져 있으면 게이지로 흡수하지 않고 원본 사망 경로로 보낸다.
                 return true;
             }
 
             float delta;
-            if (!TryGetDelta(judgement, out delta) || Mathf.Approximately(delta, 0f))
-            {
-                return false;
-            }
+            return TryGetDelta(judgement, out delta) && ApplyDelta(delta, judgement, false);
+        }
 
-            delta = TransformDelta(delta);
-            if (Mathf.Approximately(delta, 0f))
+        internal static void ApplyAutomaticRecovery()
+        {
+            if (ShouldHandle() && !frozen)
             {
-                return false;
+                ApplyDelta(PerfectDelta, HitMargin.Auto, true);
             }
+        }
 
-            float next;
-            if (delta > 0f)
-            {
-                float recoveryMaximum = EventSettings.RecoveryCapEnabled
-                    ? PlanetGaugeValueRules.SanitizeRecoveryCap(EventSettings.RecoveryCapPercent)
-                    : MaximumGauge;
+        internal static float GetJudgementTotal(HitMargin judgement)
+        {
+            int index = GetTotalIndex(judgement);
+            return index < 0 ? 0f : judgementTotals[index];
+        }
 
-                // 강제 제한을 선택하지 않았다면 이미 상한보다 높은 체력을 회복 시점에 낮추지 않는다.
-                next = Current >= recoveryMaximum
-                    ? Current
-                    : Mathf.Min(recoveryMaximum, Current + delta);
-            }
-            else
-            {
-                next = Current + delta;
-            }
+        private static bool ApplyDelta(float rawDelta, HitMargin judgement, bool automatic)
+        {
+            float delta = TransformDelta(rawDelta);
+            float previous = Current;
+            float next = delta > 0f
+                ? (Current >= RecoveryMaximum ? Current : Mathf.Min(RecoveryMaximum, Current + delta))
+                : Current + delta;
 
+            scrController controller = scrController.instance;
+            bool shouldDie = false;
             if (next > 0f)
             {
                 Current = next;
-                return false;
             }
-
-            if (controller != null && controller.noFail)
+            else if (controller != null && controller.noFail)
             {
-                // 실패 방지가 우선이다. 최저 -5까지만 허용한 뒤 변동을 정지한다.
                 Current = Mathf.Max(NoFailMinimumGauge, next);
                 frozen = true;
-                return false;
+            }
+            else
+            {
+                Current = 0f;
+                frozen = true;
+                shouldDie = true;
             }
 
-            Current = 0f;
-            frozen = true;
-            return true;
+            float actual = Current - previous;
+            if (automatic)
+            {
+                autoTotal += actual;
+            }
+            else
+            {
+                int index = GetTotalIndex(judgement);
+                if (index >= 0) judgementTotals[index] += actual;
+            }
+
+            return shouldDie;
         }
 
-        internal static void MarkNextDieAlreadyCharged()
-        {
-            // SwitchChosen 직후 같은 실패를 알리는 Die가 이어질 수 있어 1회성 토큰으로 중복 차감을 막는다.
-            nextDieAlreadyCharged = true;
-        }
-
+        internal static void MarkNextDieAlreadyCharged() { nextDieAlreadyCharged = true; }
         internal static bool ConsumeNextDieAlreadyCharged()
         {
             bool charged = nextDieAlreadyCharged;
             nextDieAlreadyCharged = false;
             return charged;
         }
-
-        internal static void ClearPendingDieCharge()
-        {
-            nextDieAlreadyCharged = false;
-        }
-
-        internal static void BeginFailureRecovery()
-        {
-            // 실패 복구 중 SwitchChosen이 재진입할 수 있으므로 bool 대신 중첩 가능한 깊이를 사용한다.
-            failureRecoveryDepth++;
-        }
-
-        internal static void EndFailureRecovery()
-        {
-            if (failureRecoveryDepth > 0)
-            {
-                failureRecoveryDepth--;
-            }
-        }
+        internal static void ClearPendingDieCharge() { nextDieAlreadyCharged = false; }
+        internal static void BeginFailureRecovery() { failureRecoveryDepth++; }
+        internal static void EndFailureRecovery() { if (failureRecoveryDepth > 0) failureRecoveryDepth--; }
 
         internal static void ForceDie(scrPlayer player)
         {
-            if (player == null || forcingDeath)
-            {
-                return;
-            }
-
+            if (player == null || forcingDeath) return;
             ClearPendingDieCharge();
             forcingDeath = true;
             try
             {
-                // 사용자가 요청한 최종 실패 경로: 별도 사유를 만들지 않고 원본 Die를 호출한다.
                 player.Die();
             }
             catch (Exception exception)
             {
                 Main.LogException("게이지 소진 후 scrPlayer.Die 호출에 실패했습니다.", exception);
-
-                // 부분적으로 손상된 상태에서도 게임 진행이 멈추지 않도록 원본 실패 상태 진입을 시도한다.
                 try
                 {
                     scrController controller = scrController.instance;
-                    if (controller != null)
-                    {
-                        controller.FailAction();
-                    }
+                    if (controller != null) controller.FailAction();
                 }
                 catch (Exception fallbackException)
                 {
@@ -282,69 +290,48 @@ namespace PlanetGauge
         {
             switch (judgement)
             {
-                case HitMargin.Perfect:
-                    delta = PerfectDelta;
-                    return true;
-                case HitMargin.EarlyPerfect:
-                    delta = EarlyPerfectDelta;
-                    return true;
-                case HitMargin.LatePerfect:
-                    delta = LatePerfectDelta;
-                    return true;
-                case HitMargin.VeryEarly:
-                    delta = VeryEarlyDelta;
-                    return true;
-                case HitMargin.VeryLate:
-                    delta = VeryLateDelta;
-                    return true;
-                case HitMargin.TooEarly:
-                    delta = TooEarlyDelta;
-                    return true;
-                case HitMargin.FailMiss:
-                    delta = FailMissDelta;
-                    return true;
-                case HitMargin.FailOverload:
-                    delta = FailOverloadDelta;
-                    return true;
-                default:
-                    // TooLate, Auto, Multipress, OverPress 등은 게이지를 바꾸지 않는다.
-                    delta = 0f;
-                    return false;
+                case HitMargin.Perfect: delta = PerfectDelta; return true;
+                case HitMargin.EarlyPerfect: delta = EarlyPerfectDelta; return true;
+                case HitMargin.LatePerfect: delta = LatePerfectDelta; return true;
+                case HitMargin.VeryEarly: delta = VeryEarlyDelta; return true;
+                case HitMargin.VeryLate: delta = VeryLateDelta; return true;
+                case HitMargin.TooEarly: delta = TooEarlyDelta; return true;
+                case HitMargin.FailMiss: delta = FailMissDelta; return true;
+                case HitMargin.FailOverload: delta = FailOverloadDelta; return true;
+                default: delta = 0f; return false;
             }
         }
 
         private static float TransformDelta(float delta)
         {
             PlanetGaugeEventSettings settings = EventSettings;
-            switch (settings.AttributeMode)
+            if (delta > 0f)
             {
-                case PlanetGaugeAttributeMode.BlockRecovery:
-                    return delta > 0f ? 0f : delta;
-
-                case PlanetGaugeAttributeMode.AmplifyDecrease:
-                    return delta < 0f ? delta * GetMultiplier(settings) : delta;
-
-                case PlanetGaugeAttributeMode.AmplifyIncrease:
-                    return delta > 0f ? delta * GetMultiplier(settings) : delta;
-
-                case PlanetGaugeAttributeMode.AmplifyBoth:
-                    return delta * GetMultiplier(settings);
-
-                case PlanetGaugeAttributeMode.Normal:
-                default:
-                    return delta;
+                if (settings.RecoveryBlocked) return 0f;
+                return settings.RecoveryRate.Enabled ? delta * settings.RecoveryRate.Percent / 100f : delta;
             }
+            return delta < 0f && settings.DamageRate.Enabled ? delta * settings.DamageRate.Percent / 100f : delta;
         }
 
-        private static float GetMultiplier(PlanetGaugeEventSettings settings)
+        private static int GetTotalIndex(HitMargin judgement)
         {
-            return PlanetGaugeValueRules.SanitizeMultiplier(settings.MultiplierPercent) / 100f;
+            switch (judgement)
+            {
+                case HitMargin.TooEarly: return 0;
+                case HitMargin.VeryEarly: return 1;
+                case HitMargin.EarlyPerfect: return 2;
+                case HitMargin.Perfect: return 3;
+                case HitMargin.LatePerfect: return 4;
+                case HitMargin.VeryLate: return 5;
+                case HitMargin.FailMiss: return 6;
+                case HitMargin.FailOverload: return 7;
+                default: return -1;
+            }
         }
 
         private static bool IsFailureJudgement(HitMargin judgement)
         {
-            return judgement == HitMargin.FailMiss
-                || judgement == HitMargin.FailOverload;
+            return judgement == HitMargin.FailMiss || judgement == HitMargin.FailOverload;
         }
     }
 }

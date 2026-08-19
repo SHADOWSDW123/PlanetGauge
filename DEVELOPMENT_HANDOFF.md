@@ -2,295 +2,302 @@
 
 최종 갱신: 2026-08-19
 
-대상 게임: A Dance of Fire and Ice(얼불춤)
-
-모드 로더: Unity Mod Manager + Harmony
-
-저장소 기준 경로: 이 문서가 있는 저장소 루트
-
-PC별 절대 경로와 설치 DLL 해시는 장기 호환성 근거로 사용하지 않는다. 다음 작업자는 현재 체크아웃한 소스, 현재 설치된 게임 DLL, 실게임 재현 결과 순서로 사실을 다시 확인한다.
-
 ## 1. 현재 스냅샷
 
-| 항목 | 현재 값 |
+| 항목 | 값 |
 |---|---|
-| 브랜치 | `main` |
-| HEAD | `1391f2e` (`Merge branch 'main' of https://github.com/SHADOWSDW123/PlanetGauge`) |
-| 원격 | `origin/main` = `1391f2e` |
-| 모드 버전 | `0.1.0` |
+| 브랜치 | `main` (`origin/main`보다 1커밋 앞섬) |
+| 작업 시작 HEAD | `0eb8291` (`0.1.1 테스트 / 대체 뭐가 바뀐거임... 오버엔지니어링같은데`) |
+| 현재 소스 버전 | `0.1.2` |
 | 타깃 | .NET Framework 4.8 / C# 7.3 |
-| 최신 빌드 | Release, 경고 0개·오류 0개 |
-| 자동 테스트 프로젝트 | 없음 |
-| 전용 이벤트 | `SetPlanetGauge`, 숫자 ID `0x5047` (`20551`) |
+| 전용 이벤트 | `SetPlanetGauge`, `0x5047` (`20551`) |
+| 최신 Release | 경고 0개, 오류 0개 |
+| Release DLL | 62,976바이트, SHA-256 `C6987C96766138BF93674E4DE09DA36FC7F31DB8ABEBD73546DBE88C524135C9` |
 
-`88a772e`에 커스텀 이벤트, 런타임 동작, HUD 상태색/문구, 전용 아이콘까지 포함되었고, 현재 HEAD는 이 커밋을 포함한 `1391f2e`다. 2026-08-19 현재 `Patches.cs`의 Multipress 중복 차감 방지와 이 문서가 미커밋 변경으로 남아 있다.
-
-다음 작업 시작 시 먼저 실행한다.
+이 문서 갱신 시점에는 0.1.2 구현이 아직 커밋되지 않은 작업 트리에 있다. 다음 작업자는 반드시 먼저 확인한다.
 
 ```powershell
 git status --short --branch
+git diff --check
 git diff
 ```
 
-## 2. 모드 목적과 적용 범위
+### 이번 활동 요약
 
-PlanetGauge는 레벨 에디터의 1인 테스트 플레이에 체력형 게이지를 추가한다.
+이번 작업은 0.1.1을 기준으로 0.1.2 기능을 구현하고, 설치본 DLL을 참조한 Release 산출물까지 스테이징한 활동이다.
 
-- 에디터의 작은 게이지 버튼으로 PlanetGauge 동작을 켜고 끈다.
-- 새 에디터 세션에서는 기본 OFF다.
-- 에디터의 1인 실제 플레이에서만 판정과 실패 흐름을 변경한다.
-- 일반 플레이, 협동 플레이, 자동 플레이에는 적용하지 않는다.
-- 판정 오차 미터 위에 체력 바, 숫자, 활성 효과 문구를 표시한다.
-- 레벨 에디터의 `PlanetGauge 설정` 이벤트로 플레이 중 규칙을 변경한다.
-- 게이지 스킨 기능은 아직 구현하지 않았다.
+- 단일 속성 모드를 회복/피해 유효 채널과 독립 회복 차단 상태로 교체했다.
+- 증가, 감소, Both의 설정 퍼센트를 각각 기억하고, 겹치는 부호에서는 마지막 명령만 유효하도록 했다. 배율끼리 곱하지 않는다.
+- 이벤트에 `attributeEnabled`, `disableOtherAttributes`, `autoTileRecovery`를 추가하면서 기존 이벤트 ID, 이름, 키, O/X 해석을 유지했다.
+- 증감률 100% 미만을 Reduced, 초과를 Amplified로 구분하고 체력 숫자 아래에 출처색 퍼센트 토큰을 추가했다.
+- 회복 상한을 1000%까지 확장하고 100을 넘는 체력 숫자/바 정규화를 반영했다.
+- 수동 Auto 타일과 실제 Auto의 회복 경로를 추가하되 기존 Auto 판정·사망 흐름과 분리했다.
+- 메인 게이지와 체력 숫자 색을 0.5초 OutQuad로 보간하도록 했다.
+- `Shift+F3` 디버그 HUD를 새로 만들고 상태 변수와 판정별 실제 적용량 누계를 표시한다.
+- `Info.json`, AssemblyVersion, AssemblyFileVersion을 0.1.2로 맞추고 README 및 이 문서를 갱신했다.
+- 설치본 DLL 기준 Release 빌드와 임시 reflection 채널 계약 검사는 완료했지만 게임을 직접 실행하지 않았으므로 실게임 검증은 남아 있다.
 
-실패 처리 우선순위는 다음과 같다.
+## 2. 설치본 DLL 기준선
+
+빌드와 API 검증에 사용한 설치 경로:
 
 ```text
-게임의 실제 실패 방지 > PlanetGauge 체력 > 일반 게임오버
+C:\Program Files (x86)\Steam\steamapps\common\A Dance of Fire and Ice\
 ```
 
-- 실제 `controller.noFail`이 켜졌으면 바닐라 실패 방지가 우선한다.
-- PlanetGauge의 실패 방지가 켜져 있고 체력이 남으면 실패를 흡수한다.
-- 체력이 소진되거나 이벤트로 PlanetGauge 실패 방지를 끄면 원본 `scrPlayer.Die()` 경로를 사용한다.
+| DLL | SHA-256 |
+|---|---|
+| `Assembly-CSharp.dll` | `0D1524DABF0F8C67AA58BA1992D6ED858522B9094490EBBB00E5E8AEFF7F40CD` |
+| `UnityModManager/0Harmony.dll` | `DF043F05C6E43602FA8E8F38F52A3A2CF962AAB7A65A9D85573EA25F01A63E80` |
+| `UnityModManager/UnityModManager.dll` | `5B4C5DA3896D4B353330315DC0AEEA06D984520BCA990B2B611ED86DA89D9003` |
+
+설치본에서 확인한 중요 API:
+
+- `scrPlanet SwitchChosen()`
+- `scrPlayer.OnDamage(bool,bool,bool,HitMargin)`
+- `scrPlayer.Die(bool,bool,string,bool)`
+- `SwitchChosen`의 조기/실패 반환은 `this`, 정상 진행 반환은 `movingToNext`다.
+- 따라서 Auto 회복 성공 판별은 `__result != null && __result != __instance`를 사용한다.
+
+## 3. 목적과 기존 실패 계약
+
+PlanetGauge는 레벨 에디터의 1인 테스트 플레이에 체력 게이지를 추가한다. 에디터 버튼이 켜진 테스트 플레이에서만 판정/실패를 가로챈다. 실제 자동 플레이는 0.1.2부터 회복 디버깅만 허용하며, 피해·사망 흐름은 절대 가로채지 않는다.
+
+실패 우선순위는 계속 다음과 같다.
+
+```text
+게임의 실제 no-fail > PlanetGauge 체력 > 원본 사망
+```
+
 - `hitbox` 사망은 흡수하지 않는다.
-- 실제 실패 방지 상태에서 체력이 바닥에 닿으면 최저 `-5`에서 동결한다.
+- 실제 no-fail에서 체력이 소진되면 최저 `-5`에서 동결한다.
+- `TooLate`는 직접 차감하지 않고 뒤의 확정 `FailMiss`만 반영한다.
+- `SwitchChosen` 내부 `Die`와 Postfix 사이 중복 차감은 깊이별 관찰 상태와 1회성 토큰으로 막는다.
+- 실패 복구의 임시 no-fail은 중첩 깊이, Postfix, Finalizer로 반드시 복원한다.
 
-## 3. 파일 구조와 책임
+기본 변화량:
 
-```text
-.
-├─ DEVELOPMENT_HANDOFF.md
-├─ PlanetGauge.slnx
-├─ README.md
-├─ dist/PlanetGauge/                     # 빌드 스테이징, Git ignore
-│  ├─ PlanetGauge.dll
-│  ├─ Info.json
-│  ├─ Assets/Gaugeline.png
-│  └─ PlanetGauge.zip                    # 릴리스 시 수동 생성; 현재는 없음
-└─ PlanetGauge/
-   ├─ Assets/Gaugeline.png               # 커스텀 이벤트 아이콘 원본
-   ├─ Main.cs
-   ├─ GaugeRuntime.cs
-   ├─ Patches.cs
-   ├─ PlanetGaugeLevelEvent.cs
-   ├─ RuntimeHost.cs
-   ├─ EditorGaugeButton.cs
-   ├─ MainGaugeHud.cs
-   ├─ GaugeBarGraphic.cs
-   ├─ PlanetGaugeSettings.cs
-   ├─ PlanetGauge.csproj
-   ├─ Info.json
-   └─ Properties/AssemblyInfo.cs
-```
-
-| 파일 | 역할 |
-|---|---|
-| `Main.cs` | UMM 진입점, 모드 경로, 설정·토글·Harmony 수명, API 검사, 결과/놓침 복구 패치 |
-| `GaugeRuntime.cs` | 체력과 현재 이벤트 설정의 단일 기준, 판정 변화, 강제 사망 |
-| `Patches.cs` | 세션 초기화, `SwitchChosen` 판정, `scrPlayer.Die` 흡수 |
-| `PlanetGaugeLevelEvent.cs` | 이벤트 스키마, 등록, JSON 왕복, 편집기 보정, 런타임 효과 생성, 아이콘 |
-| `RuntimeHost.cs` | 장면 전환을 감시하고 버튼/HUD 수명을 관리하는 단일 Unity 호스트 |
-| `EditorGaugeButton.cs` | 에디터 활성화 버튼 생성·배치·동기화 |
-| `MainGaugeHud.cs` | 체력 바·숫자·효과 문구와 상태색 |
-| `GaugeBarGraphic.cs` | 모따기 게이지 메시와 색상 렌더링 |
-| `PlanetGaugeSettings.cs` | UMM 직렬화 설정과 IMGUI |
-| `PlanetGauge.csproj` | 게임/Unity/UMM 참조와 DLL·Info·아이콘 스테이징 |
-
-## 4. 기본 체력 규칙
-
-`GaugeRuntime.cs`가 단일 기준이다.
-
-| `HitMargin` | 변화량 |
+| HitMargin | 변화량 |
 |---|---:|
-| `Perfect` | `+0.1` |
-| `EarlyPerfect` | `-0.5` |
-| `LatePerfect` | `-0.5` |
-| `VeryEarly` | `-1.5` |
-| `VeryLate` | `-1.5` |
-| `TooEarly` | `-3` |
-| `FailMiss` | `-8` |
-| `FailOverload` | `-8` |
-| `TooLate`, `Multipress`, `Auto`, `OverPress`, 기타 | 직접 변화 없음 |
+| Perfect | +0.1 |
+| EarlyPerfect / LatePerfect | -0.5 |
+| VeryEarly / VeryLate | -1.5 |
+| TooEarly | -3 |
+| FailMiss / FailOverload | -8 |
 
-- 시작·기본 최대 체력은 `100`이다.
-- 기본 회복은 100을 넘지 않는다.
-- `TooLate`는 중간 상태라 직접 차감하지 않고 이후 확정되는 `FailMiss`만 반영한다.
-- 기존 중복 차감 토큰과 복구 깊이 카운터는 유지된다.
+## 4. 0.1.2 속성 모델
 
-## 5. 커스텀 이벤트 계약
+내부 enum/기존 JSON 값은 호환성을 위해 그대로지만 화면 이름은 다음과 같이 바뀌었다.
 
-### 식별자와 실행 시점
-
-- 내부 이름: `SetPlanetGauge`
-- 화면 이름: `PlanetGauge 설정`
-- 숫자 enum ID: `0x5047` (`20551`)
-- 카테고리: `Gameplay`
-- 실행 시점: `OnBar`
-- 첫 타일 허용: 예
-- 같은 타일 중복 허용 여부는 바닐라 `LevelEventInfo` 기본 동작을 따른다.
-
-### 속성 스키마
-
-| 표시 이름 | 키 | 기본값 | 새 이벤트의 O/X | 동작 |
-|---|---|---:|---|---|
-| 속성 설정 | `attributeMode` | `Normal` | O | 아래 모드 중 하나 선택 |
-| 증폭값 설정 | `multiplierPercent` | `100%` | X | O일 때만 저장된 증폭률을 교체 |
-| 실패 방지 | `failureProtection` | 켜짐 | X | O일 때 현재 실패 방지 상태 교체 |
-| 회복 상한 제한 | `recoveryCapEnabled` | 꺼짐 | X | O일 때 상한 제한 상태와 상한값 교체 |
-| 회복 상한 | `recoveryCapPercent` | `100%` | 그룹 하위 | 상한 제한 값이 켜짐일 때만 표시 |
-| 체력 상한 강제 제한 | `forceRecoveryCap` | 켜짐 | 별도 O/X 없음 | 상한 제한이 켜진 이벤트에서 즉시 체력을 상한까지 내릴지 결정 |
-
-속성 모드:
-
-| 모드 | 런타임 효과 |
+| 내부 값 | 화면 이름 |
 |---|---|
-| `Normal` | 원래 변화량 사용 |
-| `BlockRecovery` / 회복 차단 | 양수 변화량을 0으로 변경 |
-| `AmplifyIncrease` / 증가율 증폭 | 양수 변화량에 `증폭값 / 100` 곱하기 |
-| `AmplifyDecrease` / 감소율 증폭 | 음수 변화량에 `증폭값 / 100` 곱하기 |
-| `AmplifyBoth` / 증가·감소율 증폭 | 모든 변화량에 `증폭값 / 100` 곱하기 |
+| `AmplifyIncrease` | 증가율 변경 |
+| `AmplifyDecrease` | 감소율 변경 |
+| `AmplifyBoth` | 증가·감소율 변경 |
 
-중요한 O/X 의미:
+런타임은 단일 `AttributeMode`가 아니라 다음 상태를 보관한다.
 
-- O인 속성만 현재 런타임 설정을 바꾼다.
-- X인 속성은 이전 타일에서 설정된 값을 보존한다.
-- 증폭 모드를 사용자가 직접 고르면 `증폭값 설정` O/X는 바닐라 버튼 경로로 자동 O가 된다.
-- 사용자가 이후 증폭값을 X로 바꾸면 기존 증폭값을 계속 사용한다.
-- 실패 방지가 꺼져 있으면 `FailMiss`/`FailOverload`를 게이지로 흡수하지 않고 사망 처리한다. 단, 게임의 실제 no-fail은 우선한다.
-- 회복 상한은 양수 회복에만 적용한다. 이미 상한보다 높은 체력은 강제 제한을 켠 이벤트가 실행될 때만 즉시 낮춘다.
+- 회복 차단: 독립 Bool
+- 회복 유효 채널: 활성 여부, 퍼센트, 출처(`Increase`/`Both`)
+- 피해 유효 채널: 활성 여부, 퍼센트, 출처(`Decrease`/`Both`)
+- 증가/감소/Both별 마지막 설정 퍼센트: 각각 독립 보존
+- 실패 방지, 회복 상한, Auto 타일 회복
 
-### 수치 보정
-
-- 증폭값: `NaN`/무한대 → `100`, 범위 `0..1000`.
-- 회복 상한: `NaN`/무한대 → `100`, 범위 `0.1..100`.
-- 편집기 입력 확정 시 `PropertyInfo.Validate(float)` Postfix에서 보정한다.
-- 저장 직전 `LevelEvent.Encode(bool)` Prefix에서도 다시 보정한다.
-
-## 6. 이벤트 등록과 JSON 왕복
-
-`PlanetGaugeLevelEventRegistry`가 등록을 소유한다.
-
-1. 모드 활성화 시 GCS 사전이 준비됐으면 즉시 등록한다.
-2. 아직 준비되지 않았으면 활성화 자체는 성공시키고 `ADOStartup.SetupLevelEventsInfo` Postfix에서 등록한다.
-3. 숫자 ID 충돌과 이름 충돌은 각각 예외로 보고한다.
-4. `levelEventsInfo`에는 숫자 문자열 키 하나만 넣는다. 이름 키까지 넣으면 편집기 버튼이 중복된다.
-5. `levelEventTypeString`에는 숫자 enum 값과 `SetPlanetGauge` 이름을 연결한다.
-
-JSON 계약:
-
-```json
-{
-  "eventType": "SetPlanetGauge"
-}
-```
-
-- `RDUtils.ParseEnum<LevelEventType>` Prefix가 이름을 숫자 enum 값으로 바꾼다.
-- `LevelEvent.Decode`는 같은 문자열을 enum 파싱과 `levelEventsInfo` 조회에 같이 사용하므로 Decode Prefix에서만 숫자 문자열 `20551`로 교체한다.
-- `LevelEvent` 생성자 Prefix는 커스텀 `LevelEventInfo`를 주입한다.
-- Encode Postfix는 정의되지 않은 enum의 숫자 `ToString()` 대신 다시 `SetPlanetGauge`를 저장한다.
-- 현재 `ADOStartup.ModWasAdded("PlanetGauge")`를 호출한다. 별도 `LevelData.Encode` requiredMods 패치는 없으므로 배포 전 저장된 레벨의 의존성 표기는 실게임으로 확인한다.
-
-## 7. 편집기 보정과 해결된 문제
-
-### 초기화 전 등록 실패
-
-과거에는 모드 활성화 시 `ADOStartup.SetupLevelEventsInfo`가 끝나지 않았으면 예외로 모드 전체가 꺼졌다. 현재는 준비 여부를 확인하고 지연 등록한다.
-
-### 빈 인스펙터 패널
-
-정의되지 않은 숫자 enum은 `Enum.GetValues`에 나오지 않는다. 바닐라 `InspectorPanel.ShowTabsForFloor`가 대체 이벤트를 고를 때 커스텀 이벤트만 남으면 `None`을 선택해 패널 본문이 비었다.
-
-현재 Postfix는 다음 조건에서만 `ShowPanel(SetPlanetGauge, 0)`을 호출한다.
-
-- 원본 처리 뒤 선택 타입이 `None`이고
-- 해당 타일에 실제 `SetPlanetGauge` 이벤트가 하나 이상 있을 때
-
-이 좁은 조건으로 이벤트 삭제, 다른 타일 전환, 바닐라 이벤트와의 전환에서 발생하던 빈 패널 문제를 해결했다. 사용자가 이후 실게임에서 정상이라고 확인했다.
-
-### 회복 상한 표시 반전
-
-`PropertyInfo.ValueMatch`의 Bool 조건 문자열은 대소문자를 구분하며 소문자 `"true"`를 요구한다. `bool.TrueString`의 `"True"`를 사용하면 조건이 반전된다. 회복 상한과 강제 제한의 `showIfVals`에는 반드시 소문자 리터럴을 유지한다.
-
-### 런타임 효과 생성
-
-`scnGame.ApplyEvent` Postfix는 바닐라가 처리하지 않아 `__result == null`인 `SetPlanetGauge`만 가로챈다. `PlanetGaugeLevelEventEffect : ffxPlusBase`를 대상 floor에 추가하고 `floorID`, `floors`, `crotchet`, `plusEffects`, 시작 시간, `sourceLevelEvent`를 구성한다. 중간 실패 시 추가한 컴포넌트와 리스트 항목을 롤백한다.
-
-## 8. HUD 상태색과 효과 문구
-
-일반 상태에서는 UMM에서 지정한 사용자 게이지 색을 사용한다. 이벤트 효과가 활성화되면 게이지 바와 숫자 텍스트에 같은 대표색을 적용한다.
-
-| 효과 | 색상 | 문구 |
-|---|---|---|
-| 회복 차단 | `#B02020` | `Increase Disabled` |
-| 증가율 증폭 | `#45D66B` | `Increase Amplified` |
-| 감소율 증폭 | `#FF9F1C` | `Decrease Amplified` |
-| 증가·감소율 증폭 | `#FFE36E` | `Rate Amplified` |
-| 실패 방지 꺼짐 | `#2850A7` | `No-Fail Disabled` |
-| 회복 상한 켜짐 | `#9B59D0` | `Increase Limited` |
-
-- 여러 효과가 동시에 활성화되면 모든 문구를 숫자 위에 한 줄씩 표시하고 각 문구는 자기 색을 유지한다.
-- 게이지/숫자는 한 색만 가질 수 있으므로 대표색 우선순위는 `속성 모드 → 회복 상한 → 실패 방지 꺼짐 → 사용자 색`이다.
-- 색상 상수와 우선순위는 `MainGaugeHud.cs`에 주석으로 표시되어 있다.
-- 상태나 사용자 색이 실제로 바뀔 때만 스타일과 TMP 문구를 다시 만든다. 레이아웃 계산은 게임 HUD 애니메이션을 따라 `LateUpdate`에서 수행한다.
-- UI 크기별 2~3줄 동시 표시의 가독성은 계속 실게임 확인 대상이다.
-
-## 9. 전용 이벤트 아이콘
-
-- 원본: `PlanetGauge/Assets/Gaugeline.png`
-- 현재 이미지: 300×300, 투명 ARGB PNG
-- 배포 위치: `dist/PlanetGauge/Assets/Gaugeline.png`
-- 런타임 경로: `UnityModManager.ModEntry.Path` 기준 `Assets/Gaugeline.png`
-- Sprite 생성: 전체 이미지를 사용하고 128 PPU, 중앙 피벗
-- PNG가 없거나 손상되면 `EventSettings`, 그다음 `SetSpeed`, 마지막으로 첫 가용 바닐라 아이콘을 빌린다.
-
-설치본의 `UnityEngine.ImageConversionModule.dll`은 netstandard 2.1을 참조해 net48 프로젝트에서 직접 참조하면 `CS1705`가 발생한다. 따라서 선택 기능인 아이콘 로더만 확인된 `ImageConversion.LoadImage(Texture2D, byte[], bool)` 오버로드를 런타임 reflection으로 호출한다. API가 없으면 이벤트나 모드 전체를 실패시키지 않고 기본 아이콘으로 폴백한다.
-
-커스텀 Sprite와 Texture는 캐시된다. 같은 게임 프로세스에서 PNG만 교체해도 즉시 다시 읽지 않으므로 파일 교체 후 게임 재시작을 권장한다.
-
-## 10. 모드 수명과 등록 유지 정책
-
-1. `Main.Load`가 `ModDirectory`, 설정, UMM 콜백만 등록한다.
-2. Enable은 필수 API 검사 → Harmony 적용 → 상태 초기화 → 단일 `RuntimeHost` 생성 → 이벤트 등록 순서다.
-3. 부분 실패 시 이 모드의 Harmony ID만 해제하고 호스트·상태·새로 추가한 이벤트 등록을 롤백한다.
-4. 정상 Disable에서는 런타임 호스트와 패치를 제거하지만 이벤트 메타데이터는 현재 프로세스에 유지한다. 에디터와 이미 생성된 `LevelEvent`가 참조할 수 있기 때문이다.
-5. `RuntimeHost.OnDestroy`는 버튼과 HUD를 제거하고 Unity 참조를 비운다.
-
-세션 상태는 에디터 플레이 시작, 편집 모드 복귀, 재시작, 커스텀 레벨 리셋에서 `GaugeRuntime.Reset()`으로 초기화되며 이벤트 설정도 기본값으로 돌아간다.
-
-## 11. 기존 판정/사망 흐름의 주의점
-
-- `SwitchChosenPatch`는 원본 처리 전후 판정과 실패 바 상태를 결합한다.
-- `TooLate`는 직접 차감하지 않는다.
-- 확정 실패 뒤 이어지는 `Die`와의 중복 차감은 1회성 토큰으로 방지한다.
-- 놓침 복구의 임시 no-fail은 깊이 카운터와 Postfix/Finalizer로 복원한다.
-- 결과 문자열 생성 중에만 no-fail을 빌려 놓침/과부하 행을 만들고 즉시 원복한다.
-
-해결한 과거 위험:
+겹치는 배율은 곱하지 않는다. 각 부호에서 마지막 명령이 이전 유효 채널을 상쇄한다.
 
 ```text
-SwitchChosen 원본 내부의 OnDamage(false/true, ...)
-→ 연속 Multipress 9회 이상에서 Die(true, true, "", false)
-→ PlayerDiePatch에서 FailOverload -8
-→ 바깥 SwitchChosen Postfix가 실패 바를 다시 확인하면 추가 -8 가능
+Increase 150 → Both 200       = 회복 200(Both), 피해 200(Both)
+Both 200 → Increase 150       = 회복 150(Increase), 피해 200(Both)
+Both 200 → Decrease 50        = 회복 200(Both), 피해 50(Decrease)
 ```
 
-2026-08-19 설치본 IL에서 위 호출 계약을 확인했다. `SwitchChosenPatch`는 중첩 가능한 호출 깊이별 관찰 상태를 두고, 원본 호출 중 `PlayerDiePatch`가 실패 판정을 적용했으면 Postfix의 재적용을 건너뛴다. Postfix와 Finalizer가 관찰 상태를 멱등으로 종료한다. 연속 Multipress 9회 이상에서 체력이 `100 → 92`로 정확히 한 번만 감소하는지는 실게임으로 마지막 확인한다.
+- `0..99.999%`: Reduced
+- `100%`: 중립. 배율 토큰과 상태 문구를 숨긴다.
+- `100% 초과`: Amplified
+- 입력 범위: `0..1000%`
+- 선택 속성 끄기는 그 속성과 겹치는 유효 부호 채널을 끄지만 저장된 퍼센트는 보존한다.
+- `다른 속성 설정 끄기`는 모든 속성 활성 상태를 먼저 끄고 선택 속성을 적용한다. 저장된 퍼센트 메모리는 보존한다.
+- 회복 차단은 배율 채널과 별개이며 최종 양수 변화량을 0으로 만든다.
 
-## 12. 빌드와 배포
+## 5. SetPlanetGauge 직렬화 계약
+
+절대 변경하지 말아야 할 기존 식별자/키:
+
+```text
+eventType = SetPlanetGauge
+numeric ID = 20551
+attributeMode
+multiplierPercent
+failureProtection
+recoveryCapEnabled
+recoveryCapPercent
+forceRecoveryCap
+```
+
+0.1.2 추가 키:
+
+| 표시 이름 | 키 | 기본값 | 형식 |
+|---|---|---:|---|
+| 선택 속성 켜기 | `attributeEnabled` | true | Bool |
+| 다른 속성 설정 끄기 | `disableOtherAttributes` | false | Bool |
+| 자동 플레이 타일 체력 회복 | `autoTileRecovery` | false | 선택형 Bool, 새 이벤트 기본 X |
+
+기존 속성:
+
+| 표시 이름 | 키 | 새 이벤트 O/X |
+|---|---|---|
+| 속성 설정 | `attributeMode` | O |
+| 변경값 설정 | `multiplierPercent` | X |
+| 실패 방지 | `failureProtection` | X |
+| 회복 상한 설정 | `recoveryCapEnabled` | X |
+| 회복 상한 | `recoveryCapPercent` | 그룹 하위 |
+| 체력 상한 강제 제한 | `forceRecoveryCap` | 그룹 하위 |
+
+0.1.1 JSON에는 새 키가 없으므로 Decode 기본값을 `attributeEnabled=true`, `disableOtherAttributes=false`, `autoTileRecovery=false`로 둔다. O/X는 계속 `LevelEvent.disabled`에서만 해석한다. 증감률 모드를 직접 고르면 기존처럼 `multiplierPercent` O/X를 바닐라 버튼 경로로 O로 바꾼다.
+
+`LevelEvent.Encode` Postfix는 `eventType`을 다시 `SetPlanetGauge`로 저장한다. 숫자 ID의 `ToString()`을 JSON에 내보내면 안 된다. 회복 상한 범위는 0.1.2에서 `0.1..1000`으로 확장됐다.
+
+## 6. Auto 회복
+
+- 수동 플레이의 Auto 타일: `autoTileRecovery`가 켜졌을 때만 정상 진행 타일당 `PerfectDelta`를 회복한다.
+- 실제 자동 플레이(`RDC.auto` 또는 player.auto): 설정과 무관하게 정상 진행 타일당 회복한다.
+- 두 경우 모두 회복 차단, 회복 배율, 회복 상한을 거친다.
+- 실제 적용량만 디버그 `Auto` 누계에 더한다.
+- Auto 경로에서는 `ApplyJudgement`와 `Die` 가로채기를 호출하지 않는다.
+
+## 7. 회복 상한과 HUD
+
+- 회복 상한 범위는 `0.1..1000`이다.
+- 숫자 체력은 100을 넘어도 실제 값을 표시한다.
+- 상한이 켜지면 바 정규화 기준은 활성 상한이다.
+- 상한이 꺼진 상태에서 체력이 100보다 높으면 바는 가득 차고 숫자는 실제 값을 표시한다.
+- 강제 제한은 이벤트 실행 시 현재 체력이 상한보다 높은 경우에만 즉시 낮춘다.
+
+HUD 상태색은 0.5초 동안 `EaseOutQuad` (`1-(1-t)^2`)로 보간한다. `Time.unscaledDeltaTime`을 사용하므로 일시정지 중에도 전환이 완료된다. 중간에 목표가 바뀌면 현재 보간색에서 새 목표로 이동한다.
+
+체력 숫자 아래 배율 토큰:
+
+- 회복/피해 유효 채널을 각각 출처색으로 표시한다.
+- 동일한 Both 출처와 퍼센트가 양쪽에 남아 있으면 한 번만 표시한다.
+- 100%와 비활성 채널은 숨긴다.
+- 증폭색: Increase `#45D66B`, Decrease `#FF9F1C`, Both `#FFE36E`
+- 감쇠색: Increase `#3CCFCF`, Decrease `#5DADE2`, Both `#B794F4`
+
+상태 문구는 `Increase/Decrease/Rate Amplified` 또는 `Reduced`를 유효 채널 기준으로 만든다. 회복 차단, 실패 방지 꺼짐, 회복 상한 문구는 기존 계약을 유지한다.
+
+## 8. Shift+F3 디버그 HUD
+
+- 플레이 중 `Shift+F3`로 좌상단 표시를 토글한다.
+- 첫 줄은 항상 `Shift+F3`다.
+- 플레이 일시정지와 실제 Auto 일시정지에서도 숨기지 않는다.
+- 편집 화면에서는 숨기며, 편집 모드 복귀/에디터 장면 진입 시 표시 상태를 초기화한다.
+- Restart/ResetCustomLevel은 게이지·누계만 초기화하고 표시 토글은 유지한다.
+- 10Hz로 텍스트를 갱신한다.
+
+### 화면에 기재되는 전체 행
+
+`GaugeDebugHud.BuildText()`가 만드는 실제 순서와 표기는 다음과 같다.
+
+```text
+Shift+F3
+Gauge: <Current> / <RecoveryMaximum>  BaseMax: <MaximumGauge>
+Recovery: <RecoveryRate>  Damage: <DamageRate>
+BlockRecovery: <RecoveryBlocked>  FailureProtection: <FailureProtection>
+RecoveryCap: <RecoveryCapEnabled> @ <RecoveryCapPercent>  AutoTileRecovery: <AutoTileRecovery>
+ActualAutoPlay: <IsAutoPlay()>  Paused: <controller.paused>
+Frozen: <IsFrozen>  RecoveryDepth: <FailureRecoveryDepth>  PendingDie: <HasPendingDieCharge>  ForcingDeath: <IsForcingDeath>
+Active: <활성 상태 목록 또는 None>
+Totals (applied)
+TooEarly: <누계>
+VeryEarly: <누계>
+EarlyPerfect: <누계>
+Perfect: <누계>
+LatePerfect: <누계>
+VeryLate: <누계>
+FailMiss: <누계>
+FailOverload: <누계>
+Auto: <누계>
+```
+
+### 변수와 계산값의 정확한 의미
+
+| 화면 표기 | 실제 소스 | 값과 의미 |
+|---|---|---|
+| `Shift+F3` | 고정 문자열 | 단축키 안내. 항상 첫 줄이다. |
+| `Gauge` 첫 값 | `GaugeRuntime.Current` | 현재 실제 체력. 소수 셋째 자리까지 표시하며 100을 넘을 수 있다. |
+| `Gauge` 두 번째 값 | `GaugeRuntime.RecoveryMaximum` | 현재 양수 회복에 적용되는 상한. `RecoveryCapEnabled=true`이면 보정된 `RecoveryCapPercent`, 아니면 기본 100이다. |
+| `BaseMax` | `GaugeRuntime.MaximumGauge` | 기본 게이지 최대값 상수. 현재 `100`. 활성 회복 상한과 구별하기 위해 별도로 표시한다. |
+| `Recovery` | `EventSettings.RecoveryRate` | 양수 변화에 개입하는 마지막 유효 채널. 활성 시 `<Source> <Percent>%`, 비활성 시 `Default 100%`. |
+| `Damage` | `EventSettings.DamageRate` | 음수 변화에 개입하는 마지막 유효 채널. 활성 시 `<Source> <Percent>%`, 비활성 시 `Default 100%`. |
+| 채널 `Source` | `PlanetGaugeRateChannel.Source` | `Increase`, `Decrease`, `Both` 중 현재 채널의 출처. 비활성 채널은 화면에서 Source 대신 `Default 100%`로 합쳐 표시한다. |
+| 채널 `Percent` | `PlanetGaugeRateChannel.Percent` | 실제 해당 부호 변화량에 적용되는 퍼센트. 100%도 채널이 활성 상태라면 디버그에는 표시된다. |
+| `BlockRecovery` | `EventSettings.RecoveryBlocked` | `True`이면 모든 양수 회복을 배율 계산과 무관하게 최종 0으로 만든다. |
+| `FailureProtection` | `EventSettings.FailureProtection` | PlanetGauge가 `FailMiss`/`FailOverload`를 체력으로 흡수할지 여부. 게임의 실제 no-fail이 더 높은 우선순위다. |
+| `RecoveryCap` | `EventSettings.RecoveryCapEnabled` | 이벤트 회복 상한 사용 여부. |
+| `RecoveryCap @` 뒤 값 | `EventSettings.RecoveryCapPercent` | 저장된 회복 상한 설정값. 상한이 꺼져 있어도 기억된 값 자체는 계속 표시된다. 범위는 `0.1..1000`. |
+| `AutoTileRecovery` | `EventSettings.AutoTileRecovery` | 수동 플레이에서 Auto 타일 정상 진행 시 체력을 회복할지 여부. 실제 Auto 회복에는 이 Bool이 필요하지 않다. |
+| `ActualAutoPlay` | `GaugeRuntime.IsAutoPlay()` | `RDC.auto` 또는 현재 1P의 `player.auto`가 켜졌는지 계산한 값. |
+| `Paused` | `scrController.instance.paused` | 현재 컨트롤러의 일시정지 상태. 컨트롤러가 없으면 `False`. HUD는 `True`여도 숨지 않는다. |
+| `Frozen` | `GaugeRuntime.IsFrozen` | 체력이 소진된 후 더 이상 변화시키지 않는 동결 상태. 실제 no-fail 바닥에서도 사용한다. |
+| `RecoveryDepth` | `GaugeRuntime.FailureRecoveryDepth` | 원본 실패 복구 경로에 빌린 임시 no-fail의 중첩 깊이. 정상 대기 상태는 `0`. |
+| `PendingDie` | `GaugeRuntime.HasPendingDieCharge` | `SwitchChosen`에서 이미 실패 차감을 적용했고 뒤따르는 `Die`가 같은 실패인지 나타내는 1회성 토큰. |
+| `ForcingDeath` | `GaugeRuntime.IsForcingDeath` | 게이지 소진 후 모드가 원본 `scrPlayer.Die()`를 직접 호출 중인지 나타내는 재진입 방지 상태. |
+| `Active` | `BuildActiveList(EventSettings)` | 아래 활성 상태 이름을 정해진 순서로 쉼표 구분해 표시한다. 아무것도 없으면 `None`. |
+| `Totals (applied)` | 고정 문자열 | 아래 값들이 원시 판정값이 아니라 최종 실제 체력 적용량 누계임을 나타내는 제목. |
+| `TooEarly` | `GetJudgementTotal(HitMargin.TooEarly)` | 매우 빠름 판정의 최종 실제 적용량 누계. |
+| `VeryEarly` | `GetJudgementTotal(HitMargin.VeryEarly)` | 빠름! 판정의 최종 실제 적용량 누계. |
+| `EarlyPerfect` | `GetJudgementTotal(HitMargin.EarlyPerfect)` | 빠름 판정의 최종 실제 적용량 누계. |
+| `Perfect` | `GetJudgementTotal(HitMargin.Perfect)` | 정확 판정의 최종 실제 적용량 누계. |
+| `LatePerfect` | `GetJudgementTotal(HitMargin.LatePerfect)` | 느림 판정의 최종 실제 적용량 누계. |
+| `VeryLate` | `GetJudgementTotal(HitMargin.VeryLate)` | 느림! 판정의 최종 실제 적용량 누계. |
+| `FailMiss` | `GetJudgementTotal(HitMargin.FailMiss)` | 놓침 판정의 최종 실제 적용량 누계. |
+| `FailOverload` | `GetJudgementTotal(HitMargin.FailOverload)` | 과부하 판정의 최종 실제 적용량 누계. |
+| `Auto` | `GaugeRuntime.AutoTotal` | 수동 Auto 타일 또는 실제 Auto가 정상 진행해 적용한 최종 회복량 누계. |
+
+`Active` 목록에는 다음 이름만 들어가며, 아래 순서를 유지한다.
+
+| 표시 이름 | 포함 조건 |
+|---|---|
+| `BlockRecovery` | `RecoveryBlocked == true` |
+| `RecoveryRate` | `RecoveryRate.Enabled == true` |
+| `DamageRate` | `DamageRate.Enabled == true` |
+| `NoFailDisabled` | `FailureProtection == false` |
+| `RecoveryCap` | `RecoveryCapEnabled == true` |
+| `AutoTileRecovery` | `AutoTileRecovery == true` |
+
+### 표시 형식과 누계 규칙
+
+- 일반 수치는 invariant culture의 `0.###` 형식이다. 소수점 아래 불필요한 0은 생략한다.
+- 판정/Auto 누계는 `+0.###;-0.###;0` 형식이라 양수에는 `+`, 음수에는 `-`가 붙는다.
+- Bool은 C# 기본 문자열인 `True`/`False`로 표시된다.
+- 누계는 회복 차단, 유효 배율, 회복 상한, no-fail 바닥/0 체력 제한을 모두 거친 `Current`의 실제 전후 차이만 더한다.
+- 예를 들어 원시 회복 +0.1 중 상한 때문에 +0.03만 들어갔다면 +0.03만, 회복 차단으로 0이 됐다면 0만 반영된다.
+- `FailureProtection=false`가 원본 사망으로 바로 보내 게이지를 바꾸지 않은 실패는 해당 판정 누계도 증가하지 않는다.
+- 마지막 판정, 판정 직전 체력, 판정 직후 체력은 사용자 결정에 따라 의도적으로 표시하지 않는다.
+- `GaugeRuntime.Reset()`은 체력, 이벤트 상태, 판정 누계, Auto 누계, frozen/Die/복구 상태를 초기화한다. HUD의 `Visible`은 별도 소유라 Restart에서는 유지하고 편집 화면 복귀에서만 초기화한다.
+
+## 9. 주요 파일
+
+| 파일 | 책임 |
+|---|---|
+| `GaugeRuntime.cs` | 체력, 채널 상태, 판정/Auto 실제 변화, 누계, 사망 상태 |
+| `Patches.cs` | 세션 경계, SwitchChosen 판정/Auto 성공 관찰, Die 흡수 |
+| `PlanetGaugeLevelEvent.cs` | 이벤트 스키마, Decode/Encode, 등록, 아이콘, 현지화 |
+| `MainGaugeHud.cs` | 게이지/숫자/배율/효과 문구와 색 전환 |
+| `GaugeDebugHud.cs` | Shift+F3 좌상단 디버그 표시 |
+| `RuntimeHost.cs` | 버튼, 메인 HUD, 디버그 HUD 수명과 입력 |
+| `GaugeBarGraphic.cs` | 게이지 메시 |
+| `PlanetGauge.csproj` | 설치 DLL 참조와 dist 스테이징 |
+
+`UnityEngine.InputLegacyModule.dll`은 Shift+F3 입력 때문에 명시적으로 참조하며 `Private=false`다.
+
+## 10. 빌드와 완료된 검증
 
 ```powershell
 dotnet build PlanetGauge/PlanetGauge.csproj -c Release
 ```
 
-게임 설치 위치가 기본값과 다르면 다음을 사용한다.
-
-```powershell
-dotnet build PlanetGauge/PlanetGauge.csproj -c Release `
-  /p:GameManagedDir="<게임 Managed 폴더>"
-```
-
-빌드 타깃이 자동 갱신하는 항목:
+빌드가 자동 스테이징하는 파일:
 
 ```text
 dist/PlanetGauge/PlanetGauge.dll
@@ -298,57 +305,39 @@ dist/PlanetGauge/Info.json
 dist/PlanetGauge/Assets/Gaugeline.png
 ```
 
-- 게임, Unity, Harmony, UMM DLL은 `Private=false`이며 배포물에 넣지 않는다.
-- ZIP은 자동 생성하지 않는다. 릴리스 시 위 세 항목으로 새 ZIP을 만든다.
-- 오래된 ZIP을 dist에 남기지 않는다. 사용자가 구버전을 설치하는 원인이 된다.
-- 2026-08-19 최신 Release DLL은 52,736바이트, SHA-256 `2405C1FEC4CCA2AED2466028EA6A6BA0D0B92BA62C0F919EC68B99B6E9257085`이다. 기존 `dist/PlanetGauge/PlanetGauge.zip`은 스테이징 DLL보다 오래됐고 Info/DLL이 다르며 아이콘이 없어 제거했다. 릴리스 시 최신 3개 항목으로 새 ZIP을 만든다.
-- `Info.json`, `AssemblyVersion`, `AssemblyFileVersion`은 모두 `0.1.0`이다.
+완료:
 
-## 13. 검증 현황
+- 위 설치본 DLL 기준 Release 빌드: 경고 0, 오류 0.
+- `Info.json` 0.1.2, AssemblyVersion/FileVersion 0.1.2.0 일치.
+- dist에는 DLL, Info, Gaugeline만 존재하며 게임/Unity/Harmony DLL은 복사되지 않음.
+- 임시 reflection 실행 검증으로 마지막 채널 우선, Both 부분 덮어쓰기, 다른 속성 끄기, 속성별 변경값 재사용 계약 통과.
+- `git diff --check` 오류 없음(Windows CRLF 안내만 존재).
 
-완료된 정적/빌드 검증:
+## 11. 반드시 남은 실게임 검증
 
-- 현재 설치된 ADOFAI/Unity/UMM DLL 기준 Release 빌드 성공.
-- 경고 0개, 오류 0개.
-- 오래된 ZIP 제거 후 `Info.json`, `PlanetGauge.dll`, `Assets/Gaugeline.png` 3개만 남겨 엄격 패키지 검증 통과.
-- 설치본의 `scrPlanet.SwitchChosen()` → `scrPlayer.OnDamage(bool,bool,bool,HitMargin)` → `scrPlayer.Die(bool,bool,string,bool)` Multipress 경로를 IL로 확인.
-- 중복 차감 방지 관찰 상태를 reflection으로 검증: Die 없음 `false`, 중첩 내부 Die `true`/외부 `false`, 단일 Die `true`.
-- 커스텀 이벤트 스키마를 reflection으로 생성해 `showIfVals`, O/X 여부를 확인.
-- 일반 및 효과 조합의 HUD 대표색·문구 매핑을 reflection으로 확인.
-- 원본/배포 아이콘 SHA-256 일치 확인.
-- 배포 폴더에 게임/Unity/Harmony/UMM DLL이 없음을 확인.
-- 사용자가 빈 인스펙터와 회복 상한 그룹 표시가 정상화됐다고 보고함.
+빌드/정적 검증은 실게임 동작을 보장하지 않는다. 다음은 아직 수동 확인이 필요하다.
 
-빌드 성공은 실게임 안정성을 의미하지 않는다. 다음 수동 검증은 계속 유지한다.
-
-1. 모드 enable/disable/re-enable에서 UI와 패치가 중복되지 않는가.
-2. 이벤트 생성·복사·삭제·Undo·타일 이동·다른 이벤트 전환이 정상인가.
-3. JSON 저장 → 재로드 → 재저장 시 `SetPlanetGauge`와 속성/O/X가 보존되는가.
-4. 저장된 레벨의 requiredMods에 PlanetGauge 의존성이 기대대로 남는가.
-5. 각 속성 모드가 양수/음수 판정에 정확히 적용되는가.
-6. 증폭값 X가 이전 값을 보존하고 증폭 모드 직접 선택 시 O로 바뀌는가.
-7. 실패 방지 OFF와 게임 실제 no-fail의 우선순위가 맞는가.
-8. 회복 상한, 강제 상한, 0.1 최소값, NaN/무한대 보정이 맞는가.
-9. 재시작·체크포인트·편집 복귀에서 체력과 이벤트 설정이 초기화되는가.
-10. HUD 문구 1~3줄과 상태색이 여러 해상도/UI 배율에서 읽기 좋은가.
-11. `Gaugeline.png`가 실제 이벤트 아이콘으로 보이고 누락/손상 시 폴백하는가.
-12. PACL2/JALib 등 다른 모드와 함께 이벤트 패널 전환이 정상인가.
-13. 연속 Multipress 9회 이상의 직접 사망 경로에서 체력이 `100 → 92`로 한 번만 감소하는가.
-
-## 14. 다음 작업 후보
-
-1. 위 수동 검증표, 특히 requiredMods·Multipress·PACL2 공존을 완료한다.
-2. 아이콘의 실제 크기·여백을 확인하고 필요하면 128×128 PNG로 교체한다.
-3. HUD 효과 3줄 동시 표시의 간격과 잘림을 확인한다.
-4. 게이지 스킨 이벤트 속성은 현재 구조가 안정된 뒤 별도 설계한다.
-5. 배포 전 새 ZIP을 만들고 DLL/Info/Assets 버전이 같은지 확인한다.
+1. 0.1.1 레벨 JSON 로드 → 실행 → 저장 → 재로드에서 기존 키와 O/X가 보존되는가.
+2. 새 Bool 두 개와 Auto 토글의 표시, 복사, 삭제, Undo/Redo가 정상인가.
+3. Increase/Both/Decrease 순서를 바꾼 위 세 예제에서 실제 회복·피해가 마지막 채널 규칙과 일치하는가.
+4. 속성 끄기와 `다른 속성 설정 끄기`가 활성 상태만 끄고 각 변경값 메모리를 보존하는가.
+5. 0%, 50%, 100%, 150%, 1000%에서 수치, Reduced/Amplified 문구, 토큰 색이 맞는가.
+6. 100% 토큰/문구가 숨겨지고 Both 동일 채널이 하나의 토큰으로 합쳐지는가.
+7. 회복 상한 150/500/1000에서 숫자와 바가 깨지지 않는가. 상한 해제 후 100 초과 숫자가 유지되는가.
+8. 수동 Auto 타일 토글 OFF/ON과 실제 Auto에서 정상 진행당 한 번만 회복하는가.
+9. Auto 회복이 차단/배율/상한을 통과하면서 피해·사망 패치를 건드리지 않는가.
+10. HUD 색이 0.5초 OutQuad로 전환되고 연속 이벤트 중 튀지 않는가.
+11. Shift+F3가 play/pause에서 보이고 edit에서 숨으며, restart에는 표시 유지·누계 초기화, edit 복귀에는 표시 초기화되는가.
+12. 디버그 판정 누계와 Auto 누계가 상한/차단 후 실제 적용량과 일치하는가.
+13. 실패 방지 OFF, 실제 no-fail, hitbox, 연속 Multipress 9회 이상에서 기존 판정·사망 우선순위와 단일 차감이 유지되는가.
+14. 다양한 해상도/UI 배율에서 체력 숫자, 배율 토큰, 여러 효과 줄, 디버그 HUD가 겹치거나 잘리지 않는가.
+15. 이벤트 아이콘, requiredMods, PACL2/JALib 공존이 기존처럼 정상인가.
 
 ## 다음 채팅용 지시문
 
 ```text
-PlanetGauge 개발을 이어서 진행해줘.
-저장소 루트의 DEVELOPMENT_HANDOFF.md를 전부 읽고 git status와 현재 설치 DLL을 먼저 확인해.
-현재 버전은 0.1.0이고 SetPlanetGauge 커스텀 이벤트, HUD 상태색/효과 문구, Gaugeline 아이콘까지 구현돼 있다.
-기존 판정·사망 흐름과 커스텀 이벤트 직렬화 계약을 보존해.
-수정 후에는 설치본 DLL 기준 Release 빌드와 관련 실게임 검증 항목을 구분해서 보고해.
+PlanetGauge 0.1.2 작업을 이어서 진행해줘.
+저장소 루트 DEVELOPMENT_HANDOFF.md를 전부 읽고 git status와 현재 설치 DLL을 먼저 확인해.
+기존 판정·사망 흐름과 SetPlanetGauge 이름/ID/기존 JSON 키/O-X 계약을 보존해.
+Release 빌드 검증과 아직 필요한 실게임 검증을 구분해서 보고해.
 ```

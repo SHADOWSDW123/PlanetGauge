@@ -24,6 +24,7 @@ namespace PlanetGauge
             if (Main.IsEnabled && Main.EditorGaugeEnabled)
             {
                 GaugeRuntime.Reset();
+                RuntimeHost.ResetDebugVisibility();
             }
         }
     }
@@ -70,6 +71,7 @@ namespace PlanetGauge
             internal HitMargin Judgement;
             internal scrPlayer Player;
             internal int ObservationDepth;
+            internal bool TrackAutomaticRecovery;
         }
 
         private static void Prefix(scrPlanet __instance, ref SwitchState __state)
@@ -98,9 +100,16 @@ namespace PlanetGauge
 
             scrFloor nextFloor = currentFloor.nextfloor;
             bool autoFloor = nextFloor != null && nextFloor.auto;
-            if (GaugeRuntime.IsAutoPlay(__instance.player)
-                || (autoFloor && !RDC.useOldAuto)
-                || (__instance.player != null && __instance.player.midspinInfiniteMargin))
+            bool actualAutoPlay = GaugeRuntime.IsAutoPlay(__instance.player);
+            if (actualAutoPlay || (autoFloor && !RDC.useOldAuto))
+            {
+                __state.TrackAutomaticRecovery = actualAutoPlay
+                    || GaugeRuntime.EventSettings.AutoTileRecovery;
+                __state.Player = __instance.player;
+                return;
+            }
+
+            if (__instance.player != null && __instance.player.midspinInfiniteMargin)
             {
                 return;
             }
@@ -122,9 +131,24 @@ namespace PlanetGauge
             __state.ObservationDepth = BeginObservation();
         }
 
-        private static void Postfix(ref SwitchState __state)
+        private static void Postfix(
+            scrPlanet __instance,
+            scrPlanet __result,
+            ref SwitchState __state)
         {
             bool judgementAppliedByDie = EndObservation(ref __state);
+
+            if (__state.TrackAutomaticRecovery
+                && __state.Player != null
+                && __result != null
+                && __result != __instance
+                && GaugeRuntime.ShouldHandle(__state.Player))
+            {
+                // 자동 플레이는 성공적으로 다음 타일로 진행한 경우에만 회복한다.
+                // 판정/사망 가로채기와는 연결하지 않아 원본 자동 플레이 흐름을 보존한다.
+                GaugeRuntime.ApplyAutomaticRecovery();
+                return;
+            }
 
             if (!__state.Track
                 || __state.Player == null

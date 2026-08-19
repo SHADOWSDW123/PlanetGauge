@@ -22,7 +22,7 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 # PlanetGauge 설정 이벤트
 <img width="500" height="868" alt="wip_setgauge" src="https://github.com/user-attachments/assets/5bf46a38-33f6-4d96-a6bf-c763351ea0a9" />
 
-* 게이지 증감률 증폭, 회복 차단, 체력상한 설정, 실패방지 오프(게이지 모드에서만) 등과 같은 내용들을 인게임에서 설정할 수 있습니다. 
+* 게이지 증감률 변경(감쇠/증폭), 회복 차단, 체력상한 설정, 실패방지 오프(게이지 모드에서만) 등과 같은 내용들을 인게임에서 설정할 수 있습니다.
 # 게이지 설정에 따른 체력바 변형
 * 게이지 속성에 따라 체력과 텍스트의 색상이 변화합니다.
 * 속성이 다음과 같이 기재됩니다.
@@ -31,6 +31,7 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 > - 체력 회복량 증폭: Increase Amplified
 > - 체력 감소량 증폭: Decrease Amplified
 > - 체력 증감량 증폭: Rate Amplified
+> - 100% 미만의 증감률: Increase/Decrease/Rate Reduced
 > - 실패방지 해제: No-Fail Disabled (*PlanetGauge 모드의 실패방지만 해제됩니다.)
 > - 체력 상한 설정: Increase Limited
 

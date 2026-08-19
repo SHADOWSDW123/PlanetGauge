@@ -12,6 +12,7 @@ namespace PlanetGauge
 
         private scnEditor observedEditor;
         private MainGaugeHud mainGaugeHud;
+        private GaugeDebugHud debugHud;
 
         internal static void Create()
         {
@@ -38,9 +39,18 @@ namespace PlanetGauge
             instance = null;
         }
 
+        internal static void ResetDebugVisibility()
+        {
+            if (instance != null && instance.debugHud != null)
+            {
+                instance.debugHud.ResetVisibility();
+            }
+        }
+
         private void Awake()
         {
             mainGaugeHud = new MainGaugeHud();
+            debugHud = new GaugeDebugHud();
         }
 
         private void Update()
@@ -54,6 +64,7 @@ namespace PlanetGauge
 
                 if (editor != null)
                 {
+                    debugHud.ResetVisibility();
                     Main.BeginEditorSession();
                 }
             }
@@ -67,6 +78,14 @@ namespace PlanetGauge
             {
                 EditorGaugeButton.Destroy();
             }
+
+            if (Input.GetKeyDown(KeyCode.F3)
+                && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)))
+            {
+                debugHud.Toggle();
+            }
+
+            debugHud.Update();
         }
 
         private void LateUpdate()
@@ -86,6 +105,12 @@ namespace PlanetGauge
             {
                 mainGaugeHud.Dispose();
                 mainGaugeHud = null;
+            }
+
+            if (debugHud != null)
+            {
+                debugHud.Dispose();
+                debugHud = null;
             }
 
             if (instance == this)

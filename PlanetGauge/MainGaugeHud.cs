@@ -18,6 +18,8 @@ namespace PlanetGauge
         private const float BaseEffectTextGap = 2f;
         private const float BaseFontSize = 24f;
         private const float EffectFontSizeRatio = 0.46f;
+        private const float RateFontSizeRatio = 0.54f;
+        private const float ColorTransitionDuration = 0.5f;
         private const float BaseChamferSize = 4f;
 
         private static readonly Color32 BorderColor = new Color32(0, 0, 0, 255);
@@ -32,6 +34,9 @@ namespace PlanetGauge
         private static readonly Color32 AmplifyIncreaseColor = new Color32(69, 214, 107, 255);    // #45D66B
         private static readonly Color32 AmplifyDecreaseColor = new Color32(255, 159, 28, 255);    // #FF9F1C
         private static readonly Color32 AmplifyBothColor = new Color32(255, 227, 110, 255);       // #FFE36E
+        private static readonly Color32 ReduceIncreaseColor = new Color32(60, 207, 207, 255);     // #3CCFCF
+        private static readonly Color32 ReduceDecreaseColor = new Color32(93, 173, 226, 255);     // #5DADE2
+        private static readonly Color32 ReduceBothColor = new Color32(183, 148, 244, 255);        // #B794F4
         private static readonly Color32 NoFailDisabledColor = new Color32(40, 80, 167, 255);      // #2850A7
         private static readonly Color32 IncreaseLimitedColor = new Color32(155, 89, 208, 255);    // #9B59D0
 
@@ -44,17 +49,22 @@ namespace PlanetGauge
         private TextMeshProUGUI valueText;
         private RectTransform valueTextRect;
         private Outline valueOutline;
+        private TextMeshProUGUI rateText;
+        private RectTransform rateTextRect;
+        private Outline rateOutline;
         private TextMeshProUGUI effectText;
         private RectTransform effectTextRect;
         private Outline effectOutline;
 
         private Color32 lastUserGaugeColor;
-        private PlanetGaugeAttributeMode lastAttributeMode;
-        private bool lastFailureProtection;
-        private bool lastRecoveryCapEnabled;
+        private int lastStyleRevision = -1;
         private bool hasLastStyle;
         private int activeEffectCount;
         private string lastDisplayedValue;
+        private Color currentGaugeColor;
+        private Color transitionStartColor;
+        private Color transitionTargetColor;
+        private float transitionElapsed;
 
         internal void Update()
         {
@@ -93,6 +103,9 @@ namespace PlanetGauge
             valueText = null;
             valueTextRect = null;
             valueOutline = null;
+            rateText = null;
+            rateTextRect = null;
+            rateOutline = null;
             effectText = null;
             effectTextRect = null;
             effectOutline = null;
@@ -147,10 +160,15 @@ namespace PlanetGauge
             gaugeGraphic.SetChamferSize(BaseChamferSize);
 
             CreateValueText();
+            CreateRateText();
             CreateEffectText();
             hasLastStyle = false;
             activeEffectCount = 0;
             lastDisplayedValue = null;
+            currentGaugeColor = Main.Settings.GetMainGaugeColor();
+            transitionStartColor = currentGaugeColor;
+            transitionTargetColor = currentGaugeColor;
+            transitionElapsed = ColorTransitionDuration;
         }
 
         private void CreateValueText()
@@ -221,41 +239,75 @@ namespace PlanetGauge
             effectOutline.useGraphicAlpha = true;
         }
 
+        private void CreateRateText()
+        {
+            GameObject textObject = new GameObject(
+                "GaugeRates",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(TextMeshProUGUI),
+                typeof(Outline));
+            textObject.transform.SetParent(rootObject.transform, false);
+
+            rateTextRect = textObject.GetComponent<RectTransform>();
+            rateTextRect.anchorMin = new Vector2(0.5f, 0.5f);
+            rateTextRect.anchorMax = new Vector2(0.5f, 0.5f);
+            rateTextRect.pivot = new Vector2(0.5f, 0.5f);
+
+            rateText = textObject.GetComponent<TextMeshProUGUI>();
+            rateText.alignment = TextAlignmentOptions.Center;
+            rateText.fontStyle = FontStyles.Bold;
+            rateText.richText = true;
+            rateText.textWrappingMode = TextWrappingModes.NoWrap;
+            rateText.overflowMode = TextOverflowModes.Overflow;
+            rateText.raycastTarget = false;
+            if (TMP_Settings.defaultFontAsset != null)
+            {
+                rateText.font = TMP_Settings.defaultFontAsset;
+            }
+
+            rateOutline = textObject.GetComponent<Outline>();
+            rateOutline.effectColor = new Color(0f, 0f, 0f, 0.95f);
+            rateOutline.useGraphicAlpha = true;
+        }
+
         private void UpdateStyle()
         {
             PlanetGaugeSettings settings = Main.Settings;
             PlanetGaugeEventSettings eventSettings = GaugeRuntime.EventSettings;
             Color32 userGaugeColor = settings.GetMainGaugeColor();
-            if (hasLastStyle
-                && lastUserGaugeColor.Equals(userGaugeColor)
-                && lastAttributeMode == eventSettings.AttributeMode
-                && lastFailureProtection == eventSettings.FailureProtection
-                && lastRecoveryCapEnabled == eventSettings.RecoveryCapEnabled)
+            bool styleChanged = !hasLastStyle
+                || !lastUserGaugeColor.Equals(userGaugeColor)
+                || lastStyleRevision != GaugeRuntime.StyleRevision;
+            if (styleChanged)
             {
-                return;
+                lastUserGaugeColor = userGaugeColor;
+                lastStyleRevision = GaugeRuntime.StyleRevision;
+                hasLastStyle = true;
+
+                transitionStartColor = currentGaugeColor;
+                transitionTargetColor = ResolveGaugeColor(eventSettings, userGaugeColor);
+                transitionElapsed = 0f;
+
+                string effects = BuildEffectText(eventSettings, out activeEffectCount);
+                effectText.text = effects;
+                effectText.enabled = activeEffectCount > 0;
+                rateText.text = BuildRateText(eventSettings);
+                rateText.enabled = !string.IsNullOrEmpty(rateText.text);
             }
 
-            lastUserGaugeColor = userGaugeColor;
-            lastAttributeMode = eventSettings.AttributeMode;
-            lastFailureProtection = eventSettings.FailureProtection;
-            lastRecoveryCapEnabled = eventSettings.RecoveryCapEnabled;
-            hasLastStyle = true;
-
-            Color32 gaugeColor = ResolveGaugeColor(eventSettings, userGaugeColor);
+            transitionElapsed = Mathf.Min(
+                ColorTransitionDuration,
+                transitionElapsed + Time.unscaledDeltaTime);
+            float progress = ColorTransitionDuration <= 0f
+                ? 1f
+                : transitionElapsed / ColorTransitionDuration;
+            float eased = 1f - (1f - progress) * (1f - progress);
+            currentGaugeColor = Color.Lerp(transitionStartColor, transitionTargetColor, eased);
             gaugeGraphic.SetStyle(
-                BorderColor,
-                DisabledColor,
-                DepletedColor,
-                gaugeColor,
-                gaugeColor,
-                gaugeColor,
-                2f);
-
-            valueText.color = gaugeColor;
-
-            string effects = BuildEffectText(eventSettings, out activeEffectCount);
-            effectText.text = effects;
-            effectText.enabled = activeEffectCount > 0;
+                BorderColor, DisabledColor, DepletedColor,
+                currentGaugeColor, currentGaugeColor, currentGaugeColor, 2f);
+            valueText.color = currentGaugeColor;
         }
 
         private void UpdateLayout(scrHitErrorMeter meter, RectTransform meterRect)
@@ -301,6 +353,9 @@ namespace PlanetGauge
                 9f,
                 84f);
             float textHeight = fontSize + 10f;
+            float rateFontSize = Mathf.Clamp(fontSize * RateFontSizeRatio, 8f, 40f);
+            float rateHeight = rateFontSize + 2f;
+            float visibleRateHeight = rateText.enabled ? rateHeight : 0f;
             valueText.fontSize = fontSize;
             valueTextRect.sizeDelta = new Vector2(
                 Mathf.Max(barWidth, fontSize * 5f),
@@ -309,11 +364,25 @@ namespace PlanetGauge
                 settings.MainGaugeValueOffsetX,
                 barHeight * 0.5f
                     + BaseTextGap * meterScale
+                    + visibleRateHeight
                     + textHeight * 0.5f
                     + settings.MainGaugeValueOffsetY);
             valueOutline.effectDistance = new Vector2(
                 Mathf.Clamp(meterScale, 1f, 2f),
                 -Mathf.Clamp(meterScale, 1f, 2f));
+
+            rateText.fontSize = rateFontSize;
+            rateTextRect.sizeDelta = new Vector2(
+                Mathf.Max(barWidth, rateFontSize * 9f),
+                rateHeight);
+            rateTextRect.anchoredPosition = new Vector2(
+                settings.MainGaugeValueOffsetX,
+                valueTextRect.anchoredPosition.y
+                    - textHeight * 0.5f
+                    - rateHeight * 0.5f);
+            rateOutline.effectDistance = new Vector2(
+                Mathf.Clamp(meterScale * 0.7f, 1f, 1.5f),
+                -Mathf.Clamp(meterScale * 0.7f, 1f, 1.5f));
 
             float effectFontSize = Mathf.Clamp(
                 fontSize * EffectFontSizeRatio,
@@ -347,16 +416,19 @@ namespace PlanetGauge
              * 여러 효과가 동시에 켜졌을 때 게이지와 숫자는 한 색만 가질 수 있다.
              * 우선순위를 바꾸려면 아래 검사 순서를 옮기면 된다. 모든 활성 효과 문구는 별도로 표시된다.
              */
-            switch (settings.AttributeMode)
+            if (settings.RecoveryBlocked)
             {
-                case PlanetGaugeAttributeMode.BlockRecovery:
-                    return BlockRecoveryColor;
-                case PlanetGaugeAttributeMode.AmplifyIncrease:
-                    return AmplifyIncreaseColor;
-                case PlanetGaugeAttributeMode.AmplifyDecrease:
-                    return AmplifyDecreaseColor;
-                case PlanetGaugeAttributeMode.AmplifyBoth:
-                    return AmplifyBothColor;
+                return BlockRecoveryColor;
+            }
+
+            if (IsNonNeutral(settings.RecoveryRate))
+            {
+                return GetRateColor(settings.RecoveryRate);
+            }
+
+            if (IsNonNeutral(settings.DamageRate))
+            {
+                return GetRateColor(settings.DamageRate);
             }
 
             if (settings.RecoveryCapEnabled)
@@ -379,20 +451,24 @@ namespace PlanetGauge
             string result = string.Empty;
             effectCount = 0;
 
-            switch (settings.AttributeMode)
+            if (settings.RecoveryBlocked)
             {
-                case PlanetGaugeAttributeMode.BlockRecovery:
-                    AppendEffect(ref result, ref effectCount, BlockRecoveryColor, "Increase Disabled");
-                    break;
-                case PlanetGaugeAttributeMode.AmplifyIncrease:
-                    AppendEffect(ref result, ref effectCount, AmplifyIncreaseColor, "Increase Amplified");
-                    break;
-                case PlanetGaugeAttributeMode.AmplifyDecrease:
-                    AppendEffect(ref result, ref effectCount, AmplifyDecreaseColor, "Decrease Amplified");
-                    break;
-                case PlanetGaugeAttributeMode.AmplifyBoth:
-                    AppendEffect(ref result, ref effectCount, AmplifyBothColor, "Rate Amplified");
-                    break;
+                AppendEffect(ref result, ref effectCount, BlockRecoveryColor, "Increase Disabled");
+            }
+
+            bool combinedBoth = IsSameBothChannel(settings.RecoveryRate, settings.DamageRate);
+            if (combinedBoth && IsNonNeutral(settings.RecoveryRate))
+            {
+                AppendEffect(
+                    ref result,
+                    ref effectCount,
+                    GetRateColor(settings.RecoveryRate),
+                    settings.RecoveryRate.Percent < 100f ? "Rate Reduced" : "Rate Amplified");
+            }
+            else
+            {
+                AppendRateEffect(ref result, ref effectCount, settings.RecoveryRate, "Increase");
+                AppendRateEffect(ref result, ref effectCount, settings.DamageRate, "Decrease");
             }
 
             if (!settings.FailureProtection)
@@ -406,6 +482,78 @@ namespace PlanetGauge
             }
 
             return result;
+        }
+
+        private static string BuildRateText(PlanetGaugeEventSettings settings)
+        {
+            bool combinedBoth = IsSameBothChannel(settings.RecoveryRate, settings.DamageRate);
+            if (combinedBoth && IsNonNeutral(settings.RecoveryRate))
+            {
+                return FormatRateToken(settings.RecoveryRate);
+            }
+
+            string result = string.Empty;
+            if (IsNonNeutral(settings.RecoveryRate))
+            {
+                result = FormatRateToken(settings.RecoveryRate);
+            }
+            if (IsNonNeutral(settings.DamageRate))
+            {
+                if (result.Length > 0) result += "  ";
+                result += FormatRateToken(settings.DamageRate);
+            }
+            return result;
+        }
+
+        private static string FormatRateToken(PlanetGaugeRateChannel channel)
+        {
+            return "<color=#" + ColorUtility.ToHtmlStringRGB(GetRateColor(channel)) + ">"
+                + channel.Percent.ToString("0.#", CultureInfo.InvariantCulture) + "%</color>";
+        }
+
+        private static void AppendRateEffect(
+            ref string text,
+            ref int effectCount,
+            PlanetGaugeRateChannel channel,
+            string prefix)
+        {
+            if (!IsNonNeutral(channel)) return;
+            AppendEffect(
+                ref text,
+                ref effectCount,
+                GetRateColor(channel),
+                prefix + (channel.Percent < 100f ? " Reduced" : " Amplified"));
+        }
+
+        private static bool IsNonNeutral(PlanetGaugeRateChannel channel)
+        {
+            return channel.Enabled && !Mathf.Approximately(channel.Percent, 100f);
+        }
+
+        private static bool IsSameBothChannel(
+            PlanetGaugeRateChannel recovery,
+            PlanetGaugeRateChannel damage)
+        {
+            return recovery.Enabled && damage.Enabled
+                && recovery.Source == PlanetGaugeRateSource.Both
+                && damage.Source == PlanetGaugeRateSource.Both
+                && Mathf.Approximately(recovery.Percent, damage.Percent);
+        }
+
+        private static Color32 GetRateColor(PlanetGaugeRateChannel channel)
+        {
+            bool reduced = channel.Percent < 100f;
+            switch (channel.Source)
+            {
+                case PlanetGaugeRateSource.Increase:
+                    return reduced ? ReduceIncreaseColor : AmplifyIncreaseColor;
+                case PlanetGaugeRateSource.Decrease:
+                    return reduced ? ReduceDecreaseColor : AmplifyDecreaseColor;
+                case PlanetGaugeRateSource.Both:
+                    return reduced ? ReduceBothColor : AmplifyBothColor;
+                default:
+                    return reduced ? ReduceBothColor : AmplifyBothColor;
+            }
         }
 
         private static void AppendEffect(
@@ -429,15 +577,12 @@ namespace PlanetGauge
 
         private void UpdateValue()
         {
-            float normalizedValue = GaugeRuntime.MaximumGauge <= 0f
+            float normalizedValue = GaugeRuntime.RecoveryMaximum <= 0f
                 ? 0f 
-                : GaugeRuntime.Current / GaugeRuntime.MaximumGauge;
+                : GaugeRuntime.Current / GaugeRuntime.RecoveryMaximum;
             gaugeGraphic.SetState(true, normalizedValue);
 
-            float displayValue = Mathf.Clamp(
-                GaugeRuntime.Current,
-                0f,
-                GaugeRuntime.MaximumGauge);
+            float displayValue = Mathf.Max(0f, GaugeRuntime.Current);
             PlanetGaugeSettings settings = Main.Settings;
             string formattedValue = settings.MainGaugeShowDecimalValue
                 ? displayValue.ToString("0.0", CultureInfo.InvariantCulture)
