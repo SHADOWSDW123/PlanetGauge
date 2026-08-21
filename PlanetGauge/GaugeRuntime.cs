@@ -9,8 +9,8 @@ namespace PlanetGauge
         internal const float MaximumGauge = 100f;
         internal const float NoFailMinimumGauge = -5f;
         internal const float PerfectDelta = 0.1f;
-        internal const float EarlyPerfectDelta = -0.5f;
-        internal const float LatePerfectDelta = -0.5f;
+        internal const float EarlyPerfectDelta = -0.8f;
+        internal const float LatePerfectDelta = -0.8f;
         internal const float VeryEarlyDelta = -1.5f;
         internal const float VeryLateDelta = -1.5f;
         internal const float TooEarlyDelta = -3f;
