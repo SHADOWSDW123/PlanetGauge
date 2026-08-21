@@ -11,6 +11,7 @@ namespace PlanetGauge
     {
         public float MainGaugeOffsetX;
         public float MainGaugeOffsetY = -158f;
+        public float MainGaugeSizePercent = 100f;
         public float MainGaugeWidthPercent = 83f;
 
         public float MainGaugeValueOffsetX;
@@ -31,6 +32,12 @@ namespace PlanetGauge
         {
             // UMM의 OnGUI에서 매 프레임 호출되는 즉시 모드(IMGUI) 설정 화면이다.
             GUILayout.Label("Main gauge size");
+            MainGaugeSizePercent = DrawFloatSlider(
+                "Scale",
+                MainGaugeSizePercent,
+                25f,
+                200f,
+                "%");
             MainGaugeWidthPercent = DrawFloatSlider(
                 "Width",
                 MainGaugeWidthPercent,
@@ -40,8 +47,9 @@ namespace PlanetGauge
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(96f);
-            if (GUILayout.Button("Reset width", GUILayout.Width(140f)))
+            if (GUILayout.Button("Reset size", GUILayout.Width(140f)))
             {
+                MainGaugeSizePercent = 100f;
                 MainGaugeWidthPercent = 83f;
             }
             GUILayout.EndHorizontal();
@@ -125,24 +133,13 @@ namespace PlanetGauge
         internal void Sanitize()
         {
             // 저장 파일을 사용자가 직접 수정했거나 이전 버전 값이 남아 있어도 UI 범위를 보장한다.
-            MainGaugeOffsetX = Mathf.Clamp(MainGaugeOffsetX, -500f, 500f);
-            MainGaugeOffsetY = Mathf.Clamp(MainGaugeOffsetY, -300f, 300f);
-            MainGaugeWidthPercent = Mathf.Clamp(
-                MainGaugeWidthPercent,
-                25f,
-                100f);
-            MainGaugeValueOffsetX = Mathf.Clamp(
-                MainGaugeValueOffsetX,
-                -500f,
-                500f);
-            MainGaugeValueOffsetY = Mathf.Clamp(
-                MainGaugeValueOffsetY,
-                -300f,
-                300f);
-            MainGaugeValueSizePercent = Mathf.Clamp(
-                MainGaugeValueSizePercent,
-                50f,
-                200f);
+            MainGaugeOffsetX = SanitizeFloat(MainGaugeOffsetX, 0f, -500f, 500f);
+            MainGaugeOffsetY = SanitizeFloat(MainGaugeOffsetY, -158f, -300f, 300f);
+            MainGaugeSizePercent = SanitizeFloat(MainGaugeSizePercent, 100f, 25f, 200f);
+            MainGaugeWidthPercent = SanitizeFloat(MainGaugeWidthPercent, 83f, 25f, 100f);
+            MainGaugeValueOffsetX = SanitizeFloat(MainGaugeValueOffsetX, 0f, -500f, 500f);
+            MainGaugeValueOffsetY = SanitizeFloat(MainGaugeValueOffsetY, -14f, -300f, 300f);
+            MainGaugeValueSizePercent = SanitizeFloat(MainGaugeValueSizePercent, 111f, 50f, 200f);
             MainGaugeColorR = Mathf.Clamp(MainGaugeColorR, 0, 255);
             MainGaugeColorG = Mathf.Clamp(MainGaugeColorG, 0, 255);
             MainGaugeColorB = Mathf.Clamp(MainGaugeColorB, 0, 255);
@@ -192,6 +189,20 @@ namespace PlanetGauge
             GUILayout.Label(rounded.ToString(), GUILayout.Width(56f));
             GUILayout.EndHorizontal();
             return rounded;
+        }
+
+        private static float SanitizeFloat(
+            float value,
+            float fallback,
+            float minimum,
+            float maximum)
+        {
+            if (float.IsNaN(value) || float.IsInfinity(value))
+            {
+                value = fallback;
+            }
+
+            return Mathf.Clamp(value, minimum, maximum);
         }
     }
 }

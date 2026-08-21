@@ -1,20 +1,20 @@
 # PlanetGauge 개발 인수인계
 
-최종 갱신: 2026-08-19
+최종 갱신: 2026-08-21
 
 ## 1. 현재 스냅샷
 
 | 항목 | 값 |
 |---|---|
-| 브랜치 | `main` (`origin/main`보다 1커밋 앞섬) |
-| 작업 시작 HEAD | `0eb8291` (`0.1.1 테스트 / 대체 뭐가 바뀐거임... 오버엔지니어링같은데`) |
-| 현재 소스 버전 | `0.1.2` |
+| 브랜치 | `main` (`origin/main`과 동일한 `6bb41ef`에서 작업 시작, 0.1.4는 미커밋 작업 트리) |
+| 작업 시작 HEAD | `6bb41ef` (`Update README.md`) |
+| 현재 소스 버전 | `0.1.4` |
 | 타깃 | .NET Framework 4.8 / C# 7.3 |
 | 전용 이벤트 | `SetPlanetGauge`, `0x5047` (`20551`) |
 | 최신 Release | 경고 0개, 오류 0개 |
-| Release DLL | 62,976바이트, SHA-256 `C6987C96766138BF93674E4DE09DA36FC7F31DB8ABEBD73546DBE88C524135C9` |
+| Release DLL | 66,560바이트, SHA-256 `BFC1C5E1538891820BBAF942E8539D70AFB3B093E47CA943C8CE917C1A3A5C68` |
 
-이 문서 갱신 시점에는 0.1.2 구현이 아직 커밋되지 않은 작업 트리에 있다. 다음 작업자는 반드시 먼저 확인한다.
+이 문서 갱신 시점에는 0.1.4 구현이 아직 커밋되지 않은 작업 트리에 있다. 다음 작업자는 반드시 먼저 확인한다.
 
 ```powershell
 git status --short --branch
@@ -22,7 +22,28 @@ git diff --check
 git diff
 ```
 
-### 이번 활동 요약
+### 0.1.4 추가 활동 요약
+
+- 기존 `attributeMode` enum 끝에 `ForceRecovery=6`을 추가했다. 기존 0~5 숫자, `SetPlanetGauge` 이름/ID, 기존 JSON 키와 O/X 계약은 유지했다.
+- `체력 강제 회복`은 `회복량 설정`(`recoveryAmountPercent`, 기본 0, -1000~1000%)만큼 현재 체력에 퍼센트포인트를 한 번 직접 더하거나 뺀다.
+- 강제 회복은 회복 차단과 증감률을 우회하지만, 같은 이벤트에서 새로 설정된 회복 상한과 기존 사망/게임 no-fail 규칙은 따른다. 양수 회복은 상한을 넘지 않으며 음수로 소진되면 기존 사망 흐름을 사용한다.
+- 이 일회성 모드는 `선택 속성 켜기`를 표시하지 않는다. `속성 설정` O/X가 실행 여부이고 `다른 속성 설정 끄기`는 계속 표시되어 먼저 기존 속성 상태를 끌 수 있다.
+- PlanetGauge 활성 + `FailureProtection=false` + 게임 자체 no-fail의 3중 조건에서 `FailMiss`/`FailOverload`가 발생하면 게이지만 즉시 0으로 만들고 동결한다. 실제 게임은 native no-fail로 계속 진행하고 Blindfold 숫자는 공개된다.
+- 이벤트 태그 기능은 사용자 결정으로 폐기했으며 구현하지 않았다.
+
+### 0.1.4 선행 활동 요약
+
+- 기존 `attributeMode` enum 끝에 `Blindfold=5`를 추가했다. 기존 enum 숫자 0~4와 이벤트 이름/ID/키/O-X 계약은 그대로다.
+- Blindfold 활성 중 게이지 바는 검은색, 체력 숫자는 `???`로 표시한다.
+- 실제 사망 요청 또는 게임 자체 no-fail에서 체력이 0 이하로 동결되는 순간 체력 숫자를 공개한다. 게이지가 실패를 흡수해 살아남으면 공개하지 않는다.
+- 에디터 속성명은 `체력 표시 차단`, 메인 HUD 상태 문구는 `Blindfolded`, 디버그 표기는 `Blindfold`로 구분했다.
+- `scrController.OnLandOnPortal(scrPlanet,Portal,string)` 진입 시 Blindfold 속성 자체를 끄며, 다른 활성 속성은 보존한다.
+- `일반` 속성에서도 `다른 속성 설정 끄기`를 표시해 모든 속성 활성 상태를 끄는 명령으로 사용할 수 있게 했다.
+- 증감률 퍼센트를 게이지 바 위의 안전한 독립 위치에 두고, 체력/효과 문구의 수직 패딩과 효과 여러 줄 간격을 약 2/3로 줄였다.
+- UMM GUI에 게이지 전체 크기 25~200%를 추가했다. 기존 폭과 체력 텍스트 크기 설정 키는 보존했다.
+- 0.1.4 Release 빌드와 reflection 상태 계약 검사는 완료했지만 게임은 실행하지 않았다.
+
+### 0.1.2 기반 활동 요약
 
 이번 작업은 0.1.1을 기준으로 0.1.2 기능을 구현하고, 설치본 DLL을 참조한 Release 산출물까지 스테이징한 활동이다.
 
@@ -51,11 +72,21 @@ C:\Program Files (x86)\Steam\steamapps\common\A Dance of Fire and Ice\
 | `UnityModManager/0Harmony.dll` | `DF043F05C6E43602FA8E8F38F52A3A2CF962AAB7A65A9D85573EA25F01A63E80` |
 | `UnityModManager/UnityModManager.dll` | `5B4C5DA3896D4B353330315DC0AEEA06D984520BCA990B2B611ED86DA89D9003` |
 
+현재 게임 Mods 폴더에 실제 설치된 `PlanetGauge.dll`은 이전 0.1.4 빌드다. 이번 최종 0.1.4 빌드로 설치본을 덮어쓰지 않았다.
+
+| 설치 모드 DLL | 값 |
+|---|---|
+| 경로 | `Mods/PlanetGauge/PlanetGauge.dll` |
+| AssemblyVersion | `0.1.4.0` |
+| 크기 | 65,024바이트 |
+| SHA-256 | `333BFF0728FA57C08AC9181CFEED32F3A6BF2E681C6C49F341FBB2BC75B1BAD0` |
+
 설치본에서 확인한 중요 API:
 
 - `scrPlanet SwitchChosen()`
 - `scrPlayer.OnDamage(bool,bool,bool,HitMargin)`
 - `scrPlayer.Die(bool,bool,string,bool)`
+- `scrController.OnLandOnPortal(scrPlanet,Portal,string)`
 - `SwitchChosen`의 조기/실패 반환은 `this`, 정상 진행 반환은 `movingToNext`다.
 - 따라서 Auto 회복 성공 판별은 `__result != null && __result != __instance`를 사용한다.
 
@@ -98,6 +129,7 @@ PlanetGauge는 레벨 에디터의 1인 테스트 플레이에 체력 게이지�
 런타임은 단일 `AttributeMode`가 아니라 다음 상태를 보관한다.
 
 - 회복 차단: 독립 Bool
+- Blindfold: 독립 활성 Bool과 세션 단위 공개 상태
 - 회복 유효 채널: 활성 여부, 퍼센트, 출처(`Increase`/`Both`)
 - 피해 유효 채널: 활성 여부, 퍼센트, 출처(`Decrease`/`Both`)
 - 증가/감소/Both별 마지막 설정 퍼센트: 각각 독립 보존
@@ -118,6 +150,8 @@ Both 200 → Decrease 50        = 회복 200(Both), 피해 50(Decrease)
 - 선택 속성 끄기는 그 속성과 겹치는 유효 부호 채널을 끄지만 저장된 퍼센트는 보존한다.
 - `다른 속성 설정 끄기`는 모든 속성 활성 상태를 먼저 끄고 선택 속성을 적용한다. 저장된 퍼센트 메모리는 보존한다.
 - 회복 차단은 배율 채널과 별개이며 최종 양수 변화량을 0으로 만든다.
+- `Blindfold`는 기존 값의 숫자를 바꾸지 않도록 enum 끝의 값 `5`로 추가됐다.
+- `일반` + `다른 속성 설정 끄기`는 저장된 퍼센트는 보존하면서 회복 차단, 회복/피해 채널, Blindfold 활성 상태를 모두 끈다.
 
 ## 5. SetPlanetGauge 직렬화 계약
 
@@ -155,6 +189,20 @@ forceRecoveryCap
 
 0.1.1 JSON에는 새 키가 없으므로 Decode 기본값을 `attributeEnabled=true`, `disableOtherAttributes=false`, `autoTileRecovery=false`로 둔다. O/X는 계속 `LevelEvent.disabled`에서만 해석한다. 증감률 모드를 직접 고르면 기존처럼 `multiplierPercent` O/X를 바닐라 버튼 경로로 O로 바꾼다.
 
+Blindfold는 새 JSON 키를 추가하지 않는다. 기존 `attributeMode` 키에 문자열 `Blindfold`로 저장하며, 기존 문자열 값과 숫자 순서는 다음과 같이 유지된다.
+
+```text
+Normal=0, BlockRecovery=1, AmplifyDecrease=2, AmplifyIncrease=3, AmplifyBoth=4, Blindfold=5, ForceRecovery=6
+```
+
+0.1.4 추가 키:
+
+| 표시 이름 | 키 | 기본값 | 형식/범위 |
+|---|---|---:|---|
+| 회복량 설정 | `recoveryAmountPercent` | 0 | Float, -1000..1000% |
+
+`ForceRecovery`에서는 `attributeEnabled`를 표시하지 않고 `attributeMode`의 기존 O/X로 실행 여부를 결정한다. `recoveryAmountPercent` 자체에는 별도 O/X를 추가하지 않았다. Lore는 `음수로 설정할 시 체력을 깎습니다.`와 `최대 체력을 넘는 회복은 상쇄됩니다.`를 표시한다.
+
 `LevelEvent.Encode` Postfix는 `eventType`을 다시 `SetPlanetGauge`로 저장한다. 숫자 ID의 `ToString()`을 JSON에 내보내면 안 된다. 회복 상한 범위는 0.1.2에서 `0.1..1000`으로 확장됐다.
 
 ## 6. Auto 회복
@@ -174,6 +222,12 @@ forceRecoveryCap
 - 강제 제한은 이벤트 실행 시 현재 체력이 상한보다 높은 경우에만 즉시 낮춘다.
 
 HUD 상태색은 0.5초 동안 `EaseOutQuad` (`1-(1-t)^2`)로 보간한다. `Time.unscaledDeltaTime`을 사용하므로 일시정지 중에도 전환이 완료된다. 중간에 목표가 바뀌면 현재 보간색에서 새 목표로 이동한다.
+
+Blindfold가 활성화되면 다른 상태색보다 우선해 게이지 바를 검은색으로 만들고 체력 숫자를 `???`로 표시한다. 메인 HUD 상태 문구는 `Blindfolded`, Shift+F3 디버그 표기는 `Blindfold`다. 실제 사망 요청, hitbox 사망, 또는 게임 자체 no-fail에서 게이지가 0 이하로 동결되는 순간 숫자만 공개하며 검은 게이지 색은 유지한다. 실패를 게이지가 흡수해 체력이 남는 경로에서는 공개하지 않는다. 레벨 클리어에서는 실제 커스텀 레벨 완료 처리를 시작하는 `scrController.OnLandOnPortal(scrPlanet,Portal,string)` Prefix가 Blindfold 속성 자체를 해제하므로 검은색과 상태 문구도 사라지고 다른 활성 속성색 또는 사용자 색으로 복귀한다.
+
+증감률 토큰은 사용자 체력 텍스트 오프셋의 기존 기본값을 기준으로 보정해 바 위의 독립 위치를 확보한다. 체력/토큰 수직 패딩을 줄이고, 체력 위 여러 효과 문구에는 약 2/3 줄 간격을 적용한다.
+
+UMM 설정의 `MainGaugeSizePercent`는 게이지 바 전체 크기를 25~200%로 조절한다. 기존 `MainGaugeWidthPercent`와 `MainGaugeValueSizePercent` 키 및 의미는 유지한다.
 
 체력 숫자 아래 배율 토큰:
 
@@ -232,6 +286,8 @@ Auto: <누계>
 | 채널 `Source` | `PlanetGaugeRateChannel.Source` | `Increase`, `Decrease`, `Both` 중 현재 채널의 출처. 비활성 채널은 화면에서 Source 대신 `Default 100%`로 합쳐 표시한다. |
 | 채널 `Percent` | `PlanetGaugeRateChannel.Percent` | 실제 해당 부호 변화량에 적용되는 퍼센트. 100%도 채널이 활성 상태라면 디버그에는 표시된다. |
 | `BlockRecovery` | `EventSettings.RecoveryBlocked` | `True`이면 모든 양수 회복을 배율 계산과 무관하게 최종 0으로 만든다. |
+| `Blindfold` | `EventSettings.BlindfoldEnabled` | Blindfold 속성 활성 여부. 활성 중 게이지 색은 검은색이다. |
+| `Revealed` | `GaugeRuntime.IsBlindfoldRevealed` | 이번 플레이에서 사망 처리로 체력 숫자가 공개됐는지 나타낸다. |
 | `FailureProtection` | `EventSettings.FailureProtection` | PlanetGauge가 `FailMiss`/`FailOverload`를 체력으로 흡수할지 여부. 게임의 실제 no-fail이 더 높은 우선순위다. |
 | `RecoveryCap` | `EventSettings.RecoveryCapEnabled` | 이벤트 회복 상한 사용 여부. |
 | `RecoveryCap @` 뒤 값 | `EventSettings.RecoveryCapPercent` | 저장된 회복 상한 설정값. 상한이 꺼져 있어도 기억된 값 자체는 계속 표시된다. 범위는 `0.1..1000`. |
@@ -261,6 +317,7 @@ Auto: <누계>
 | `BlockRecovery` | `RecoveryBlocked == true` |
 | `RecoveryRate` | `RecoveryRate.Enabled == true` |
 | `DamageRate` | `DamageRate.Enabled == true` |
+| `Blindfold` | `BlindfoldEnabled == true` |
 | `NoFailDisabled` | `FailureProtection == false` |
 | `RecoveryCap` | `RecoveryCapEnabled == true` |
 | `AutoTileRecovery` | `AutoTileRecovery == true` |
@@ -284,6 +341,7 @@ Auto: <누계>
 | `Patches.cs` | 세션 경계, SwitchChosen 판정/Auto 성공 관찰, Die 흡수 |
 | `PlanetGaugeLevelEvent.cs` | 이벤트 스키마, Decode/Encode, 등록, 아이콘, 현지화 |
 | `MainGaugeHud.cs` | 게이지/숫자/배율/효과 문구와 색 전환 |
+| `PlanetGaugeSettings.cs` | UMM 위치/크기/색상 설정과 값 보정 |
 | `GaugeDebugHud.cs` | Shift+F3 좌상단 디버그 표시 |
 | `RuntimeHost.cs` | 버튼, 메인 HUD, 디버그 HUD 수명과 입력 |
 | `GaugeBarGraphic.cs` | 게이지 메시 |
@@ -305,13 +363,25 @@ dist/PlanetGauge/Info.json
 dist/PlanetGauge/Assets/Gaugeline.png
 ```
 
-완료:
+0.1.4 최종 완료:
+
+- 설치본 DLL 참조 기준 Release 빌드: 경고 0개, 오류 0개.
+- `Info.json` 0.1.4, AssemblyVersion/FileVersion 0.1.4.0 일치.
+- Strict 패키지 검사 통과. dist에는 DLL, Info, Gaugeline만 존재하며 게임/Unity/Harmony/UMM DLL은 없다.
+- reflection 계약 검사로 기존 enum 0~5 보존, ForceRecovery=6, 이벤트 이름/ID, `recoveryAmountPercent`, -1000~1000 보정, ForceRecovery에서 `선택 속성 켜기` 숨김/`다른 속성 설정 끄기` 표시를 확인했다.
+- Release DLL: 66,560바이트, SHA-256 `BFC1C5E1538891820BBAF942E8539D70AFB3B093E47CA943C8CE917C1A3A5C68`.
+- 게임은 실행하지 않았다. Unity 외부 reflection 환경은 `Mathf` 네이티브 호출을 실행할 수 없어 강제 회복과 3중 Fail 런타임은 아래 실게임 검증으로 남긴다.
+- 이벤트 태그 관련 코드/키/패치는 추가하지 않았다.
+
+0.1.4 선행 검증:
 
 - 위 설치본 DLL 기준 Release 빌드: 경고 0, 오류 0.
-- `Info.json` 0.1.2, AssemblyVersion/FileVersion 0.1.2.0 일치.
+- `Info.json` 0.1.4, AssemblyVersion/FileVersion 0.1.4.0 일치.
 - dist에는 DLL, Info, Gaugeline만 존재하며 게임/Unity/Harmony DLL은 복사되지 않음.
-- 임시 reflection 실행 검증으로 마지막 채널 우선, Both 부분 덮어쓰기, 다른 속성 끄기, 속성별 변경값 재사용 계약 통과.
+- 번들 패키지 검증기를 실제 `dist/PlanetGauge` 경로로 지정한 Strict 검사 통과.
+- reflection 실행 검증으로 기존 enum 숫자 0~4 보존, Blindfold=5, 숨김→공개 상태, 일반+다른 속성 끄기, 클리어 해제 후 다른 속성 보존, HUD `Blindfolded`, 에디터 `체력 표시 차단` 계약 통과.
 - `git diff --check` 오류 없음(Windows CRLF 안내만 존재).
+- Release DLL: 65,024바이트, SHA-256 `333BFF0728FA57C08AC9181CFEED32F3A6BF2E681C6C49F341FBB2BC75B1BAD0`.
 
 ## 11. 반드시 남은 실게임 검증
 
@@ -332,11 +402,27 @@ dist/PlanetGauge/Assets/Gaugeline.png
 13. 실패 방지 OFF, 실제 no-fail, hitbox, 연속 Multipress 9회 이상에서 기존 판정·사망 우선순위와 단일 차감이 유지되는가.
 14. 다양한 해상도/UI 배율에서 체력 숫자, 배율 토큰, 여러 효과 줄, 디버그 HUD가 겹치거나 잘리지 않는가.
 15. 이벤트 아이콘, requiredMods, PACL2/JALib 공존이 기존처럼 정상인가.
+16. Blindfold 켜기/끄기와 `다른 속성 설정 끄기`가 검은 게이지, `???`, 활성 상태를 정확히 전환하는가.
+17. 게이지가 실패를 흡수해 체력이 남은 경우에는 Blindfold 숫자가 계속 가려지는가.
+18. 일반 사망, hitbox 사망, 게임 자체 no-fail에서 체력 0 이하 동결 시 숫자가 공개되고 검은 게이지는 유지되는가.
+19. 게이지 전체 크기 25/100/200%와 체력 텍스트 50/100/200% 조합이 여러 해상도/UI 배율에서 안정적인가.
+20. 증감률 퍼센트가 게이지 바를 침범하지 않고, 여러 속성 문구의 줄 간격이 기존의 약 2/3로 읽기 좋게 보이는가.
+21. Blindfold 상태로 레벨을 클리어할 때 결과 처리 전에 `???`, 검은 게이지, `Blindfolded` 문구가 모두 해제되고 다른 활성 속성은 유지되는가.
+22. `체력 강제 회복` +20/-20/0이 현재 체력에 한 번만 적용되고, 복사/Undo/Redo/재로드 뒤에도 값과 `attributeMode` O/X가 보존되는가.
+23. 강제 회복이 회복 차단과 증가/감소 배율을 우회하면서 활성 회복 상한은 지키는가. 상한 초과 체력에서는 양수 회복이 상쇄되는가.
+24. 음수 강제 회복으로 체력이 소진될 때 일반 모드에서는 기존 사망, 게임 자체 no-fail에서는 -5 하한 및 동결, Blindfold에서는 숫자 공개가 유지되는가.
+25. PlanetGauge + 게임 자체 실패 방지 + `No-Fail Disabled`에서 첫 Fail 판정이 게이지만 0/검은색으로 동결하고 게임은 계속 진행하는가. 이후 판정으로 체력이 변하지 않는가.
+26. 위 3중 조건의 `FailMiss`/`FailOverload`가 SwitchChosen/Die 중복 경로에서도 한 번만 누계되고, hitbox 및 실제 no-fail 우선순위를 깨지 않는가.
+
+### 향후 개선점
+
+- `ForceRecovery`는 일회성 명령이지만 기존 에디터 계약을 보존하기 위해 `attributeMode` O/X를 실행 스위치로 재사용한다. 현재 요구에는 맞지만 영속 속성 선택과 일회성 명령 종류가 같은 enum에 섞여 좋은 구조는 아니다. 향후 호환 가능한 별도 command type/schema를 설계할 때 분리하는 편이 낫다.
+- 이벤트 태그 기능은 폐기된 요구이며 향후 작업 대상으로 간주하지 않는다.
 
 ## 다음 채팅용 지시문
 
 ```text
-PlanetGauge 0.1.2 작업을 이어서 진행해줘.
+PlanetGauge 0.1.4 작업을 이어서 진행해줘.
 저장소 루트 DEVELOPMENT_HANDOFF.md를 전부 읽고 git status와 현재 설치 DLL을 먼저 확인해.
 기존 판정·사망 흐름과 SetPlanetGauge 이름/ID/기존 JSON 키/O-X 계약을 보존해.
 Release 빌드 검증과 아직 필요한 실게임 검증을 구분해서 보고해.

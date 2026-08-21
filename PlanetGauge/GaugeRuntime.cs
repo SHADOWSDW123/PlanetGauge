@@ -21,6 +21,7 @@ namespace PlanetGauge
         private static bool nextDieAlreadyCharged;
         private static int failureRecoveryDepth;
         private static bool forcingDeath;
+        private static bool blindfoldRevealed;
         private static int styleRevision;
         private static readonly float[] judgementTotals = new float[8];
         private static float autoTotal;
@@ -31,6 +32,11 @@ namespace PlanetGauge
         internal static bool IsForcingDeath { get { return forcingDeath; } }
         internal static bool IsFrozen { get { return frozen; } }
         internal static bool HasPendingDieCharge { get { return nextDieAlreadyCharged; } }
+        internal static bool IsBlindfolded
+        {
+            get { return EventSettings.BlindfoldEnabled && !blindfoldRevealed; }
+        }
+        internal static bool IsBlindfoldRevealed { get { return blindfoldRevealed; } }
         internal static int FailureRecoveryDepth { get { return failureRecoveryDepth; } }
         internal static int StyleRevision { get { return styleRevision; } }
         internal static float AutoTotal { get { return autoTotal; } }
@@ -51,6 +57,7 @@ namespace PlanetGauge
             nextDieAlreadyCharged = false;
             failureRecoveryDepth = 0;
             forcingDeath = false;
+            blindfoldRevealed = false;
             EventSettings = PlanetGaugeEventSettings.Default;
             Array.Clear(judgementTotals, 0, judgementTotals.Length);
             autoTotal = 0f;
@@ -66,6 +73,7 @@ namespace PlanetGauge
             float configuredIncrease = current.ConfiguredIncreasePercent;
             float configuredDecrease = current.ConfiguredDecreasePercent;
             float configuredBoth = current.ConfiguredBothPercent;
+            bool blindfoldEnabled = current.BlindfoldEnabled;
 
             if (command.ApplyMultiplier)
             {
@@ -85,6 +93,7 @@ namespace PlanetGauge
                     recoveryBlocked = false;
                     recoveryRate = PlanetGaugeRateChannel.Disabled;
                     damageRate = PlanetGaugeRateChannel.Disabled;
+                    blindfoldEnabled = false;
                 }
 
                 switch (command.AttributeMode)
@@ -109,6 +118,9 @@ namespace PlanetGauge
                         recoveryRate = both;
                         damageRate = both;
                         break;
+                    case PlanetGaugeAttributeMode.Blindfold:
+                        blindfoldEnabled = command.AttributeEnabled;
+                        break;
                 }
             }
 
@@ -122,12 +134,24 @@ namespace PlanetGauge
             EventSettings = new PlanetGaugeEventSettings(
                 recoveryBlocked, recoveryRate, damageRate,
                 configuredIncrease, configuredDecrease, configuredBoth,
+                blindfoldEnabled,
                 failureProtection, recoveryCapEnabled, recoveryCapPercent, autoTileRecovery);
             styleRevision++;
 
             if (command.ForceRecoveryCap && recoveryCapEnabled && Current > recoveryCapPercent)
             {
                 Current = recoveryCapPercent;
+            }
+
+            if (command.ApplyAttributeMode
+                && command.AttributeMode == PlanetGaugeAttributeMode.ForceRecovery)
+            {
+                bool shouldDie = ApplyForcedRecovery(command.RecoveryAmountPercent);
+                if (shouldDie)
+                {
+                    scrController controller = scrController.instance;
+                    ForceDie(controller == null ? null : controller.playerOne);
+                }
             }
         }
 
@@ -183,9 +207,19 @@ namespace PlanetGauge
             }
 
             scrController controller = scrController.instance;
+            if (IsFailureJudgement(judgement)
+                && !EventSettings.FailureProtection
+                && controller != null
+                && controller.noFail)
+            {
+                ApplyProtectedFailureGaugeDeath(judgement);
+                return false;
+            }
+
             if (IsFailureJudgement(judgement) && !EventSettings.FailureProtection
                 && (controller == null || !controller.noFail))
             {
+                RevealBlindfold();
                 return true;
             }
 
@@ -225,12 +259,14 @@ namespace PlanetGauge
             {
                 Current = Mathf.Max(NoFailMinimumGauge, next);
                 frozen = true;
+                RevealBlindfold();
             }
             else
             {
                 Current = 0f;
                 frozen = true;
                 shouldDie = true;
+                RevealBlindfold();
             }
 
             float actual = Current - previous;
@@ -247,6 +283,58 @@ namespace PlanetGauge
             return shouldDie;
         }
 
+        private static bool ApplyForcedRecovery(float amount)
+        {
+            if (frozen)
+            {
+                return false;
+            }
+
+            float delta = PlanetGaugeValueRules.SanitizeRecoveryAmount(amount);
+            if (Mathf.Approximately(delta, 0f))
+            {
+                return false;
+            }
+
+            float next = delta > 0f
+                ? (Current >= RecoveryMaximum ? Current : Mathf.Min(RecoveryMaximum, Current + delta))
+                : Current + delta;
+
+            scrController controller = scrController.instance;
+            if (next > 0f)
+            {
+                Current = next;
+                return false;
+            }
+
+            if (controller != null && controller.noFail)
+            {
+                Current = Mathf.Max(NoFailMinimumGauge, next);
+                frozen = true;
+                RevealBlindfold();
+                return false;
+            }
+
+            Current = 0f;
+            frozen = true;
+            RevealBlindfold();
+            return true;
+        }
+
+        private static void ApplyProtectedFailureGaugeDeath(HitMargin judgement)
+        {
+            float previous = Current;
+            Current = 0f;
+            frozen = true;
+            RevealBlindfold();
+
+            int index = GetTotalIndex(judgement);
+            if (index >= 0)
+            {
+                judgementTotals[index] += Current - previous;
+            }
+        }
+
         internal static void MarkNextDieAlreadyCharged() { nextDieAlreadyCharged = true; }
         internal static bool ConsumeNextDieAlreadyCharged()
         {
@@ -255,6 +343,29 @@ namespace PlanetGauge
             return charged;
         }
         internal static void ClearPendingDieCharge() { nextDieAlreadyCharged = false; }
+        internal static void RevealBlindfold()
+        {
+            if (EventSettings.BlindfoldEnabled && !blindfoldRevealed)
+            {
+                blindfoldRevealed = true;
+                styleRevision++;
+            }
+        }
+
+        internal static void DisableBlindfoldForLevelCompletion()
+        {
+            if (!EventSettings.BlindfoldEnabled)
+            {
+                return;
+            }
+
+            ApplyEventSettings(new PlanetGaugeEventCommand
+            {
+                ApplyAttributeMode = true,
+                AttributeMode = PlanetGaugeAttributeMode.Blindfold,
+                AttributeEnabled = false
+            });
+        }
         internal static void BeginFailureRecovery() { failureRecoveryDepth++; }
         internal static void EndFailureRecovery() { if (failureRecoveryDepth > 0) failureRecoveryDepth--; }
 

@@ -16,6 +16,8 @@ namespace PlanetGauge
         private const float BaseGapAboveMeter = 10f;
         private const float BaseTextGap = 5f;
         private const float BaseEffectTextGap = 2f;
+        private const float DefaultValueOffsetY = -14f;
+        private const float CompactSpacingRatio = 2f / 3f;
         private const float BaseFontSize = 24f;
         private const float EffectFontSizeRatio = 0.46f;
         private const float RateFontSizeRatio = 0.54f;
@@ -25,6 +27,9 @@ namespace PlanetGauge
         private static readonly Color32 BorderColor = new Color32(0, 0, 0, 255);
         private static readonly Color32 DisabledColor = new Color32(184, 184, 184, 255);
         private static readonly Color32 DepletedColor = new Color32(0, 0, 0, 240);
+        private static readonly Color32 BlindfoldGaugeColor = new Color32(0, 0, 0, 255);
+        private static readonly Color32 BlindfoldTextColor = new Color32(230, 230, 230, 255);
+        private static readonly Color32 BlindfoldEffectColor = new Color32(112, 112, 112, 255);
 
         /*
          * 이벤트 상태별 HUD 강조색. 색상을 조정하려면 아래 RGB 값만 변경하면 된다.
@@ -307,7 +312,9 @@ namespace PlanetGauge
             gaugeGraphic.SetStyle(
                 BorderColor, DisabledColor, DepletedColor,
                 currentGaugeColor, currentGaugeColor, currentGaugeColor, 2f);
-            valueText.color = currentGaugeColor;
+            valueText.color = eventSettings.BlindfoldEnabled
+                ? (Color)BlindfoldTextColor
+                : currentGaugeColor;
         }
 
         private void UpdateLayout(scrHitErrorMeter meter, RectTransform meterRect)
@@ -329,12 +336,19 @@ namespace PlanetGauge
 
             float meterScale = Mathf.Clamp(Mathf.Abs(meter.meterScale), 0.5f, 2.5f);
             PlanetGaugeSettings settings = Main.Settings;
+            float gaugeScale = settings.MainGaugeSizePercent / 100f;
             float widthScale = settings.MainGaugeWidthPercent / 100f;
             float barWidth = Mathf.Max(
-                48f,
-                (maximumX - minimumX) * widthScale);
-            float barHeight = Mathf.Clamp(BaseBarHeight * meterScale, 14f, 36f);
-            float gapAboveMeter = Mathf.Clamp(BaseGapAboveMeter * meterScale, 7f, 24f);
+                48f * gaugeScale,
+                (maximumX - minimumX) * widthScale * gaugeScale);
+            float barHeight = Mathf.Clamp(
+                BaseBarHeight * meterScale * gaugeScale,
+                5f,
+                72f);
+            float gapAboveMeter = Mathf.Clamp(
+                BaseGapAboveMeter * meterScale * gaugeScale,
+                2f,
+                48f);
 
             float centerX = (minimumX + maximumX) * 0.5f + settings.MainGaugeOffsetX;
             float centerY = maximumY
@@ -352,21 +366,30 @@ namespace PlanetGauge
                 BaseFontSize * meterScale * textSizeScale,
                 9f,
                 84f);
-            float textHeight = fontSize + 10f;
+            float textHeight = fontSize + 4f;
             float rateFontSize = Mathf.Clamp(fontSize * RateFontSizeRatio, 8f, 40f);
-            float rateHeight = rateFontSize + 2f;
+            float rateHeight = rateFontSize + 1f;
             float visibleRateHeight = rateText.enabled ? rateHeight : 0f;
+            float compactTextGap = Mathf.Clamp(
+                BaseTextGap * meterScale * CompactSpacingRatio,
+                1f,
+                8f);
+            float textOffsetY = settings.MainGaugeValueOffsetY - DefaultValueOffsetY;
             valueText.fontSize = fontSize;
             valueTextRect.sizeDelta = new Vector2(
                 Mathf.Max(barWidth, fontSize * 5f),
                 textHeight);
+            float valueCenterY = barHeight * 0.5f
+                + compactTextGap
+                + textHeight * 0.5f
+                + textOffsetY;
+            if (rateText.enabled)
+            {
+                valueCenterY += visibleRateHeight + compactTextGap;
+            }
             valueTextRect.anchoredPosition = new Vector2(
                 settings.MainGaugeValueOffsetX,
-                barHeight * 0.5f
-                    + BaseTextGap * meterScale
-                    + visibleRateHeight
-                    + textHeight * 0.5f
-                    + settings.MainGaugeValueOffsetY);
+                valueCenterY);
             valueOutline.effectDistance = new Vector2(
                 Mathf.Clamp(meterScale, 1f, 2f),
                 -Mathf.Clamp(meterScale, 1f, 2f));
@@ -377,9 +400,10 @@ namespace PlanetGauge
                 rateHeight);
             rateTextRect.anchoredPosition = new Vector2(
                 settings.MainGaugeValueOffsetX,
-                valueTextRect.anchoredPosition.y
-                    - textHeight * 0.5f
-                    - rateHeight * 0.5f);
+                barHeight * 0.5f
+                    + compactTextGap
+                    + rateHeight * 0.5f
+                    + textOffsetY);
             rateOutline.effectDistance = new Vector2(
                 Mathf.Clamp(meterScale * 0.7f, 1f, 1.5f),
                 -Mathf.Clamp(meterScale * 0.7f, 1f, 1.5f));
@@ -388,9 +412,10 @@ namespace PlanetGauge
                 fontSize * EffectFontSizeRatio,
                 8f,
                 36f);
-            float effectLineHeight = effectFontSize + 2f;
+            float effectLineHeight = (effectFontSize + 2f) * CompactSpacingRatio;
             float effectHeight = effectLineHeight * Mathf.Max(activeEffectCount, 1);
             effectText.fontSize = effectFontSize;
+            effectText.lineSpacing = -effectFontSize * (1f - CompactSpacingRatio);
             effectTextRect.sizeDelta = new Vector2(
                 Mathf.Max(barWidth, effectFontSize * 18f),
                 effectHeight);
@@ -398,14 +423,14 @@ namespace PlanetGauge
                 settings.MainGaugeValueOffsetX,
                 valueTextRect.anchoredPosition.y
                     + textHeight * 0.5f
-                    + BaseEffectTextGap * meterScale
+                    + BaseEffectTextGap * meterScale * CompactSpacingRatio
                     + effectHeight * 0.5f);
             effectOutline.effectDistance = new Vector2(
                 Mathf.Clamp(meterScale * 0.75f, 1f, 1.5f),
                 -Mathf.Clamp(meterScale * 0.75f, 1f, 1.5f));
 
             gaugeGraphic.SetChamferSize(
-                Mathf.Clamp(BaseChamferSize * meterScale, 3f, 8f));
+                Mathf.Clamp(BaseChamferSize * meterScale * gaugeScale, 1f, 16f));
         }
 
         private static Color32 ResolveGaugeColor(
@@ -416,6 +441,11 @@ namespace PlanetGauge
              * 여러 효과가 동시에 켜졌을 때 게이지와 숫자는 한 색만 가질 수 있다.
              * 우선순위를 바꾸려면 아래 검사 순서를 옮기면 된다. 모든 활성 효과 문구는 별도로 표시된다.
              */
+            if (settings.BlindfoldEnabled)
+            {
+                return BlindfoldGaugeColor;
+            }
+
             if (settings.RecoveryBlocked)
             {
                 return BlockRecoveryColor;
@@ -450,6 +480,11 @@ namespace PlanetGauge
         {
             string result = string.Empty;
             effectCount = 0;
+
+            if (settings.BlindfoldEnabled)
+            {
+                AppendEffect(ref result, ref effectCount, BlindfoldEffectColor, "Blindfolded");
+            }
 
             if (settings.RecoveryBlocked)
             {
@@ -584,10 +619,18 @@ namespace PlanetGauge
 
             float displayValue = Mathf.Max(0f, GaugeRuntime.Current);
             PlanetGaugeSettings settings = Main.Settings;
-            string formattedValue = settings.MainGaugeShowDecimalValue
-                ? displayValue.ToString("0.0", CultureInfo.InvariantCulture)
-                : Mathf.RoundToInt(displayValue).ToString(
-                    CultureInfo.InvariantCulture);
+            string formattedValue;
+            if (GaugeRuntime.IsBlindfolded)
+            {
+                formattedValue = "???";
+            }
+            else
+            {
+                formattedValue = settings.MainGaugeShowDecimalValue
+                    ? displayValue.ToString("0.0", CultureInfo.InvariantCulture)
+                    : Mathf.RoundToInt(displayValue).ToString(
+                        CultureInfo.InvariantCulture);
+            }
             if (!string.Equals(
                 lastDisplayedValue,
                 formattedValue,

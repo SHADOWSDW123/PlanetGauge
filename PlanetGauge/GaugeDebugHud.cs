@@ -119,7 +119,9 @@ namespace PlanetGauge
             builder.Append("Recovery: ").Append(FormatChannel(settings.RecoveryRate))
                 .Append("  Damage: ").Append(FormatChannel(settings.DamageRate)).AppendLine();
             builder.Append("BlockRecovery: ").Append(settings.RecoveryBlocked)
-                .Append("  FailureProtection: ").Append(settings.FailureProtection).AppendLine();
+                .Append("  Blindfold: ").Append(settings.BlindfoldEnabled)
+                .Append("  Revealed: ").Append(GaugeRuntime.IsBlindfoldRevealed).AppendLine();
+            builder.Append("FailureProtection: ").Append(settings.FailureProtection).AppendLine();
             builder.Append("RecoveryCap: ").Append(settings.RecoveryCapEnabled)
                 .Append(" @ ").Append(Format(settings.RecoveryCapPercent))
                 .Append("  AutoTileRecovery: ").Append(settings.AutoTileRecovery).AppendLine();
@@ -149,6 +151,7 @@ namespace PlanetGauge
             if (settings.RecoveryBlocked) builder.Append("BlockRecovery, ");
             if (settings.RecoveryRate.Enabled) builder.Append("RecoveryRate, ");
             if (settings.DamageRate.Enabled) builder.Append("DamageRate, ");
+            if (settings.BlindfoldEnabled) builder.Append("Blindfold, ");
             if (!settings.FailureProtection) builder.Append("NoFailDisabled, ");
             if (settings.RecoveryCapEnabled) builder.Append("RecoveryCap, ");
             if (settings.AutoTileRecovery) builder.Append("AutoTileRecovery, ");

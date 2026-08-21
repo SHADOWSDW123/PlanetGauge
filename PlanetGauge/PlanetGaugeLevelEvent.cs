@@ -19,7 +19,9 @@ namespace PlanetGauge
         BlockRecovery,
         AmplifyDecrease,
         AmplifyIncrease,
-        AmplifyBoth
+        AmplifyBoth,
+        Blindfold,
+        ForceRecovery
     }
 
     internal enum PlanetGaugeRateSource
@@ -58,6 +60,7 @@ namespace PlanetGauge
             100f,
             100f,
             100f,
+            false,
             true,
             false,
             100f,
@@ -70,6 +73,7 @@ namespace PlanetGauge
             float configuredIncreasePercent,
             float configuredDecreasePercent,
             float configuredBothPercent,
+            bool blindfoldEnabled,
             bool failureProtection,
             bool recoveryCapEnabled,
             float recoveryCapPercent,
@@ -81,6 +85,7 @@ namespace PlanetGauge
             ConfiguredIncreasePercent = PlanetGaugeValueRules.SanitizeMultiplier(configuredIncreasePercent);
             ConfiguredDecreasePercent = PlanetGaugeValueRules.SanitizeMultiplier(configuredDecreasePercent);
             ConfiguredBothPercent = PlanetGaugeValueRules.SanitizeMultiplier(configuredBothPercent);
+            BlindfoldEnabled = blindfoldEnabled;
             FailureProtection = failureProtection;
             RecoveryCapEnabled = recoveryCapEnabled;
             RecoveryCapPercent = recoveryCapPercent;
@@ -93,6 +98,8 @@ namespace PlanetGauge
         internal float ConfiguredIncreasePercent { get; }
         internal float ConfiguredDecreasePercent { get; }
         internal float ConfiguredBothPercent { get; }
+
+        internal bool BlindfoldEnabled { get; }
 
         internal bool FailureProtection { get; }
 
@@ -114,6 +121,7 @@ namespace PlanetGauge
         internal bool DisableOtherAttributes;
         internal bool ApplyMultiplier;
         internal float MultiplierPercent;
+        internal float RecoveryAmountPercent;
         internal bool ApplyFailureProtection;
         internal bool FailureProtection;
         internal bool ApplyRecoveryCap;
@@ -134,6 +142,11 @@ namespace PlanetGauge
         internal static float SanitizeRecoveryCap(float value)
         {
             return SanitizePercent(value, 100f, 0.1f, 1000f);
+        }
+
+        internal static float SanitizeRecoveryAmount(float value)
+        {
+            return SanitizePercent(value, 0f, -1000f, 1000f);
         }
 
         internal static bool IsAmplificationMode(PlanetGaugeAttributeMode mode)
@@ -171,6 +184,7 @@ namespace PlanetGauge
         internal const string AttributeEnabledKey = "attributeEnabled";
         internal const string DisableOtherAttributesKey = "disableOtherAttributes";
         internal const string MultiplierPercentKey = "multiplierPercent";
+        internal const string RecoveryAmountPercentKey = "recoveryAmountPercent";
         internal const string FailureProtectionKey = "failureProtection";
         internal const string RecoveryCapEnabledKey = "recoveryCapEnabled";
         internal const string RecoveryCapPercentKey = "recoveryCapPercent";
@@ -178,6 +192,8 @@ namespace PlanetGauge
         internal const string AutoTileRecoveryKey = "autoTileRecovery";
         internal const string MultiplierReuseNoteKey = "multiplierReuseNote";
         internal const string MultiplierReuseLocalizationKey = "planetGauge.multiplierReuseNote";
+        internal const string RecoveryAmountNoteKey = "recoveryAmountNote";
+        internal const string RecoveryAmountLocalizationKey = "planetGauge.recoveryAmountNote";
 
         private const string IconRelativePath = "Assets/Gaugeline.png";
         private const float IconPixelsPerUnit = 128f;
@@ -595,6 +611,12 @@ namespace PlanetGauge
                 false,
                 "다른 속성 설정 끄기");
             AddAttributeShowConditions(disableOthers);
+            disableOthers.showIfVals.Add(Tuple.Create(
+                AttributeModeKey,
+                PlanetGaugeAttributeMode.Normal.ToString()));
+            disableOthers.showIfVals.Add(Tuple.Create(
+                AttributeModeKey,
+                PlanetGaugeAttributeMode.ForceRecovery.ToString()));
             AddProperty(info, disableOthers, 2);
 
             ADOFAI.PropertyInfo multiplier = CreateProperty(
@@ -621,6 +643,29 @@ namespace PlanetGauge
             multiplierNote.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyBoth.ToString()));
             AddProperty(info, multiplierNote, 4);
 
+            ADOFAI.PropertyInfo recoveryAmount = CreateProperty(
+                info,
+                RecoveryAmountPercentKey,
+                "Float",
+                0f,
+                "회복량 설정");
+            recoveryAmount.unit = "%";
+            recoveryAmount.float_min = -1000f;
+            recoveryAmount.float_max = 1000f;
+            recoveryAmount.showIfVals.Add(Tuple.Create(
+                AttributeModeKey,
+                PlanetGaugeAttributeMode.ForceRecovery.ToString()));
+            AddProperty(info, recoveryAmount, 5);
+
+            ADOFAI.PropertyInfo recoveryAmountNote = CreateNoteProperty(
+                info,
+                RecoveryAmountNoteKey,
+                RecoveryAmountLocalizationKey);
+            recoveryAmountNote.showIfVals.Add(Tuple.Create(
+                AttributeModeKey,
+                PlanetGaugeAttributeMode.ForceRecovery.ToString()));
+            AddProperty(info, recoveryAmountNote, 6);
+
             ADOFAI.PropertyInfo failureProtection = CreateProperty(
                 info,
                 FailureProtectionKey,
@@ -628,7 +673,7 @@ namespace PlanetGauge
                 true,
                 "실패 방지");
             MakeOptional(failureProtection, false);
-            AddProperty(info, failureProtection, 5);
+            AddProperty(info, failureProtection, 7);
 
             ADOFAI.PropertyInfo recoveryCapEnabled = CreateProperty(
                 info,
@@ -637,7 +682,7 @@ namespace PlanetGauge
                 false,
                 "회복 상한 설정");
             MakeOptional(recoveryCapEnabled, false);
-            AddProperty(info, recoveryCapEnabled, 6);
+            AddProperty(info, recoveryCapEnabled, 8);
 
             ADOFAI.PropertyInfo recoveryCap = CreateProperty(
                 info,
@@ -650,7 +695,7 @@ namespace PlanetGauge
             recoveryCap.float_max = 1000f;
             // PropertyInfo.ValueMatch는 Bool 조건에서 소문자 "true"를 요구한다.
             recoveryCap.showIfVals.Add(Tuple.Create(RecoveryCapEnabledKey, "true"));
-            AddProperty(info, recoveryCap, 7);
+            AddProperty(info, recoveryCap, 9);
 
             ADOFAI.PropertyInfo forceCap = CreateProperty(
                 info,
@@ -659,7 +704,7 @@ namespace PlanetGauge
                 true,
                 "체력 상한 강제 제한");
             forceCap.showIfVals.Add(Tuple.Create(RecoveryCapEnabledKey, "true"));
-            AddProperty(info, forceCap, 8);
+            AddProperty(info, forceCap, 10);
 
             ADOFAI.PropertyInfo autoTileRecovery = CreateProperty(
                 info,
@@ -668,7 +713,7 @@ namespace PlanetGauge
                 false,
                 "자동 플레이 타일 체력 회복");
             MakeOptional(autoTileRecovery, false);
-            AddProperty(info, autoTileRecovery, 9);
+            AddProperty(info, autoTileRecovery, 11);
 
             return info;
         }
@@ -679,6 +724,7 @@ namespace PlanetGauge
             property.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyDecrease.ToString()));
             property.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyIncrease.ToString()));
             property.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyBoth.ToString()));
+            property.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.Blindfold.ToString()));
         }
 
         private static ADOFAI.PropertyInfo CreateProperty(
@@ -753,6 +799,8 @@ namespace PlanetGauge
 
             float multiplier = PlanetGaugeValueRules.SanitizeMultiplier(
                 levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.MultiplierPercentKey, 100f));
+            float recoveryAmount = PlanetGaugeValueRules.SanitizeRecoveryAmount(
+                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.RecoveryAmountPercentKey, 0f));
             bool failureProtection = levelEvent.Get<bool>(
                 PlanetGaugeLevelEventRegistry.FailureProtectionKey,
                 true);
@@ -786,6 +834,7 @@ namespace PlanetGauge
                     levelEvent,
                     PlanetGaugeLevelEventRegistry.MultiplierPercentKey),
                 MultiplierPercent = multiplier,
+                RecoveryAmountPercent = recoveryAmount,
                 ApplyFailureProtection = IsPropertyEnabled(
                     levelEvent,
                     PlanetGaugeLevelEventRegistry.FailureProtectionKey),
@@ -916,10 +965,17 @@ namespace PlanetGauge
             SanitizeStoredFloat(
                 __instance,
                 PlanetGaugeLevelEventRegistry.MultiplierPercentKey,
+                100f,
                 PlanetGaugeValueRules.SanitizeMultiplier);
             SanitizeStoredFloat(
                 __instance,
+                PlanetGaugeLevelEventRegistry.RecoveryAmountPercentKey,
+                0f,
+                PlanetGaugeValueRules.SanitizeRecoveryAmount);
+            SanitizeStoredFloat(
+                __instance,
                 PlanetGaugeLevelEventRegistry.RecoveryCapPercentKey,
+                100f,
                 PlanetGaugeValueRules.SanitizeRecoveryCap);
         }
 
@@ -938,16 +994,17 @@ namespace PlanetGauge
         private static void SanitizeStoredFloat(
             LevelEvent levelEvent,
             string key,
+            float fallback,
             Func<float, float> sanitize)
         {
-            float value = levelEvent.Get<float>(key, 100f);
+            float value = levelEvent.Get<float>(key, fallback);
             levelEvent[key] = sanitize(value);
         }
     }
 
     /// <summary>
     /// Float 입력이 확정되는 순간 PlanetGauge 값만 보정한다.
-    /// NaN/Infinity는 100으로 복구하고 회복 상한의 0 이하는 0.1로 올린다.
+    /// NaN/Infinity는 각 속성 기본값으로 복구하고 회복 상한의 0 이하는 0.1로 올린다.
     /// </summary>
     [HarmonyPatch(typeof(ADOFAI.PropertyInfo), nameof(ADOFAI.PropertyInfo.Validate), typeof(float))]
     internal static class PlanetGaugeFloatValidationPatch
@@ -975,6 +1032,13 @@ namespace PlanetGauge
                 StringComparison.Ordinal))
             {
                 __result = PlanetGaugeValueRules.SanitizeMultiplier(__state);
+            }
+            else if (string.Equals(
+                __instance.name,
+                PlanetGaugeLevelEventRegistry.RecoveryAmountPercentKey,
+                StringComparison.Ordinal))
+            {
+                __result = PlanetGaugeValueRules.SanitizeRecoveryAmount(__state);
             }
             else if (string.Equals(
                 __instance.name,
@@ -1190,6 +1254,15 @@ namespace PlanetGauge
                 return true;
             }
 
+            if (string.Equals(
+                key,
+                PlanetGaugeLevelEventRegistry.RecoveryAmountLocalizationKey,
+                StringComparison.Ordinal))
+            {
+                localized = "음수로 설정할 시 체력을 깎습니다.\n최대 체력을 넘는 회복은 상쇄됩니다.";
+                return true;
+            }
+
             if (string.Equals(key, "editor." + PlanetGaugeLevelEventRegistry.NumericEventId, StringComparison.Ordinal)
                 || string.Equals(key, "editor." + PlanetGaugeLevelEventRegistry.EventName, StringComparison.Ordinal))
             {
@@ -1226,6 +1299,18 @@ namespace PlanetGauge
                 if (key.EndsWith(".AmplifyBoth", StringComparison.Ordinal))
                 {
                     localized = "증가·감소율 변경";
+                    return true;
+                }
+
+                if (key.EndsWith(".Blindfold", StringComparison.Ordinal))
+                {
+                    localized = "체력 표시 차단";
+                    return true;
+                }
+
+                if (key.EndsWith(".ForceRecovery", StringComparison.Ordinal))
+                {
+                    localized = "체력 강제 회복";
                     return true;
                 }
             }

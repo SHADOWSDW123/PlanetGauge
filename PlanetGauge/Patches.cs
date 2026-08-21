@@ -53,6 +53,24 @@ namespace PlanetGauge
         }
     }
 
+    [HarmonyPatch(
+        typeof(scrController),
+        nameof(scrController.OnLandOnPortal),
+        typeof(scrPlanet),
+        typeof(Portal),
+        typeof(string))]
+    internal static class ControllerLandOnPortalPatch
+    {
+        private static void Prefix()
+        {
+            if (GaugeRuntime.ShouldHandle())
+            {
+                // 커스텀 레벨의 승리 시간, 축하 문구, 결과 저장이 시작되기 전에 해제한다.
+                GaugeRuntime.DisableBlindfoldForLevelCompletion();
+            }
+        }
+    }
+
     /// <summary>
     /// 타일 전환 직전 판정을 계산해 게이지에 반영한다.
     /// Prefix에서 원본 메서드가 바꿀 수 있는 값을 캡처하고 Postfix에서 최종 실패 여부를 결정한다.
@@ -270,6 +288,12 @@ namespace PlanetGauge
             ref DieState __state)
         {
             __state = default(DieState);
+
+            if (hitbox && GaugeRuntime.ShouldHandle(__instance))
+            {
+                // hitbox 사망은 게이지로 흡수하지 않으므로 실제 사망 요청 시 숫자만 공개한다.
+                GaugeRuntime.RevealBlindfold();
+            }
 
             if (GaugeRuntime.IsForcingDeath
                 || hitbox

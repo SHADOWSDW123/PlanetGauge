@@ -147,6 +147,10 @@ namespace PlanetGauge
                 new[] { typeof(bool) });
             RequireMethod(typeof(scrPlanet), nameof(scrPlanet.SwitchChosen), Type.EmptyTypes);
             RequireMethod(
+                typeof(scrController),
+                nameof(scrController.OnLandOnPortal),
+                new[] { typeof(scrPlanet), typeof(Portal), typeof(string) });
+            RequireMethod(
                 typeof(scrPlayer),
                 nameof(scrPlayer.Die),
                 new[] { typeof(bool), typeof(bool), typeof(string), typeof(bool) });
