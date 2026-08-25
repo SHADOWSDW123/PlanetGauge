@@ -53,23 +53,51 @@ namespace PlanetGauge
             }
 
             scrFloor floor = floors[floorId];
+            float timingDenominator = bpm * pitch * floor.speed;
+            if (float.IsNaN(timingDenominator)
+                || float.IsInfinity(timingDenominator)
+                || Mathf.Approximately(timingDenominator, 0f))
+            {
+                throw new InvalidOperationException(
+                    "SetPlanetGauge 이벤트 시간이 유효하지 않습니다. bpm=" + bpm
+                    + ", pitch=" + pitch + ", speed=" + floor.speed);
+            }
+
+            // Unity 객체를 만들기 전에 실제 effect와 선택 warning이 요구하는 입력을 확정한다.
+            float angleOffset = 0f;
+            evnt.TryGet("angleOffset", out angleOffset);
+            if (float.IsNaN(angleOffset) || float.IsInfinity(angleOffset))
+            {
+                angleOffset = 0f;
+            }
+
+            PlanetGaugeAttributeMode mode = evnt.Get<PlanetGaugeAttributeMode>(
+                PlanetGaugeLevelEventRegistry.AttributeModeKey,
+                PlanetGaugeAttributeMode.Normal);
+            float recoveryAmount = PlanetGaugeValueRules.SanitizeRecoveryAmount(
+                evnt.Get<float>(PlanetGaugeLevelEventRegistry.RecoveryAmountPercentKey, 0f));
+            float warningOffsetAngle = PlanetGaugeValueRules.SanitizeWarningOffsetAngle(
+                evnt.Get<float>(PlanetGaugeLevelEventRegistry.WarningOffsetAngleKey, 0f));
+            bool createWarning = mode == PlanetGaugeAttributeMode.ForceRecovery
+                && IsPropertyEnabled(evnt, PlanetGaugeLevelEventRegistry.AttributeModeKey)
+                && !Mathf.Approximately(recoveryAmount, 0f)
+                && warningOffsetAngle < 0f;
+
             PlanetGaugeLevelEventEffect effect = null;
             PlanetGaugeWarningLevelEventEffect warningEffect = null;
             bool effectAddedToFloor = false;
             bool warningAddedToFloor = false;
-            float angleOffset = 0f;
             try
             {
                 effect = floor.gameObject.AddComponent<PlanetGaugeLevelEventEffect>();
                 effect.floorID = floorId;
                 effect.floors = floors;
-                effect.crotchet = 60f / (bpm * pitch * floor.speed);
+                effect.crotchet = 60f / timingDenominator;
                 effect.Decode(evnt);
                 effect.VisualToken = effect.GetInstanceID();
                 floor.plusEffects.Add(effect);
                 effectAddedToFloor = true;
 
-                evnt.TryGet("angleOffset", out angleOffset);
                 effect.SetStartTime(bpm, angleOffset + offset);
                 effect.sourceLevelEvent = evnt;
                 __result = effect;
@@ -89,19 +117,7 @@ namespace PlanetGauge
                 throw;
             }
 
-            PlanetGaugeAttributeMode mode = evnt.Get<PlanetGaugeAttributeMode>(
-                PlanetGaugeLevelEventRegistry.AttributeModeKey,
-                PlanetGaugeAttributeMode.Normal);
-            float recoveryAmount = PlanetGaugeValueRules.SanitizeRecoveryAmount(
-                evnt.Get<float>(PlanetGaugeLevelEventRegistry.RecoveryAmountPercentKey, 0f));
-            float warningOffsetAngle = PlanetGaugeValueRules.SanitizeWarningOffsetAngle(
-                evnt.Get<float>(PlanetGaugeLevelEventRegistry.WarningOffsetAngleKey, 0f));
-            if (mode != PlanetGaugeAttributeMode.ForceRecovery
-                || !IsPropertyEnabled(
-                    evnt,
-                    PlanetGaugeLevelEventRegistry.AttributeModeKey)
-                || Mathf.Approximately(recoveryAmount, 0f)
-                || warningOffsetAngle >= 0f)
+            if (!createWarning)
             {
                 return;
             }
