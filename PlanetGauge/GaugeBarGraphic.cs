@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -18,6 +19,10 @@ namespace PlanetGauge
         private float normalizedValue = 1f;
         private float borderThickness = 2f;
         private float chamferSize;
+        private bool transitionVisible;
+        private GaugeOverlaySegment transitionSegment;
+        private readonly List<GaugeOverlaySegment> warningSegments =
+            new List<GaugeOverlaySegment>();
 
         private Color32 borderColor = new Color32(8, 8, 8, 255);
         private Color32 disabledColor = new Color32(184, 184, 184, 255);
@@ -99,6 +104,48 @@ namespace PlanetGauge
             SetVerticesDirty();
         }
 
+        internal void SetOverlays(
+            bool showTransition,
+            GaugeOverlaySegment newTransitionSegment,
+            List<GaugeOverlaySegment> newWarningSegments)
+        {
+            bool changed = transitionVisible != showTransition
+                || (showTransition && !SegmentsEqual(transitionSegment, newTransitionSegment));
+
+            int warningCount = newWarningSegments == null ? 0 : newWarningSegments.Count;
+            if (!changed && warningSegments.Count != warningCount)
+            {
+                changed = true;
+            }
+
+            if (!changed)
+            {
+                for (int index = 0; index < warningCount; index++)
+                {
+                    if (!SegmentsEqual(warningSegments[index], newWarningSegments[index]))
+                    {
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!changed)
+            {
+                return;
+            }
+
+            transitionVisible = showTransition;
+            transitionSegment = newTransitionSegment;
+            warningSegments.Clear();
+            if (newWarningSegments != null)
+            {
+                warningSegments.AddRange(newWarningSegments);
+            }
+
+            SetVerticesDirty();
+        }
+
         protected override void OnPopulateMesh(VertexHelper vertexHelper)
         {
             vertexHelper.Clear();
@@ -130,20 +177,73 @@ namespace PlanetGauge
             Color32 trackColor = gaugeEnabled ? depletedColor : disabledColor;
             AddBarRect(vertexHelper, innerRect, innerRadius, trackColor, false, innerRect);
 
-            if (!gaugeEnabled || normalizedValue <= 0f)
+            if (gaugeEnabled && normalizedValue > 0f)
+            {
+                Rect fillRect = innerRect;
+                fillRect.width *= normalizedValue;
+                if (fillRect.width > 0f)
+                {
+                    float fillRadius = Mathf.Min(fillRect.width, fillRect.height) * 0.5f;
+                    AddBarRect(vertexHelper, fillRect, fillRadius, Color.white, true, innerRect);
+                }
+            }
+
+            if (!gaugeEnabled)
             {
                 return;
             }
 
-            Rect fillRect = innerRect;
-            fillRect.width *= normalizedValue;
-            if (fillRect.width <= 0f)
+            if (transitionVisible)
+            {
+                AddOverlaySegment(vertexHelper, innerRect, transitionSegment);
+            }
+
+            for (int index = 0; index < warningSegments.Count; index++)
+            {
+                AddOverlaySegment(vertexHelper, innerRect, warningSegments[index]);
+            }
+        }
+
+        private void AddOverlaySegment(
+            VertexHelper vertexHelper,
+            Rect innerRect,
+            GaugeOverlaySegment segment)
+        {
+            float start = Mathf.Clamp01(Mathf.Min(segment.Start, segment.End));
+            float end = Mathf.Clamp01(Mathf.Max(segment.Start, segment.End));
+            float width = (end - start) * innerRect.width;
+            if (width <= 0.0001f)
             {
                 return;
             }
 
-            float fillRadius = Mathf.Min(fillRect.width, fillRect.height) * 0.5f;
-            AddBarRect(vertexHelper, fillRect, fillRadius, Color.white, true, innerRect);
+            Rect rect = new Rect(
+                innerRect.xMin + start * innerRect.width,
+                innerRect.yMin,
+                width,
+                innerRect.height);
+            float cut = Mathf.Clamp(
+                chamferSize,
+                0f,
+                Mathf.Min(rect.width, rect.height * 0.5f));
+            int first = vertexHelper.currentVertCount;
+            vertexHelper.AddVert(new Vector2(rect.xMin, rect.yMin), segment.Color, Vector2.zero);
+            vertexHelper.AddVert(new Vector2(rect.xMax - cut, rect.yMin), segment.Color, Vector2.zero);
+            vertexHelper.AddVert(new Vector2(rect.xMax, rect.yMin + cut), segment.Color, Vector2.zero);
+            vertexHelper.AddVert(new Vector2(rect.xMax, rect.yMax - cut), segment.Color, Vector2.zero);
+            vertexHelper.AddVert(new Vector2(rect.xMax - cut, rect.yMax), segment.Color, Vector2.zero);
+            vertexHelper.AddVert(new Vector2(rect.xMin, rect.yMax), segment.Color, Vector2.zero);
+            vertexHelper.AddTriangle(first, first + 1, first + 2);
+            vertexHelper.AddTriangle(first, first + 2, first + 3);
+            vertexHelper.AddTriangle(first, first + 3, first + 4);
+            vertexHelper.AddTriangle(first, first + 4, first + 5);
+        }
+
+        private static bool SegmentsEqual(GaugeOverlaySegment left, GaugeOverlaySegment right)
+        {
+            return Mathf.Approximately(left.Start, right.Start)
+                && Mathf.Approximately(left.End, right.End)
+                && left.Color.Equals(right.Color);
         }
 
         private void AddBarRect(

@@ -122,6 +122,8 @@ namespace PlanetGauge
         internal bool ApplyMultiplier;
         internal float MultiplierPercent;
         internal float RecoveryAmountPercent;
+        internal float WarningOffsetAngle;
+        internal float WarningPulseBeats;
         internal bool ApplyFailureProtection;
         internal bool FailureProtection;
         internal bool ApplyRecoveryCap;
@@ -147,6 +149,21 @@ namespace PlanetGauge
         internal static float SanitizeRecoveryAmount(float value)
         {
             return SanitizePercent(value, 0f, -1000f, 1000f);
+        }
+
+        internal static float SanitizeWarningOffsetAngle(float value)
+        {
+            if (float.IsNaN(value) || float.IsInfinity(value))
+            {
+                return 0f;
+            }
+
+            return Mathf.Min(0f, value);
+        }
+
+        internal static float SanitizeWarningPulseBeats(float value)
+        {
+            return SanitizePercent(value, 0.5f, 0.125f, 16f);
         }
 
         internal static bool IsAmplificationMode(PlanetGaugeAttributeMode mode)
@@ -185,6 +202,8 @@ namespace PlanetGauge
         internal const string DisableOtherAttributesKey = "disableOtherAttributes";
         internal const string MultiplierPercentKey = "multiplierPercent";
         internal const string RecoveryAmountPercentKey = "recoveryAmountPercent";
+        internal const string WarningOffsetAngleKey = "warningOffsetAngle";
+        internal const string WarningPulseBeatsKey = "warningPulseBeats";
         internal const string FailureProtectionKey = "failureProtection";
         internal const string RecoveryCapEnabledKey = "recoveryCapEnabled";
         internal const string RecoveryCapPercentKey = "recoveryCapPercent";
@@ -657,6 +676,33 @@ namespace PlanetGauge
                 PlanetGaugeAttributeMode.ForceRecovery.ToString()));
             AddProperty(info, recoveryAmount, 5);
 
+            ADOFAI.PropertyInfo warningOffset = CreateProperty(
+                info,
+                WarningOffsetAngleKey,
+                "Float",
+                0f,
+                "사전 경고 각도 오프셋");
+            warningOffset.unit = "°";
+            warningOffset.float_max = 0f;
+            warningOffset.showIfVals.Add(Tuple.Create(
+                AttributeModeKey,
+                PlanetGaugeAttributeMode.ForceRecovery.ToString()));
+            AddProperty(info, warningOffset, 6);
+
+            ADOFAI.PropertyInfo warningPulse = CreateProperty(
+                info,
+                WarningPulseBeatsKey,
+                "Float",
+                0.5f,
+                "점멸 주기");
+            warningPulse.unit = "beats";
+            warningPulse.float_min = 0.125f;
+            warningPulse.float_max = 16f;
+            warningPulse.showIfVals.Add(Tuple.Create(
+                AttributeModeKey,
+                PlanetGaugeAttributeMode.ForceRecovery.ToString()));
+            AddProperty(info, warningPulse, 7);
+
             ADOFAI.PropertyInfo recoveryAmountNote = CreateNoteProperty(
                 info,
                 RecoveryAmountNoteKey,
@@ -664,7 +710,7 @@ namespace PlanetGauge
             recoveryAmountNote.showIfVals.Add(Tuple.Create(
                 AttributeModeKey,
                 PlanetGaugeAttributeMode.ForceRecovery.ToString()));
-            AddProperty(info, recoveryAmountNote, 6);
+            AddProperty(info, recoveryAmountNote, 8);
 
             ADOFAI.PropertyInfo failureProtection = CreateProperty(
                 info,
@@ -673,7 +719,7 @@ namespace PlanetGauge
                 true,
                 "실패 방지");
             MakeOptional(failureProtection, false);
-            AddProperty(info, failureProtection, 7);
+            AddProperty(info, failureProtection, 9);
 
             ADOFAI.PropertyInfo recoveryCapEnabled = CreateProperty(
                 info,
@@ -682,7 +728,7 @@ namespace PlanetGauge
                 false,
                 "회복 상한 설정");
             MakeOptional(recoveryCapEnabled, false);
-            AddProperty(info, recoveryCapEnabled, 8);
+            AddProperty(info, recoveryCapEnabled, 10);
 
             ADOFAI.PropertyInfo recoveryCap = CreateProperty(
                 info,
@@ -695,7 +741,7 @@ namespace PlanetGauge
             recoveryCap.float_max = 1000f;
             // PropertyInfo.ValueMatch는 Bool 조건에서 소문자 "true"를 요구한다.
             recoveryCap.showIfVals.Add(Tuple.Create(RecoveryCapEnabledKey, "true"));
-            AddProperty(info, recoveryCap, 9);
+            AddProperty(info, recoveryCap, 11);
 
             ADOFAI.PropertyInfo forceCap = CreateProperty(
                 info,
@@ -704,7 +750,7 @@ namespace PlanetGauge
                 true,
                 "체력 상한 강제 제한");
             forceCap.showIfVals.Add(Tuple.Create(RecoveryCapEnabledKey, "true"));
-            AddProperty(info, forceCap, 10);
+            AddProperty(info, forceCap, 12);
 
             ADOFAI.PropertyInfo autoTileRecovery = CreateProperty(
                 info,
@@ -713,7 +759,7 @@ namespace PlanetGauge
                 false,
                 "자동 플레이 타일 체력 회복");
             MakeOptional(autoTileRecovery, false);
-            AddProperty(info, autoTileRecovery, 11);
+            AddProperty(info, autoTileRecovery, 13);
 
             return info;
         }
@@ -801,6 +847,10 @@ namespace PlanetGauge
                 levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.MultiplierPercentKey, 100f));
             float recoveryAmount = PlanetGaugeValueRules.SanitizeRecoveryAmount(
                 levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.RecoveryAmountPercentKey, 0f));
+            float warningOffsetAngle = PlanetGaugeValueRules.SanitizeWarningOffsetAngle(
+                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.WarningOffsetAngleKey, 0f));
+            float warningPulseBeats = PlanetGaugeValueRules.SanitizeWarningPulseBeats(
+                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.WarningPulseBeatsKey, 0.5f));
             bool failureProtection = levelEvent.Get<bool>(
                 PlanetGaugeLevelEventRegistry.FailureProtectionKey,
                 true);
@@ -835,6 +885,8 @@ namespace PlanetGauge
                     PlanetGaugeLevelEventRegistry.MultiplierPercentKey),
                 MultiplierPercent = multiplier,
                 RecoveryAmountPercent = recoveryAmount,
+                WarningOffsetAngle = warningOffsetAngle,
+                WarningPulseBeats = warningPulseBeats,
                 ApplyFailureProtection = IsPropertyEnabled(
                     levelEvent,
                     PlanetGaugeLevelEventRegistry.FailureProtectionKey),
@@ -858,11 +910,23 @@ namespace PlanetGauge
 
         public override void StartEffect(scrPlanet planet)
         {
+            try
+            {
+                GaugeVisualTransitions.CancelWarning(VisualToken);
+            }
+            catch (Exception exception)
+            {
+                Main.LogException(
+                    "SetPlanetGauge 사전 경고 정리에 실패했지만 이벤트 실행은 계속합니다.",
+                    exception);
+            }
             if (GaugeRuntime.ShouldHandle())
             {
                 GaugeRuntime.ApplyEventSettings(command);
             }
         }
+
+        internal int VisualToken { get; set; }
 
         private static bool IsPropertyEnabled(LevelEvent levelEvent, string propertyName)
         {
@@ -870,6 +934,44 @@ namespace PlanetGauge
             return levelEvent.disabled == null
                 || !levelEvent.disabled.TryGetValue(propertyName, out disabled)
                 || !disabled;
+        }
+    }
+
+    internal sealed class PlanetGaugeWarningLevelEventEffect : ffxPlusBase
+    {
+        private float recoveryAmount;
+        private float warningPulseBeats;
+
+        internal int VisualToken { get; set; }
+
+        public override void Decode(LevelEvent levelEvent)
+        {
+            recoveryAmount = PlanetGaugeValueRules.SanitizeRecoveryAmount(
+                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.RecoveryAmountPercentKey, 0f));
+            warningPulseBeats = PlanetGaugeValueRules.SanitizeWarningPulseBeats(
+                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.WarningPulseBeatsKey, 0.5f));
+        }
+
+        public override void StartEffect(scrPlanet planet)
+        {
+            if (GaugeRuntime.ShouldHandle())
+            {
+                try
+                {
+                    GaugeVisualTransitions.BeginWarning(
+                        VisualToken,
+                        recoveryAmount,
+                        warningPulseBeats,
+                        crotchet,
+                        startTime);
+                }
+                catch (Exception exception)
+                {
+                    Main.LogException(
+                        "SetPlanetGauge 사전 경고 등록에 실패해 경고 없이 계속합니다.",
+                        exception);
+                }
+            }
         }
     }
 
@@ -974,6 +1076,16 @@ namespace PlanetGauge
                 PlanetGaugeValueRules.SanitizeRecoveryAmount);
             SanitizeStoredFloat(
                 __instance,
+                PlanetGaugeLevelEventRegistry.WarningOffsetAngleKey,
+                0f,
+                PlanetGaugeValueRules.SanitizeWarningOffsetAngle);
+            SanitizeStoredFloat(
+                __instance,
+                PlanetGaugeLevelEventRegistry.WarningPulseBeatsKey,
+                0.5f,
+                PlanetGaugeValueRules.SanitizeWarningPulseBeats);
+            SanitizeStoredFloat(
+                __instance,
                 PlanetGaugeLevelEventRegistry.RecoveryCapPercentKey,
                 100f,
                 PlanetGaugeValueRules.SanitizeRecoveryCap);
@@ -1039,6 +1151,20 @@ namespace PlanetGauge
                 StringComparison.Ordinal))
             {
                 __result = PlanetGaugeValueRules.SanitizeRecoveryAmount(__state);
+            }
+            else if (string.Equals(
+                __instance.name,
+                PlanetGaugeLevelEventRegistry.WarningOffsetAngleKey,
+                StringComparison.Ordinal))
+            {
+                __result = PlanetGaugeValueRules.SanitizeWarningOffsetAngle(__state);
+            }
+            else if (string.Equals(
+                __instance.name,
+                PlanetGaugeLevelEventRegistry.WarningPulseBeatsKey,
+                StringComparison.Ordinal))
+            {
+                __result = PlanetGaugeValueRules.SanitizeWarningPulseBeats(__state);
             }
             else if (string.Equals(
                 __instance.name,
@@ -1365,7 +1491,10 @@ namespace PlanetGauge
 
             scrFloor floor = floors[floorId];
             PlanetGaugeLevelEventEffect effect = null;
-            bool addedToFloor = false;
+            PlanetGaugeWarningLevelEventEffect warningEffect = null;
+            bool effectAddedToFloor = false;
+            bool warningAddedToFloor = false;
+            float angleOffset = 0f;
             try
             {
                 effect = floor.gameObject.AddComponent<PlanetGaugeLevelEventEffect>();
@@ -1373,10 +1502,10 @@ namespace PlanetGauge
                 effect.floors = floors;
                 effect.crotchet = 60f / (bpm * pitch * floor.speed);
                 effect.Decode(evnt);
+                effect.VisualToken = effect.GetInstanceID();
                 floor.plusEffects.Add(effect);
-                addedToFloor = true;
+                effectAddedToFloor = true;
 
-                float angleOffset;
                 evnt.TryGet("angleOffset", out angleOffset);
                 effect.SetStartTime(bpm, angleOffset + offset);
                 effect.sourceLevelEvent = evnt;
@@ -1384,7 +1513,7 @@ namespace PlanetGauge
             }
             catch
             {
-                if (addedToFloor)
+                if (effectAddedToFloor)
                 {
                     floor.plusEffects.Remove(effect);
                 }
@@ -1396,6 +1525,63 @@ namespace PlanetGauge
 
                 throw;
             }
+
+            PlanetGaugeAttributeMode mode = evnt.Get<PlanetGaugeAttributeMode>(
+                PlanetGaugeLevelEventRegistry.AttributeModeKey,
+                PlanetGaugeAttributeMode.Normal);
+            float recoveryAmount = PlanetGaugeValueRules.SanitizeRecoveryAmount(
+                evnt.Get<float>(PlanetGaugeLevelEventRegistry.RecoveryAmountPercentKey, 0f));
+            float warningOffsetAngle = PlanetGaugeValueRules.SanitizeWarningOffsetAngle(
+                evnt.Get<float>(PlanetGaugeLevelEventRegistry.WarningOffsetAngleKey, 0f));
+            if (mode != PlanetGaugeAttributeMode.ForceRecovery
+                || !IsPropertyEnabled(
+                    evnt,
+                    PlanetGaugeLevelEventRegistry.AttributeModeKey)
+                || Mathf.Approximately(recoveryAmount, 0f)
+                || warningOffsetAngle >= 0f)
+            {
+                return;
+            }
+
+            try
+            {
+                warningEffect = floor.gameObject.AddComponent<PlanetGaugeWarningLevelEventEffect>();
+                warningEffect.floorID = floorId;
+                warningEffect.floors = floors;
+                warningEffect.crotchet = effect.crotchet;
+                warningEffect.VisualToken = effect.VisualToken;
+                warningEffect.Decode(evnt);
+                floor.plusEffects.Add(warningEffect);
+                warningAddedToFloor = true;
+                warningEffect.SetStartTime(
+                    bpm,
+                    angleOffset + offset + warningOffsetAngle);
+                warningEffect.sourceLevelEvent = evnt;
+            }
+            catch (Exception exception)
+            {
+                if (warningAddedToFloor)
+                {
+                    floor.plusEffects.Remove(warningEffect);
+                }
+
+                if (warningEffect != null)
+                {
+                    UnityEngine.Object.Destroy(warningEffect);
+                }
+
+                Main.LogException(
+                    "SetPlanetGauge 사전 경고 효과를 만들지 못해 경고 없이 계속합니다.",
+                    exception);
+            }
+        }
+
+        private static bool IsPropertyEnabled(LevelEvent levelEvent, string propertyName)
+        {
+            bool disabled;
+            return levelEvent.disabled == null
+                || !levelEvent.disabled.TryGetValue(propertyName, out disabled)
+                || !disabled;
         }
     }
 }

@@ -55,6 +55,9 @@ namespace PlanetGauge
 
         private void Update()
         {
+            // ForceRecovery 표시 전환은 기존 HUD 색 전환과 같은 unscaled 시간축을 사용한다.
+            GaugeVisualTransitions.Tick(Time.unscaledDeltaTime);
+
             scnEditor editor = scnEditor.instance;
             if (editor != observedEditor)
             {

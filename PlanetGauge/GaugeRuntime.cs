@@ -61,6 +61,7 @@ namespace PlanetGauge
             EventSettings = PlanetGaugeEventSettings.Default;
             Array.Clear(judgementTotals, 0, judgementTotals.Length);
             autoTotal = 0f;
+            GaugeVisualTransitions.Reset();
             styleRevision++;
         }
 
@@ -146,7 +147,19 @@ namespace PlanetGauge
             if (command.ApplyAttributeMode
                 && command.AttributeMode == PlanetGaugeAttributeMode.ForceRecovery)
             {
+                float before = Current;
                 bool shouldDie = ApplyForcedRecovery(command.RecoveryAmountPercent);
+                try
+                {
+                    GaugeVisualTransitions.AddForceTransition(Current - before);
+                }
+                catch (Exception exception)
+                {
+                    // 표시 실패가 이미 확정된 체력과 기존 사망 흐름을 막아서는 안 된다.
+                    Main.LogException(
+                        "ForceRecovery 표시 전환 등록에 실패해 즉시 표시로 계속합니다.",
+                        exception);
+                }
                 if (shouldDie)
                 {
                     scrController controller = scrController.instance;
@@ -333,6 +346,33 @@ namespace PlanetGauge
             {
                 judgementTotals[index] += Current - previous;
             }
+        }
+
+        internal static float PreviewForcedRecovery(float amount)
+        {
+            if (frozen)
+            {
+                return Current;
+            }
+
+            float delta = PlanetGaugeValueRules.SanitizeRecoveryAmount(amount);
+            if (Mathf.Approximately(delta, 0f))
+            {
+                return Current;
+            }
+
+            float next = delta > 0f
+                ? (Current >= RecoveryMaximum ? Current : Mathf.Min(RecoveryMaximum, Current + delta))
+                : Current + delta;
+            if (next > 0f)
+            {
+                return next;
+            }
+
+            scrController controller = scrController.instance;
+            return controller != null && controller.noFail
+                ? Mathf.Max(NoFailMinimumGauge, next)
+                : 0f;
         }
 
         internal static void MarkNextDieAlreadyCharged() { nextDieAlreadyCharged = true; }

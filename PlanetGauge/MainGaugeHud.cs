@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using TMPro;
 using UnityEngine;
@@ -46,6 +47,8 @@ namespace PlanetGauge
         private static readonly Color32 IncreaseLimitedColor = new Color32(155, 89, 208, 255);    // #9B59D0
 
         private readonly Vector3[] meterWorldCorners = new Vector3[4];
+        private readonly List<GaugeOverlaySegment> warningSegments =
+            new List<GaugeOverlaySegment>();
 
         private scrHitErrorMeter sourceMeter;
         private GameObject rootObject;
@@ -116,6 +119,7 @@ namespace PlanetGauge
             effectOutline = null;
             hasLastStyle = false;
             activeEffectCount = 0;
+            warningSegments.Clear();
         }
 
         private void EnsureCreated(scrHitErrorMeter meter)
@@ -612,10 +616,29 @@ namespace PlanetGauge
 
         private void UpdateValue()
         {
+            bool hideForceVisuals = GaugeRuntime.EventSettings.BlindfoldEnabled;
+            float displayedCurrent = hideForceVisuals
+                ? GaugeRuntime.Current
+                : GaugeVisualTransitions.GetDisplayedCurrent();
             float normalizedValue = GaugeRuntime.RecoveryMaximum <= 0f
                 ? 0f 
-                : GaugeRuntime.Current / GaugeRuntime.RecoveryMaximum;
+                : displayedCurrent / GaugeRuntime.RecoveryMaximum;
             gaugeGraphic.SetState(true, normalizedValue);
+
+            GaugeOverlaySegment transitionSegment;
+            bool showTransition = false;
+            warningSegments.Clear();
+            if (!hideForceVisuals)
+            {
+                showTransition = GaugeVisualTransitions.TryGetTransitionSegment(
+                    out transitionSegment);
+                GaugeVisualTransitions.FillWarningSegments(warningSegments);
+            }
+            else
+            {
+                transitionSegment = default(GaugeOverlaySegment);
+            }
+            gaugeGraphic.SetOverlays(showTransition, transitionSegment, warningSegments);
 
             float displayValue = Mathf.Max(0f, GaugeRuntime.Current);
             PlanetGaugeSettings settings = Main.Settings;

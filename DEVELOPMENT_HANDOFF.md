@@ -1,26 +1,38 @@
 # PlanetGauge 개발 인수인계
 
-최종 갱신: 2026-08-21
+최종 갱신: 2026-08-25
 
 ## 1. 현재 스냅샷
 
 | 항목 | 값 |
 |---|---|
-| 브랜치 | `main` (`origin/main`과 동일한 `6bb41ef`에서 작업 시작, 0.1.4는 미커밋 작업 트리) |
-| 작업 시작 HEAD | `6bb41ef` (`Update README.md`) |
-| 현재 소스 버전 | `0.1.4` |
+| 브랜치 | `main` (`origin/main`과 동일한 `86e8bcc`, 0.1.5는 미커밋 작업 트리) |
+| 작업 시작 HEAD | `86e8bcc` (`Update README.md`) |
+| 현재 소스 버전 | `0.1.5` |
 | 타깃 | .NET Framework 4.8 / C# 7.3 |
 | 전용 이벤트 | `SetPlanetGauge`, `0x5047` (`20551`) |
 | 최신 Release | 경고 0개, 오류 0개 |
-| Release DLL | 66,560바이트, SHA-256 `BFC1C5E1538891820BBAF942E8539D70AFB3B093E47CA943C8CE917C1A3A5C68` |
+| Release DLL | 72,704바이트, SHA-256 `DB878D179DBBDAE3FD14113ED46D7A7A96EA8DE6B3C0005093F552981EB6E646` |
 
-이 문서 갱신 시점에는 0.1.4 구현이 아직 커밋되지 않은 작업 트리에 있다. 다음 작업자는 반드시 먼저 확인한다.
+이 문서 갱신 시점에는 0.1.5 구현이 아직 커밋되지 않은 작업 트리에 있다. 다음 작업자는 반드시 먼저 확인한다.
 
 ```powershell
 git status --short --branch
 git diff --check
 git diff
 ```
+
+### 0.1.5 활동 요약
+
+- `ForceRecovery`의 실제 실행 효과와 별도로 선행 경고 효과를 같은 `ffxPlusBase` 게임 시간축에 등록한다. 경고만 `warningOffsetAngle`만큼 앞서며 실제 체력 변경과 기존 사망 호출 시점은 바뀌지 않는다.
+- 새 JSON 키 `warningOffsetAngle`(기본 0°, 양수는 0으로 보정)과 `warningPulseBeats`(기본 0.5 비트, 0.125~16)를 추가했다. 둘 다 O/X가 없고 `ForceRecovery`에서만 표시한다.
+- `warningPulseBeats`의 에디터 단위는 설치본 `resources.assets`의 네이티브 `Bloom.duration`과 같은 `unit = "beats"`를 사용한다. `PropertyControl_Text`가 `editor.unit.beats`를 조회하며 설치본 한국어 값은 `비트`다.
+- `warningOffsetAngle=0`이면 경고 효과를 만들지 않고 기존 ForceRecovery를 그대로 실행한다. 네이티브 공통 `angleOffset`은 기존 실제 이벤트 시간 의미를 유지하지만 이번 에디터 스키마에는 노출하지 않았다.
+- 선행 경고는 매 프레임 최신 체력과 회복 상한으로 예상 범위를 다시 계산하고 검정↔차감 `#B02020`/회복 `#45D66B`을 beat 기반 삼각파로 표시한다.
+- 실제 실행 시 논리 체력·숫자·사망은 즉시 확정한다. 실제 적용량만 0.75초 OutCirc 표시 오프셋으로 남기며 일반 판정은 전환을 취소하지 않는다. 여러 ForceRecovery 전환은 합산되고 반대 방향은 상쇄된다.
+- Blindfold 활성 중에는 선행 경고와 적용 전환을 모두 숨긴다. 적용 전환은 기존 HUD 색 전환과 같은 `Time.unscaledDeltaTime`을 사용하므로 일시정지 중에도 끝난다.
+- 경고 생성/등록 또는 표시 전환 실패는 문맥과 함께 기록하고 실제 ForceRecovery 및 기존 사망 흐름은 계속 실행한다.
+- 버전을 `0.1.5`/`0.1.5.0`으로 올렸다. 설치본 게임 모드는 덮어쓰지 않았다.
 
 ### 0.1.4 추가 활동 요약
 
@@ -72,14 +84,14 @@ C:\Program Files (x86)\Steam\steamapps\common\A Dance of Fire and Ice\
 | `UnityModManager/0Harmony.dll` | `DF043F05C6E43602FA8E8F38F52A3A2CF962AAB7A65A9D85573EA25F01A63E80` |
 | `UnityModManager/UnityModManager.dll` | `5B4C5DA3896D4B353330315DC0AEEA06D984520BCA990B2B611ED86DA89D9003` |
 
-현재 게임 Mods 폴더에 실제 설치된 `PlanetGauge.dll`은 이전 0.1.4 빌드다. 이번 최종 0.1.4 빌드로 설치본을 덮어쓰지 않았다.
+현재 게임 Mods 폴더에 실제 설치된 `PlanetGauge.dll`은 이번 단위 토큰 수정 전의 0.1.5 개발 빌드다. 이번 최신 0.1.5 Release 빌드로 설치본을 덮어쓰지 않았다.
 
 | 설치 모드 DLL | 값 |
 |---|---|
 | 경로 | `Mods/PlanetGauge/PlanetGauge.dll` |
-| AssemblyVersion | `0.1.4.0` |
-| 크기 | 65,024바이트 |
-| SHA-256 | `333BFF0728FA57C08AC9181CFEED32F3A6BF2E681C6C49F341FBB2BC75B1BAD0` |
+| AssemblyVersion | `0.1.5.0` |
+| 크기 | 72,704바이트 |
+| SHA-256 | `614B423D4F1D188EBFB7DC3AC992D635F1AB7893CA884AA25095B4B07088847E` |
 
 설치본에서 확인한 중요 API:
 
@@ -202,6 +214,15 @@ Normal=0, BlockRecovery=1, AmplifyDecrease=2, AmplifyIncrease=3, AmplifyBoth=4, 
 | 회복량 설정 | `recoveryAmountPercent` | 0 | Float, -1000..1000% |
 
 `ForceRecovery`에서는 `attributeEnabled`를 표시하지 않고 `attributeMode`의 기존 O/X로 실행 여부를 결정한다. `recoveryAmountPercent` 자체에는 별도 O/X를 추가하지 않았다. Lore는 `음수로 설정할 시 체력을 깎습니다.`와 `최대 체력을 넘는 회복은 상쇄됩니다.`를 표시한다.
+
+0.1.5 추가 키:
+
+| 표시 이름 | 키 | 기본값 | 형식/범위 |
+|---|---|---:|---|
+| 사전 경고 각도 오프셋 | `warningOffsetAngle` | 0 | Float, 유한수 `<= 0°`; 양수/비유한수는 0 |
+| 점멸 주기 | `warningPulseBeats` | 0.5 | Float, `0.125..16 비트`; 블룸 `duration`과 같은 `unit = "beats"` |
+
+두 속성은 `ForceRecovery`에서만 표시하고 자체 O/X를 만들지 않는다. `warningOffsetAngle=0`은 경고만 끄며 ForceRecovery 실행 여부는 계속 `attributeMode` O/X가 담당한다. 네이티브 공통 `angleOffset`은 실제 이벤트 실행 시각 의미를 유지하며 0.1.5 에디터에는 아직 노출하지 않는다.
 
 `LevelEvent.Encode` Postfix는 `eventType`을 다시 `SetPlanetGauge`로 저장한다. 숫자 ID의 `ToString()`을 JSON에 내보내면 안 된다. 회복 상한 범위는 0.1.2에서 `0.1..1000`으로 확장됐다.
 
@@ -338,6 +359,7 @@ Auto: <누계>
 | 파일 | 책임 |
 |---|---|
 | `GaugeRuntime.cs` | 체력, 채널 상태, 판정/Auto 실제 변화, 누계, 사망 상태 |
+| `GaugeVisualTransitions.cs` | ForceRecovery 선행 경고와 0.75초 표시 전환 상태 |
 | `Patches.cs` | 세션 경계, SwitchChosen 판정/Auto 성공 관찰, Die 흡수 |
 | `PlanetGaugeLevelEvent.cs` | 이벤트 스키마, Decode/Encode, 등록, 아이콘, 현지화 |
 | `MainGaugeHud.cs` | 게이지/숫자/배율/효과 문구와 색 전환 |
@@ -362,6 +384,18 @@ dist/PlanetGauge/PlanetGauge.dll
 dist/PlanetGauge/Info.json
 dist/PlanetGauge/Assets/Gaugeline.png
 ```
+
+0.1.5 개발 빌드 완료:
+
+- 설치본 `Assembly-CSharp.dll`/Harmony/UMM 참조 기준 Release 빌드: 경고 0개, 오류 0개.
+- `Info.json` 0.1.5, AssemblyVersion/FileVersion 0.1.5.0 일치.
+- Strict 패키지 검사 통과. dist에는 DLL, Info, Gaugeline만 존재하며 게임/Unity/Harmony/UMM DLL은 없다.
+- 기존 enum `Normal=0`~`ForceRecovery=6`, 이벤트 이름 `SetPlanetGauge`, ID `20551`을 빌드 어셈블리/소스에서 재확인했다.
+- 새 경고 속성은 O/X 없이 `ForceRecovery`에서만 표시하며, Encode 직전과 에디터 Float 확정 시 같은 보정 함수를 사용한다.
+- 점멸 주기 단위를 네이티브 `beats` 토큰으로 수정한 뒤 Release를 다시 빌드했다. 에디터의 실제 `[값] 비트` 표시는 게임을 실행하지 않아 수동 검증 대기다.
+- Release DLL: 72,704바이트, SHA-256 `DB878D179DBBDAE3FD14113ED46D7A7A96EA8DE6B3C0005093F552981EB6E646`.
+- 과거 Debug DLL이 든 `dist/PlanetGauge/PlanetGauge.zip`은 Strict 검사를 위해 제거했다. ZIP은 아직 새로 만들지 않았다.
+- 게임은 실행하지 않았다. 아래 0.1.5 경고/메시/시간축 항목은 실게임 검증 대기다.
 
 0.1.4 최종 완료:
 
@@ -413,6 +447,17 @@ dist/PlanetGauge/Assets/Gaugeline.png
 24. 음수 강제 회복으로 체력이 소진될 때 일반 모드에서는 기존 사망, 게임 자체 no-fail에서는 -5 하한 및 동결, Blindfold에서는 숫자 공개가 유지되는가.
 25. PlanetGauge + 게임 자체 실패 방지 + `No-Fail Disabled`에서 첫 Fail 판정이 게이지만 0/검은색으로 동결하고 게임은 계속 진행하는가. 이후 판정으로 체력이 변하지 않는가.
 26. 위 3중 조건의 `FailMiss`/`FailOverload`가 SwitchChosen/Die 중복 경로에서도 한 번만 누계되고, hitbox 및 실제 no-fail 우선순위를 깨지 않는가.
+27. 기존 0.1.4 JSON에 경고 키가 없을 때 `warningOffsetAngle=0`, `warningPulseBeats=0.5`로 읽고 경고 없이 기존 시점에 실행되는가.
+28. 새 키가 복사/삭제/Undo/Redo/저장/재로드에서 보존되고 별도 O/X가 생기지 않는가. 양수/NaN/Infinity 오프셋과 범위 밖 점멸 주기가 정상 보정되는가.
+29. BPM 60/120/240/3120, 오프셋 0/-45/-180/-360/큰 음수, 주기 0.125/0.25/0.5/1/2/16 비트에서 경고 시작과 점멸 위상이 게임 시간축과 일치하는가.
+30. 경고 중 일반 판정과 회복 상한 변경이 들어와도 최신 체력 기준 예상 범위가 매 프레임 이동하며 실제 ForceRecovery 시점은 밀리지 않는가.
+31. 차감 `#B02020`, 회복 `#45D66B`, 검정↔색 선형 점멸, 수직 왼쪽 경계와 오른쪽 챔퍼가 극소 범위/다양한 해상도에서 깨지지 않는가.
+32. 실제 실행 시 숫자·논리 체력·사망은 즉시 확정되고 실제 적용 범위만 0.75초 OutCirc로 소멸하는가. 일반 판정이 전환을 취소하지 않는가.
+33. 같은 방향/반대 방향 ForceRecovery가 0.75초 안에 겹칠 때 합산/상쇄 표시가 맞고 요청량이 아니라 상한·하한 후 실제 적용량을 사용하는가.
+34. Blindfold 활성 중 선행 경고와 적용 전환이 모두 숨고, 공개 상태가 되어도 Blindfold 속성이 유지되는 동안 오버레이가 나타나지 않는가.
+35. Pause 중 선행 경고 위상은 정지하고 0.75초 적용 전환은 unscaled 시간으로 끝나는가.
+36. 경고 시작 시각이 곡 시작 이전이면 첫 플레이 프레임부터 현재 곡 위상에 맞춰 경고하며, Restart/ResetCustomLevel/에디터 복귀/모드 토글에서 경고·전환이 남지 않는가.
+37. 한국어 에디터에서 점멸 주기 입력 오른쪽에 블룸 `지속 시간`과 동일하게 `비트`가 표시되는가.
 
 ### 향후 개선점
 
@@ -422,8 +467,9 @@ dist/PlanetGauge/Assets/Gaugeline.png
 ## 다음 채팅용 지시문
 
 ```text
-PlanetGauge 0.1.4 작업을 이어서 진행해줘.
+PlanetGauge 0.1.5 작업을 이어서 진행해줘.
 저장소 루트 DEVELOPMENT_HANDOFF.md를 전부 읽고 git status와 현재 설치 DLL을 먼저 확인해.
 기존 판정·사망 흐름과 SetPlanetGauge 이름/ID/기존 JSON 키/O-X 계약을 보존해.
+ForceRecovery 선행 경고와 0.75초 표시 전환은 시각 전용으로 유지해.
 Release 빌드 검증과 아직 필요한 실게임 검증을 구분해서 보고해.
 ```
