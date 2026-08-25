@@ -376,10 +376,15 @@ namespace PlanetGauge
             for (int index = 0; index < methods.Length; index++)
             {
                 MethodInfo method = methods[index];
+                Type[] genericArguments = method.GetGenericArguments();
+                ParameterInfo[] parameters = method.GetParameters();
                 if (method.Name == "ParseEnum"
                     && method.IsGenericMethodDefinition
-                    && method.GetGenericArguments().Length == 1
-                    && method.GetParameters().Length == 2)
+                    && genericArguments.Length == 1
+                    && parameters.Length == 2
+                    && parameters[0].ParameterType == typeof(string)
+                    && parameters[1].ParameterType == genericArguments[0]
+                    && method.ReturnType == genericArguments[0])
                 {
                     return method.MakeGenericMethod(typeof(LevelEventType));
                 }

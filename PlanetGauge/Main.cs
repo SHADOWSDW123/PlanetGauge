@@ -246,6 +246,7 @@ namespace PlanetGauge
             {
                 internal scrController Controller;
                 internal bool RestoreNoFail;
+                internal bool OriginalNoFail;
             }
 
             private static MethodBase TargetMethod()
@@ -295,6 +296,7 @@ namespace PlanetGauge
                 // 결과 문자열을 만드는 동안에만 플래그를 빌려 일반 클리어/저장 판정은 유지한다.
                 __state.Controller = controller;
                 __state.RestoreNoFail = true;
+                __state.OriginalNoFail = controller.noFail;
                 controller.noFail = true;
             }
 
@@ -315,7 +317,7 @@ namespace PlanetGauge
             {
                 if (state.RestoreNoFail && state.Controller != null)
                 {
-                    state.Controller.noFail = false;
+                    state.Controller.noFail = state.OriginalNoFail;
                     state.RestoreNoFail = false;
                 }
             }
@@ -332,17 +334,18 @@ namespace PlanetGauge
             {
                 internal scrController Controller;
                 internal bool RestoreNoFail;
+                internal bool OriginalNoFail;
             }
 
             private static MethodBase TargetMethod()
             {
-                return FindMethodByName(typeof(scrPlayer), "CheckPostHoldFail");
+                return FindCheckPostHoldFailMethod();
             }
 
             [HarmonyPrepare]
             private static bool Prepare()
             {
-                if (FindMethodByName(typeof(scrPlayer), "CheckPostHoldFail") != null)
+                if (FindCheckPostHoldFailMethod() != null)
                 {
                     return true;
                 }
@@ -379,6 +382,7 @@ namespace PlanetGauge
 
                 __state.Controller = controller;
                 __state.RestoreNoFail = true;
+                __state.OriginalNoFail = controller.noFail;
                 temporaryMissRecoveryDepth++;
                 controller.noFail = true;
             }
@@ -405,7 +409,7 @@ namespace PlanetGauge
 
                 if (state.Controller != null)
                 {
-                    state.Controller.noFail = false;
+                    state.Controller.noFail = state.OriginalNoFail;
                 }
 
                 if (temporaryMissRecoveryDepth > 0)
@@ -427,6 +431,7 @@ namespace PlanetGauge
             {
                 internal scrController Controller;
                 internal bool RestoreTemporaryNoFail;
+                internal bool OriginalNoFail;
             }
 
             [HarmonyPrefix]
@@ -456,6 +461,7 @@ namespace PlanetGauge
                 // Die 패치가 FailMiss를 차감한 뒤, 게이지가 남았을 때만 다시 noFail 복구로 진입한다.
                 __state.Controller = controller;
                 __state.RestoreTemporaryNoFail = true;
+                __state.OriginalNoFail = controller.noFail;
                 controller.noFail = false;
             }
 
@@ -478,15 +484,15 @@ namespace PlanetGauge
             {
                 if (state.RestoreTemporaryNoFail && state.Controller != null)
                 {
-                    state.Controller.noFail = true;
+                    state.Controller.noFail = state.OriginalNoFail;
                     state.RestoreTemporaryNoFail = false;
                 }
             }
         }
 
-        private static MethodInfo FindMethodByName(Type type, string name)
+        private static MethodInfo FindCheckPostHoldFailMethod()
         {
-            MethodInfo[] methods = type.GetMethods(
+            MethodInfo[] methods = typeof(scrPlayer).GetMethods(
                 BindingFlags.Instance
                 | BindingFlags.Static
                 | BindingFlags.Public
@@ -494,9 +500,15 @@ namespace PlanetGauge
 
             for (int index = 0; index < methods.Length; index++)
             {
-                if (string.Equals(methods[index].Name, name, StringComparison.Ordinal))
+                MethodInfo method = methods[index];
+                ParameterInfo[] parameters = method.GetParameters();
+                if (string.Equals(method.Name, "CheckPostHoldFail", StringComparison.Ordinal)
+                    && !method.IsStatic
+                    && method.ReturnType == typeof(void)
+                    && parameters.Length == 1
+                    && parameters[0].ParameterType == typeof(ulong?))
                 {
-                    return methods[index];
+                    return method;
                 }
             }
 
