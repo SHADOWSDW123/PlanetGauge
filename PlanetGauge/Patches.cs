@@ -11,7 +11,7 @@ namespace PlanetGauge
         {
             if (Main.IsEnabled && Main.EditorGaugeEnabled)
             {
-                GaugeRuntime.Reset();
+                Main.ResetSessionState();
             }
         }
     }
@@ -23,7 +23,7 @@ namespace PlanetGauge
         {
             if (Main.IsEnabled && Main.EditorGaugeEnabled)
             {
-                GaugeRuntime.Reset();
+                Main.ResetSessionState();
                 RuntimeHost.ResetDebugVisibility();
             }
         }
@@ -34,9 +34,9 @@ namespace PlanetGauge
     {
         private static void Prefix()
         {
-            if (GaugeRuntime.ShouldHandle())
+            if (GaugeRuntime.IsGameplayContext(true))
             {
-                GaugeRuntime.Reset();
+                Main.ResetSessionState();
             }
         }
     }
@@ -46,9 +46,9 @@ namespace PlanetGauge
     {
         private static void Prefix()
         {
-            if (GaugeRuntime.ShouldHandle())
+            if (GaugeRuntime.IsGameplayContext(true))
             {
-                GaugeRuntime.Reset();
+                Main.ResetSessionState();
             }
         }
     }
@@ -228,6 +228,15 @@ namespace PlanetGauge
             {
                 judgementAppliedByDieAtDepth[observedSwitchDepth - 1] = true;
             }
+        }
+
+        internal static void ResetSessionState()
+        {
+            observedSwitchDepth = 0;
+            Array.Clear(
+                judgementAppliedByDieAtDepth,
+                0,
+                judgementAppliedByDieAtDepth.Length);
         }
 
         private static int BeginObservation()

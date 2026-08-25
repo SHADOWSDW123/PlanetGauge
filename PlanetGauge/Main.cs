@@ -98,7 +98,7 @@ namespace PlanetGauge
 
                 IsEnabled = true;
                 EditorGaugeEnabled = false;
-                GaugeRuntime.Reset();
+                ResetSessionState();
                 RuntimeHost.Create();
 
                 bool eventRegistered = PlanetGaugeLevelEventRegistry.TryRegister();
@@ -123,7 +123,7 @@ namespace PlanetGauge
             {
                 IsEnabled = false;
                 EditorGaugeEnabled = false;
-                GaugeRuntime.Reset();
+                ResetSessionState();
                 RuntimeHost.DestroyHost();
                 harmony.UnpatchAll(harmony.Id);
                 harmony = null;
@@ -204,7 +204,7 @@ namespace PlanetGauge
 
             IsEnabled = false;
             EditorGaugeEnabled = false;
-            GaugeRuntime.Reset();
+            ResetSessionState();
             RuntimeHost.DestroyHost();
 
             // 레벨/버튼이 이미 이 메타데이터를 참조할 수 있어 현재 프로세스에서는 등록 사전을 유지한다.
@@ -226,13 +226,26 @@ namespace PlanetGauge
         internal static void BeginEditorSession()
         {
             EditorGaugeEnabled = false;
-            GaugeRuntime.Reset();
+            ResetSessionState();
         }
 
         internal static void SetEditorGaugeEnabled(bool enabled)
         {
             EditorGaugeEnabled = enabled;
-            GaugeRuntime.Reset();
+            ResetSessionState();
+        }
+
+        internal static void ResetSessionState()
+        {
+            temporaryMissRecoveryDepth = 0;
+            try
+            {
+                GaugeRuntime.Reset();
+            }
+            finally
+            {
+                SwitchChosenPatch.ResetSessionState();
+            }
         }
 
         /// <summary>
