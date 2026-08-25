@@ -22,6 +22,7 @@ namespace PlanetGauge
         private static int failureRecoveryDepth;
         private static bool forcingDeath;
         private static bool blindfoldRevealed;
+        private static bool runtimeFaulted;
         private static int styleRevision;
         private static readonly float[] judgementTotals = new float[8];
         private static float autoTotal;
@@ -31,6 +32,7 @@ namespace PlanetGauge
         internal static bool IsRecoveringFailure { get { return failureRecoveryDepth > 0; } }
         internal static bool IsForcingDeath { get { return forcingDeath; } }
         internal static bool IsFrozen { get { return frozen; } }
+        internal static bool IsRuntimeFaulted { get { return runtimeFaulted; } }
         internal static bool HasPendingDieCharge { get { return nextDieAlreadyCharged; } }
         internal static bool IsBlindfolded
         {
@@ -58,6 +60,7 @@ namespace PlanetGauge
             failureRecoveryDepth = 0;
             forcingDeath = false;
             blindfoldRevealed = false;
+            runtimeFaulted = false;
             EventSettings = PlanetGaugeEventSettings.Default;
             Array.Clear(judgementTotals, 0, judgementTotals.Length);
             autoTotal = 0f;
@@ -170,7 +173,7 @@ namespace PlanetGauge
 
         internal static bool ShouldHandle(scrPlayer player = null)
         {
-            if (!Main.IsEnabled || !Main.EditorGaugeEnabled)
+            if (!Main.IsEnabled || runtimeFaulted || !Main.EditorGaugeEnabled)
             {
                 return false;
             }
@@ -421,15 +424,9 @@ namespace PlanetGauge
             catch (Exception exception)
             {
                 Main.LogException("게이지 소진 후 scrPlayer.Die 호출에 실패했습니다.", exception);
-                try
-                {
-                    scrController controller = scrController.instance;
-                    if (controller != null) controller.FailAction();
-                }
-                catch (Exception fallbackException)
-                {
-                    Main.LogException("Die 예외 후 FailAction 대체 처리에도 실패했습니다.", fallbackException);
-                }
+                // Die가 일부 상태를 바꾼 뒤 실패했는지 알 수 없으므로 다른 사망 진입점을
+                // 연달아 호출하거나 다음 판정에서 다시 Die를 시도하지 않는다.
+                runtimeFaulted = true;
             }
             finally
             {
