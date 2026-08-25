@@ -122,8 +122,6 @@ namespace PlanetGauge
         internal bool ApplyMultiplier;
         internal float MultiplierPercent;
         internal float RecoveryAmountPercent;
-        internal float WarningOffsetAngle;
-        internal float WarningPulseBeats;
         internal bool ApplyFailureProtection;
         internal bool FailureProtection;
         internal bool ApplyRecoveryCap;

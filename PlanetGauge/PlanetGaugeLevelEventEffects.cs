@@ -27,10 +27,6 @@ namespace PlanetGauge
                 levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.MultiplierPercentKey, 100f));
             float recoveryAmount = PlanetGaugeValueRules.SanitizeRecoveryAmount(
                 levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.RecoveryAmountPercentKey, 0f));
-            float warningOffsetAngle = PlanetGaugeValueRules.SanitizeWarningOffsetAngle(
-                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.WarningOffsetAngleKey, 0f));
-            float warningPulseBeats = PlanetGaugeValueRules.SanitizeWarningPulseBeats(
-                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.WarningPulseBeatsKey, 0.5f));
             bool failureProtection = levelEvent.Get<bool>(
                 PlanetGaugeLevelEventRegistry.FailureProtectionKey,
                 true);
@@ -65,8 +61,6 @@ namespace PlanetGauge
                     PlanetGaugeLevelEventRegistry.MultiplierPercentKey),
                 MultiplierPercent = multiplier,
                 RecoveryAmountPercent = recoveryAmount,
-                WarningOffsetAngle = warningOffsetAngle,
-                WarningPulseBeats = warningPulseBeats,
                 ApplyFailureProtection = IsPropertyEnabled(
                     levelEvent,
                     PlanetGaugeLevelEventRegistry.FailureProtectionKey),

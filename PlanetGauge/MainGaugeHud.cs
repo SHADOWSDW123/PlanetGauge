@@ -649,10 +649,20 @@ namespace PlanetGauge
             }
             else
             {
-                formattedValue = settings.MainGaugeShowDecimalValue
-                    ? displayValue.ToString("0.0", CultureInfo.InvariantCulture)
-                    : Mathf.RoundToInt(displayValue).ToString(
-                        CultureInfo.InvariantCulture);
+                if (settings.MainGaugeShowDecimalValue)
+                {
+                    formattedValue = displayValue.ToString("0.0", CultureInfo.InvariantCulture);
+                }
+                else
+                {
+                    int rounded = Mathf.RoundToInt(displayValue);
+                    if (GaugeRuntime.Current > 0f && rounded == 0)
+                    {
+                        rounded = 1;
+                    }
+
+                    formattedValue = rounded.ToString(CultureInfo.InvariantCulture);
+                }
             }
             if (!string.Equals(
                 lastDisplayedValue,

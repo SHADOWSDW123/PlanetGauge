@@ -125,11 +125,27 @@ namespace PlanetGauge
     [HarmonyPatch(typeof(scnEditor), nameof(scnEditor.LoadEditorProperties))]
     internal static class PlanetGaugeEditorIconPatch
     {
+        private static bool warningLogged;
+
         private static void Prefix()
         {
             if (Main.IsEnabled)
             {
-                PlanetGaugeLevelEventRegistry.EnsureIcon();
+                try
+                {
+                    PlanetGaugeLevelEventRegistry.EnsureIcon();
+                }
+                catch (Exception exception)
+                {
+                    // 아이콘은 선택 기능이다. 원본 에디터 초기화를 깨지 않고 네이티브 아이콘으로 저하한다.
+                    if (!warningLogged)
+                    {
+                        warningLogged = true;
+                        Main.LogException(
+                            "PlanetGauge 이벤트 아이콘 등록에 실패해 기본 아이콘을 사용합니다.",
+                            exception);
+                    }
+                }
             }
         }
     }
