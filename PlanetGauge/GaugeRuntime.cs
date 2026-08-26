@@ -135,12 +135,16 @@ namespace PlanetGauge
                 : current.RecoveryCapPercent;
             bool autoTileRecovery = command.ApplyAutoTileRecovery ? command.AutoTileRecovery : current.AutoTileRecovery;
 
-            EventSettings = new PlanetGaugeEventSettings(
+            PlanetGaugeEventSettings nextSettings = new PlanetGaugeEventSettings(
                 recoveryBlocked, recoveryRate, damageRate,
                 configuredIncrease, configuredDecrease, configuredBoth,
                 blindfoldEnabled,
                 failureProtection, recoveryCapEnabled, recoveryCapPercent, autoTileRecovery);
-            styleRevision++;
+            EventSettings = nextSettings;
+            if (HasVisualStyleChanged(current, nextSettings))
+            {
+                styleRevision++;
+            }
 
             if (command.ForceRecoveryCap && recoveryCapEnabled && Current > recoveryCapPercent)
             {
@@ -480,6 +484,27 @@ namespace PlanetGauge
         private static bool IsFailureJudgement(HitMargin judgement)
         {
             return judgement == HitMargin.FailMiss || judgement == HitMargin.FailOverload;
+        }
+
+        internal static bool HasVisualStyleChanged(
+            PlanetGaugeEventSettings previous,
+            PlanetGaugeEventSettings next)
+        {
+            return previous.RecoveryBlocked != next.RecoveryBlocked
+                || previous.BlindfoldEnabled != next.BlindfoldEnabled
+                || previous.FailureProtection != next.FailureProtection
+                || previous.RecoveryCapEnabled != next.RecoveryCapEnabled
+                || !ChannelsEqual(previous.RecoveryRate, next.RecoveryRate)
+                || !ChannelsEqual(previous.DamageRate, next.DamageRate);
+        }
+
+        private static bool ChannelsEqual(
+            PlanetGaugeRateChannel left,
+            PlanetGaugeRateChannel right)
+        {
+            return left.Enabled == right.Enabled
+                && left.Source == right.Source
+                && Mathf.Approximately(left.Percent, right.Percent);
         }
     }
 }
