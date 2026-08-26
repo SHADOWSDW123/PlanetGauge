@@ -56,8 +56,7 @@ git log --oneline --decorate -8
 
 ## 수정 시 지켜야 할 경계
 
-- 한 원인당 한 커밋으로 수정한다.
-- 구조 이동과 동작 변경을 같은 커밋에 넣지 않는다.
+- 구조 이동과 동작 변경은 검토하기 쉽도록 분리한다.
 - Harmony target을 바꾸기 전에 설치된 `Assembly-CSharp.dll`의 선언 타입과 정확한 overload를 확인한다.
 - 게임 설치 폴더에 파일을 자동 배포하거나 게임을 자동 실행하지 않는다.
 - 기존 `SetPlanetGauge` 이름, 숫자 ID `20551`, JSON key, O/X 계약을 유지한다.
