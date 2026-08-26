@@ -1,6 +1,39 @@
 # PlanetGauge 버전별 활동 및 검증 이력
 
-최종 갱신: 2026-08-25. 이 문서는 기능 변경과 그 시점의 검증 결과를 기록한다. 현재 구조와 불변 계약은 [logics.md](logics.md)를 참조한다.
+최종 갱신: 2026-08-26. 이 문서는 기능 변경과 그 시점의 검증 결과를 기록한다. 현재 구조와 불변 계약은 [logics.md](logics.md)를 참조한다.
+
+## 0.1.5C — 0.1.5A 기반 선별 안정화
+
+0.1.5B의 광범위한 리팩터링을 그대로 병합하지 않고, 실제 위험이 명확한 변경만 0.1.5A 기준선에 다시 적용했다.
+
+- 1,587줄의 `PlanetGaugeLevelEvent.cs`를 event types, registry, effects, serialization, editor, ApplyEvent 파일로 분리했다. 첫 분리 커밋은 타입 본문과 Harmony patch 수를 유지한 기계적 이동이다.
+- 결과 화면과 실패 복구 중 임시로 변경하는 `scrController.noFail`의 실제 원래 값을 저장하고 Postfix/Finalizer에서 복원한다.
+- reflection 대상인 `CheckPostHoldFail(ulong?)`와 `ParseEnum<T>(string, T) -> T`를 이름뿐 아니라 static 여부, 매개변수, 반환형까지 확인한다.
+- `Main.ResetSessionState()`에서 게이지, 임시 no-fail depth, SwitchChosen 관찰 상태, 사망 보류 상태, 시각 전환을 함께 초기화한다.
+- pause 상태의 Restart와 ResetCustomLevel도 세션 경계로 처리한다.
+- custom event component를 만들기 전에 floor와 `bpm × pitch × speed`, angle offset을 검사한다. actual effect 실패는 list/component를 롤백하고 warning 실패는 actual effect를 유지한다.
+- 정수 HUD에서 실제 체력이 `0`보다 크지만 반올림 결과가 `0`이면 `1`을 표시한다.
+- 선택 기능인 에디터 아이콘 등록 실패는 기본 아이콘으로 저하하고 원본 에디터 로딩을 계속한다.
+- `scrPlayer.Die()` 예외 직후 `FailAction()`을 연속 호출하지 않고 같은 세션의 반복 사망 진입을 막는다.
+- 실제 HUD 표현 설정이 바뀔 때만 style revision을 증가시킨다.
+- runtime command에서 소비하지 않던 warning offset/pulse 필드를 제거했다.
+
+다음 B 변경은 C에 포함하지 않았다.
+
+- `scrMarginTracker.AddHit` 판정 observer와 `SwitchJudgementObserver`
+- sequence 기반 Die token
+- `OptionalValue<T>` 및 command 타입 계층
+- 임의의 warning 개수·offset 상한과 측정 없는 미세 최적화
+- `PlanetGauge.Tests.exe` 콘솔 harness와 `GaugeStateKernel`
+
+### 0.1.5C 검증 상태
+
+- 현재 `Info.json = 0.1.5C` 상태에서도 Debug/Release 빌드는 경고 0개, 오류 0개다.
+- 당시 숫자 버전 `0.1.5`/assembly `0.1.5.0` 기준 Strict 패키지 검사는 통과했다.
+- 이후 `Info.json`은 별도 커밋에서 `0.1.5C`로 변경됐고 assembly는 `0.1.5.0`을 유지한다. 현재 Strict 패키지 검사는 이 버전 불일치로 실패한다.
+- `dist/PlanetGauge/planetgauge_0.1.5c.zip`은 프로젝트가 선언한 staging 파일이 아니어서 Strict 검사 경고가 발생한다. 사용자 파일일 수 있으므로 자동 삭제하지 않았다.
+- 현재 상태는 **build verified; package verification failed; in-game verification pending**이다.
+- 활성화, enable/disable/re-enable, 판정 단일 반영, no-fail 복원, pause Restart, LevelEvent 저장 왕복, ForceRecovery warning, HUD `0.x` 표시는 인게임 확인 대상이다.
 
 ## 0.1.5 — ForceRecovery 사전 경고와 적용 전환
 
