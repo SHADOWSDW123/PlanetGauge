@@ -75,12 +75,5 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 - 판정을 전체적으로 개선하고 싶으신 분들
 - 무한리트가 싫으신 분들
 
-# 개발 문서
-
-- [현재 개발 핸드오프](docs/DEVELOPMENT_HANDOFF.md)
-- [게이지 동작 및 호환성 계약](docs/logics.md)
-- [버전별 변경 기록](docs/updates.md)
-- [위험 분석 기록](docs/needfix.md)
-
 ---
 본 프로젝트는 생성형 인공지능을 사용하여 제작되었습니다.코드 이외의 에셋에서는 생성형 인공지능이 사용되지 않습니다.
