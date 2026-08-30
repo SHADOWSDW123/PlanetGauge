@@ -54,6 +54,7 @@ namespace PlanetGauge
         private GameObject rootObject;
         private RectTransform rootRect;
         private GaugeBarGraphic gaugeGraphic;
+        private GaugeSkinRenderer skinRenderer;
         private TextMeshProUGUI valueText;
         private RectTransform valueTextRect;
         private Outline valueOutline;
@@ -96,9 +97,9 @@ namespace PlanetGauge
             SetVisible(true);
             // 스타일은 값 캐시로 변경 시에만 메시를 갱신하고, 레이아웃은 게임 UI를 따라 매 프레임 계산한다.
             UpdateStyle();
-            UpdateVisibility();
             UpdateLayout(meter, meterRect);
             UpdateValue();
+            UpdateVisibility();
         }
 
         public void Dispose()
@@ -112,6 +113,7 @@ namespace PlanetGauge
             rootObject = null;
             rootRect = null;
             gaugeGraphic = null;
+            skinRenderer = null;
             valueText = null;
             valueTextRect = null;
             valueOutline = null;
@@ -175,6 +177,7 @@ namespace PlanetGauge
             gaugeGraphic.raycastTarget = false;
             gaugeGraphic.SetChamferSize(BaseChamferSize);
 
+            skinRenderer = new GaugeSkinRenderer(rootObject.transform);
             CreateValueText();
             CreateRateText();
             CreateEffectText();
@@ -358,10 +361,21 @@ namespace PlanetGauge
             float barWidth = Mathf.Max(
                 48f * gaugeScale,
                 (maximumX - minimumX) * widthScale * gaugeScale);
-            float barHeight = Mathf.Clamp(
-                BaseBarHeight * meterScale * gaugeScale,
-                5f,
-                72f);
+            GaugeSkinAsset skin = GaugeSkinManager.Current;
+            float barHeight;
+            if (skin != null && skin.ContentRect.Width > 0f && skin.ContentRect.Height > 0f)
+            {
+                barHeight = Mathf.Max(
+                    1f,
+                    barWidth * skin.ContentRect.Height / skin.ContentRect.Width);
+            }
+            else
+            {
+                barHeight = Mathf.Clamp(
+                    BaseBarHeight * meterScale * gaugeScale,
+                    5f,
+                    72f);
+            }
             float gapAboveMeter = Mathf.Clamp(
                 BaseGapAboveMeter * meterScale * gaugeScale,
                 2f,
@@ -452,9 +466,10 @@ namespace PlanetGauge
 
         private void UpdateVisibility()
         {
+            bool customSkin = GaugeSkinManager.Current != null;
             gaugeGraphic.SetVisibilityAlphas(
-                GaugeHudVisibilityTransitions.GaugeBarAlpha,
-                GaugeHudVisibilityTransitions.ForceRecoveryVisualsAlpha);
+                customSkin ? 0f : GaugeHudVisibilityTransitions.GaugeBarAlpha,
+                customSkin ? 0f : GaugeHudVisibilityTransitions.ForceRecoveryVisualsAlpha);
             SetCanvasGroupAlpha(
                 valueCanvasGroup,
                 GaugeHudVisibilityTransitions.GaugeValueAlpha);
@@ -654,7 +669,8 @@ namespace PlanetGauge
 
         private void UpdateValue()
         {
-            bool hideForceVisuals = GaugeRuntime.EventSettings.BlindfoldEnabled;
+            bool customSkin = GaugeSkinManager.Current != null && skinRenderer != null;
+            bool hideForceVisuals = GaugeRuntime.EventSettings.BlindfoldEnabled || customSkin;
             float displayedCurrent = hideForceVisuals
                 ? GaugeRuntime.Current
                 : GaugeVisualTransitions.GetDisplayedCurrent();
@@ -676,7 +692,24 @@ namespace PlanetGauge
             {
                 transitionSegment = default(GaugeOverlaySegment);
             }
-            gaugeGraphic.SetOverlays(showTransition, transitionSegment, warningSegments);
+            if (!customSkin)
+            {
+                gaugeGraphic.SetOverlayVertical(false);
+                gaugeGraphic.SetOverlays(showTransition, transitionSegment, warningSegments);
+                if (skinRenderer != null)
+                {
+                    skinRenderer.Update(rootRect, normalizedValue, false, 0f);
+                }
+            }
+            else
+            {
+                gaugeGraphic.SetOverlays(false, default(GaugeOverlaySegment), null);
+                skinRenderer.Update(
+                    rootRect,
+                    normalizedValue,
+                    GaugeRuntime.EventSettings.BlindfoldEnabled,
+                    GaugeHudVisibilityTransitions.GaugeBarAlpha);
+            }
 
             float displayValue = Mathf.Max(0f, GaugeRuntime.Current);
             PlanetGaugeSettings settings = Main.Settings;

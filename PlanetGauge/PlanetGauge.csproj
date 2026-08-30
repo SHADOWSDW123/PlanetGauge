@@ -63,6 +63,10 @@
       <HintPath>$(GameManagedDir)\Unity.TextMeshPro.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityFileDialog">
+      <HintPath>$(GameManagedDir)\UnityFileDialog.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>

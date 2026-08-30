@@ -144,6 +144,20 @@ namespace PlanetGauge
                 .Append(" Rate=").Append(Format(GaugeHudVisibilityTransitions.RateTokenAlpha))
                 .Append(" Force=").Append(Format(GaugeHudVisibilityTransitions.ForceRecoveryVisualsAlpha))
                 .AppendLine();
+            builder.Append("Skin: ").Append(GaugeSkinManager.DescribeCurrent()).AppendLine();
+            if (GaugeSkinManager.Current != null)
+            {
+                float skinProgress = GaugeRuntime.RecoveryMaximum <= 0f
+                    ? 0f
+                    : Mathf.Clamp01(GaugeRuntime.Current / GaugeRuntime.RecoveryMaximum);
+                builder.Append("SkinProgress: ").Append(Format(skinProgress))
+                    .Append("  FrameOffset: ")
+                    .Append(Format(Main.Settings.FrameSkinOffsetX))
+                    .Append(",")
+                    .Append(Format(Main.Settings.FrameSkinOffsetY))
+                    .Append("  ForceOverlay: Disabled")
+                    .AppendLine();
+            }
             builder.AppendLine("Totals (applied)");
             AppendTotal(builder, "TooEarly", HitMargin.TooEarly);
             AppendTotal(builder, "VeryEarly", HitMargin.VeryEarly);

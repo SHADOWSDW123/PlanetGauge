@@ -1,3 +1,6 @@
+using System;
+using System.Globalization;
+using System.IO;
 using UnityEngine;
 using UnityModManagerNet;
 
@@ -9,6 +12,17 @@ namespace PlanetGauge
     /// </summary>
     public sealed class PlanetGaugeSettings : UnityModManager.ModSettings
     {
+        private const float FrameOffsetLimit = 4096f;
+
+        private static readonly string[] SkinFillDirectionLabels =
+        {
+            "Horizontal (left to right)",
+            "Vertical (bottom to top)"
+        };
+
+        private string frameOffsetXInput;
+        private string frameOffsetYInput;
+
         public float MainGaugeOffsetX;
         public float MainGaugeOffsetY = -158f;
         public float MainGaugeSizePercent = 100f;
@@ -17,11 +31,18 @@ namespace PlanetGauge
         public float MainGaugeValueOffsetX;
         public float MainGaugeValueOffsetY = -14f;
         public float MainGaugeValueSizePercent = 111f;
-        public bool MainGaugeShowDecimalValue;
+        public bool MainGaugeShowDecimalValue = true;
 
         public int MainGaugeColorR = 255;
         public int MainGaugeColorG = 255;
         public int MainGaugeColorB = 255;
+
+        public bool CustomGaugeSkinEnabled;
+        public string HealthSkinImagePath = string.Empty;
+        public string FrameSkinImagePath = string.Empty;
+        public GaugeSkinFillDirection SkinFillDirection = GaugeSkinFillDirection.Horizontal;
+        public float FrameSkinOffsetX;
+        public float FrameSkinOffsetY;
 
         public override void Save(UnityModManager.ModEntry modEntry)
         {
@@ -53,6 +74,108 @@ namespace PlanetGauge
                 MainGaugeWidthPercent = 83f;
             }
             GUILayout.EndHorizontal();
+
+            GUILayout.Space(14f);
+            GUILayout.Label("Custom gauge skin");
+            GUILayout.Label("Health PNG: " + GetDisplayFileName(HealthSkinImagePath));
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Select health PNG", GUILayout.Width(180f)))
+            {
+                HealthSkinImagePath = GaugeSkinManager.PickPng(
+                    HealthSkinImagePath,
+                    "Select PlanetGauge health PNG");
+            }
+            if (GUILayout.Button("Clear health PNG", GUILayout.Width(160f)))
+            {
+                HealthSkinImagePath = string.Empty;
+                GaugeSkinManager.ResetToDefault(this);
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.Label("Frame PNG (optional): " + GetDisplayFileName(FrameSkinImagePath));
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Select frame PNG", GUILayout.Width(180f)))
+            {
+                string selectedFramePath = GaugeSkinManager.PickPng(
+                    FrameSkinImagePath,
+                    "Select optional PlanetGauge frame PNG");
+                if (!string.Equals(
+                    FrameSkinImagePath,
+                    selectedFramePath,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    FrameSkinOffsetX = 0f;
+                    FrameSkinOffsetY = 0f;
+                    frameOffsetXInput = null;
+                    frameOffsetYInput = null;
+                }
+                FrameSkinImagePath = selectedFramePath;
+            }
+            if (GUILayout.Button("Clear frame PNG", GUILayout.Width(160f)))
+            {
+                FrameSkinImagePath = string.Empty;
+                FrameSkinOffsetX = 0f;
+                FrameSkinOffsetY = 0f;
+                frameOffsetXInput = null;
+                frameOffsetYInput = null;
+                if (CustomGaugeSkinEnabled
+                    && !string.IsNullOrWhiteSpace(HealthSkinImagePath))
+                {
+                    GaugeSkinManager.TryApply(this, true);
+                }
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.Label("Fill direction");
+            SkinFillDirection = (GaugeSkinFillDirection)GUILayout.SelectionGrid(
+                (int)SkinFillDirection,
+                SkinFillDirectionLabels,
+                2,
+                GUILayout.Width(420f));
+            GUILayout.Label("Frame offset (updates live)");
+            FrameSkinOffsetX = DrawFloatField(
+                "Frame X",
+                FrameSkinOffsetX,
+                ref frameOffsetXInput,
+                "PlanetGauge.FrameOffsetX");
+            FrameSkinOffsetY = DrawFloatField(
+                "Frame Y",
+                FrameSkinOffsetY,
+                ref frameOffsetYInput,
+                "PlanetGauge.FrameOffsetY");
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(96f);
+            if (GUILayout.Button("Reset frame offset", GUILayout.Width(180f)))
+            {
+                FrameSkinOffsetX = 0f;
+                FrameSkinOffsetY = 0f;
+                frameOffsetXInput = null;
+                frameOffsetYInput = null;
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Apply custom skin", GUILayout.Width(180f)))
+            {
+                GaugeSkinManager.TryApply(this, true);
+            }
+            if (GUILayout.Button("Use default skin", GUILayout.Width(180f)))
+            {
+                GaugeSkinManager.ResetToDefault(this);
+            }
+            GUILayout.EndHorizontal();
+
+            if (!string.IsNullOrWhiteSpace(GaugeSkinManager.LastMessage))
+            {
+                GUILayout.Label(GaugeSkinManager.LastMessage);
+            }
+            if (!string.IsNullOrWhiteSpace(GaugeSkinManager.LastWarning))
+            {
+                Color previousColor = GUI.contentColor;
+                GUI.contentColor = new Color(1f, 0.72f, 0.2f, 1f);
+                GUILayout.Label("Warning: " + GaugeSkinManager.LastWarning);
+                GUI.contentColor = previousColor;
+            }
 
             GUILayout.Space(10f);
             GUILayout.Label("Main gauge position");
@@ -143,6 +266,22 @@ namespace PlanetGauge
             MainGaugeColorR = Mathf.Clamp(MainGaugeColorR, 0, 255);
             MainGaugeColorG = Mathf.Clamp(MainGaugeColorG, 0, 255);
             MainGaugeColorB = Mathf.Clamp(MainGaugeColorB, 0, 255);
+            HealthSkinImagePath = HealthSkinImagePath ?? string.Empty;
+            FrameSkinImagePath = FrameSkinImagePath ?? string.Empty;
+            if (!Enum.IsDefined(typeof(GaugeSkinFillDirection), SkinFillDirection))
+            {
+                SkinFillDirection = GaugeSkinFillDirection.Horizontal;
+            }
+            FrameSkinOffsetX = SanitizeFloat(
+                FrameSkinOffsetX,
+                0f,
+                -FrameOffsetLimit,
+                FrameOffsetLimit);
+            FrameSkinOffsetY = SanitizeFloat(
+                FrameSkinOffsetY,
+                0f,
+                -FrameOffsetLimit,
+                FrameOffsetLimit);
         }
 
         internal Color32 GetMainGaugeColor()
@@ -176,6 +315,45 @@ namespace PlanetGauge
             return result;
         }
 
+        private static float DrawFloatField(
+            string label,
+            float value,
+            ref string input,
+            string controlName)
+        {
+            bool focused = string.Equals(
+                GUI.GetNameOfFocusedControl(),
+                controlName,
+                StringComparison.Ordinal);
+            if (input == null || !focused)
+            {
+                input = value.ToString("0.###", CultureInfo.InvariantCulture);
+            }
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(label, GUILayout.Width(90f));
+            GUI.SetNextControlName(controlName);
+            input = GUILayout.TextField(input, GUILayout.Width(160f));
+            GUILayout.Label("px", GUILayout.Width(32f));
+            GUILayout.EndHorizontal();
+
+            float parsed;
+            if (float.TryParse(
+                input,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out parsed))
+            {
+                return SanitizeFloat(
+                    parsed,
+                    value,
+                    -FrameOffsetLimit,
+                    FrameOffsetLimit);
+            }
+
+            return value;
+        }
+
         private static int DrawColorSlider(string label, int value)
         {
             GUILayout.BeginHorizontal();
@@ -189,6 +367,23 @@ namespace PlanetGauge
             GUILayout.Label(rounded.ToString(), GUILayout.Width(56f));
             GUILayout.EndHorizontal();
             return rounded;
+        }
+
+        private static string GetDisplayFileName(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return "None";
+            }
+
+            try
+            {
+                return Path.GetFileName(path);
+            }
+            catch
+            {
+                return path;
+            }
         }
 
         private static float SanitizeFloat(

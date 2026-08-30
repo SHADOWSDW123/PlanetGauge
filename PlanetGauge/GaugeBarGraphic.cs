@@ -23,6 +23,7 @@ namespace PlanetGauge
         private GaugeOverlaySegment transitionSegment;
         private float baseOpacity = 1f;
         private float overlayOpacity = 1f;
+        private bool overlayVertical;
         private readonly List<GaugeOverlaySegment> warningSegments =
             new List<GaugeOverlaySegment>();
 
@@ -163,6 +164,17 @@ namespace PlanetGauge
             SetVerticesDirty();
         }
 
+        internal void SetOverlayVertical(bool vertical)
+        {
+            if (overlayVertical == vertical)
+            {
+                return;
+            }
+
+            overlayVertical = vertical;
+            SetVerticesDirty();
+        }
+
         protected override void OnPopulateMesh(VertexHelper vertexHelper)
         {
             vertexHelper.Clear();
@@ -249,17 +261,33 @@ namespace PlanetGauge
         {
             float start = Mathf.Clamp01(Mathf.Min(segment.Start, segment.End));
             float end = Mathf.Clamp01(Mathf.Max(segment.Start, segment.End));
-            float width = (end - start) * innerRect.width;
-            if (width <= 0.0001f)
+            Rect rect;
+            if (overlayVertical)
             {
-                return;
+                float height = (end - start) * innerRect.height;
+                if (height <= 0.0001f)
+                {
+                    return;
+                }
+                rect = new Rect(
+                    innerRect.xMin,
+                    innerRect.yMin + start * innerRect.height,
+                    innerRect.width,
+                    height);
             }
-
-            Rect rect = new Rect(
-                innerRect.xMin + start * innerRect.width,
-                innerRect.yMin,
-                width,
-                innerRect.height);
+            else
+            {
+                float width = (end - start) * innerRect.width;
+                if (width <= 0.0001f)
+                {
+                    return;
+                }
+                rect = new Rect(
+                    innerRect.xMin + start * innerRect.width,
+                    innerRect.yMin,
+                    width,
+                    innerRect.height);
+            }
             float cut = Mathf.Clamp(
                 chamferSize,
                 0f,

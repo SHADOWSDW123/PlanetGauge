@@ -100,6 +100,7 @@ namespace PlanetGauge
                 EditorGaugeEnabled = false;
                 ResetSessionState();
                 RuntimeHost.Create();
+                GaugeSkinManager.LoadEnabledSettings(Settings);
 
                 bool eventRegistered = PlanetGaugeLevelEventRegistry.TryRegister();
                 if (!eventRegistered && Logger != null)
@@ -125,6 +126,7 @@ namespace PlanetGauge
                 EditorGaugeEnabled = false;
                 ResetSessionState();
                 RuntimeHost.DestroyHost();
+                GaugeSkinManager.Dispose();
                 harmony.UnpatchAll(harmony.Id);
                 harmony = null;
                 if (!eventWasRegistered)
@@ -206,6 +208,7 @@ namespace PlanetGauge
             EditorGaugeEnabled = false;
             ResetSessionState();
             RuntimeHost.DestroyHost();
+            GaugeSkinManager.Dispose();
 
             // 레벨/버튼이 이미 이 메타데이터를 참조할 수 있어 현재 프로세스에서는 등록 사전을 유지한다.
             // Harmony와 런타임 호스트는 제거되므로 비활성 상태에서는 이벤트가 실행되지 않는다.
