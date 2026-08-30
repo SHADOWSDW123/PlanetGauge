@@ -158,6 +158,14 @@ namespace PlanetGauge
                     .Append("  ForceOverlay: Disabled")
                     .AppendLine();
             }
+            builder.Append("DecorationSkin: ")
+                .Append(PlanetGaugeDecorationSkinRuntime.DescribeCurrent())
+                .Append("  Tags=").Append(PlanetGaugeDecorationSkinRuntime.ActiveTagCount)
+                .Append("  Images=").Append(PlanetGaugeDecorationSkinRuntime.BoundDecorationCount)
+                .Append("  Legacy=").Append(PlanetGaugeDecorationSkinRuntime.LegacyRenderDecorationCount)
+                .Append("  Alpha=").Append(PlanetGaugeDecorationSkinRuntime.DescribeAlphaRange())
+                .Append("  Progress=").Append(Format(PlanetGaugeDecorationSkinRuntime.Progress))
+                .AppendLine();
             builder.AppendLine("Totals (applied)");
             AppendTotal(builder, "TooEarly", HitMargin.TooEarly);
             AppendTotal(builder, "VeryEarly", HitMargin.VeryEarly);

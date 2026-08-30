@@ -92,6 +92,7 @@ namespace PlanetGauge
             // 등록부터 런타임 호스트 생성까지 하나의 트랜잭션으로 취급한다.
             harmony = new Harmony(modEntry.Info.Id);
             bool eventWasRegistered = PlanetGaugeLevelEventRegistry.IsRegistered;
+            bool skinEventWasRegistered = PlanetGaugeSkinLevelEventRegistry.IsRegistered;
             try
             {
                 harmony.PatchAll(typeof(Main).Assembly);
@@ -103,15 +104,16 @@ namespace PlanetGauge
                 GaugeSkinManager.LoadEnabledSettings(Settings);
 
                 bool eventRegistered = PlanetGaugeLevelEventRegistry.TryRegister();
-                if (!eventRegistered && Logger != null)
+                bool skinEventRegistered = PlanetGaugeSkinLevelEventRegistry.TryRegister();
+                if ((!eventRegistered || !skinEventRegistered) && Logger != null)
                 {
                     Logger.Log(
                         "레벨 이벤트 사전 초기화를 기다립니다. "
-                        + "ADOStartup.SetupLevelEventsInfo 완료 후 PlanetGauge 설정 이벤트를 등록합니다.");
+                        + "ADOStartup.SetupLevelEventsInfo 완료 후 PlanetGauge 커스텀 이벤트를 등록합니다.");
                 }
-                else if (eventRegistered && !eventWasRegistered && Logger != null)
+                else if (Logger != null && (!eventWasRegistered || !skinEventWasRegistered))
                 {
-                    Logger.Log("PlanetGauge 설정 이벤트를 즉시 등록했습니다.");
+                    Logger.Log("PlanetGauge 커스텀 이벤트를 즉시 등록했습니다.");
                 }
 
                 if (!registeredWithGame)
@@ -132,6 +134,11 @@ namespace PlanetGauge
                 if (!eventWasRegistered)
                 {
                     PlanetGaugeLevelEventRegistry.RollbackRegistration();
+                }
+
+                if (!skinEventWasRegistered)
+                {
+                    PlanetGaugeSkinLevelEventRegistry.RollbackRegistration();
                 }
 
                 throw;
@@ -171,6 +178,21 @@ namespace PlanetGauge
             RequireField(typeof(scrPlayer), nameof(scrPlayer.failBar));
 
             PlanetGaugeLevelEventRegistry.ValidateRequiredGameApi();
+
+            if (AccessTools.Method(typeof(scrDecorationManager), "LateUpdate") == null)
+            {
+                throw new MissingMethodException(
+                    "호환성에 필요한 scrDecorationManager.LateUpdate 메서드를 찾을 수 없습니다.");
+            }
+
+            if (AccessTools.Method(
+                    typeof(scrVisualDecoration),
+                    nameof(scrVisualDecoration.UpdateShader),
+                    new[] { typeof(bool) }) == null)
+            {
+                throw new MissingMethodException(
+                    "호환성에 필요한 scrVisualDecoration.UpdateShader(bool) 메서드를 찾을 수 없습니다.");
+            }
         }
 
         private static void RequireMethod(Type type, string name, Type[] parameterTypes)
@@ -243,11 +265,18 @@ namespace PlanetGauge
             temporaryMissRecoveryDepth = 0;
             try
             {
-                GaugeRuntime.Reset();
+                PlanetGaugeDecorationSkinRuntime.Reset();
             }
             finally
             {
-                SwitchChosenPatch.ResetSessionState();
+                try
+                {
+                    GaugeRuntime.Reset();
+                }
+                finally
+                {
+                    SwitchChosenPatch.ResetSessionState();
+                }
             }
         }
 

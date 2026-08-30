@@ -19,14 +19,30 @@ namespace PlanetGauge
 
         private static bool Prefix(string str, ref LevelEventType __result)
         {
-            if (!Main.IsEnabled
-                || !string.Equals(str, PlanetGaugeLevelEventRegistry.EventName, StringComparison.OrdinalIgnoreCase))
+            if (!Main.IsEnabled)
             {
                 return true;
             }
 
-            __result = PlanetGaugeLevelEventRegistry.EventType;
-            return false;
+            if (string.Equals(
+                str,
+                PlanetGaugeLevelEventRegistry.EventName,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                __result = PlanetGaugeLevelEventRegistry.EventType;
+                return false;
+            }
+
+            if (string.Equals(
+                str,
+                PlanetGaugeSkinLevelEventRegistry.EventName,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                __result = PlanetGaugeSkinLevelEventRegistry.EventType;
+                return false;
+            }
+
+            return true;
         }
     }
 
@@ -40,11 +56,18 @@ namespace PlanetGauge
 
         private static void Prefix(LevelEventType __1, ref LevelEventInfo __2)
         {
-            if (Main.IsEnabled
-                && __1 == PlanetGaugeLevelEventRegistry.EventType
-                && __2 == null)
+            if (!Main.IsEnabled || __2 != null)
+            {
+                return;
+            }
+
+            if (__1 == PlanetGaugeLevelEventRegistry.EventType)
             {
                 __2 = PlanetGaugeLevelEventRegistry.EventInfo;
+            }
+            else if (__1 == PlanetGaugeSkinLevelEventRegistry.EventType)
+            {
+                __2 = PlanetGaugeSkinLevelEventRegistry.EventInfo;
             }
         }
     }
@@ -68,15 +91,27 @@ namespace PlanetGauge
             }
 
             object eventType;
-            if (dict.TryGetValue("eventType", out eventType)
-                && string.Equals(
-                    Convert.ToString(eventType),
-                    PlanetGaugeLevelEventRegistry.EventName,
-                    StringComparison.OrdinalIgnoreCase))
+            if (!dict.TryGetValue("eventType", out eventType))
+            {
+                return;
+            }
+
+            string eventName = Convert.ToString(eventType);
+            if (string.Equals(
+                eventName,
+                PlanetGaugeLevelEventRegistry.EventName,
+                StringComparison.OrdinalIgnoreCase))
             {
                 // Decode는 같은 문자열로 enum 파싱과 levelEventsInfo 조회를 수행한다.
                 // 숫자 문자열은 undefined enum으로 파싱되며 등록한 단일 숫자 키와도 일치한다.
                 __1 = PlanetGaugeLevelEventRegistry.NumericEventId.ToString();
+            }
+            else if (string.Equals(
+                eventName,
+                PlanetGaugeSkinLevelEventRegistry.EventName,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                __1 = PlanetGaugeSkinLevelEventRegistry.NumericEventId.ToString();
             }
         }
     }
@@ -127,13 +162,19 @@ namespace PlanetGauge
 
         private static void Postfix(LevelEvent __instance, Dictionary<string, object> __result)
         {
-            if (Main.IsEnabled
-                && __instance != null
-                && __instance.eventType == PlanetGaugeLevelEventRegistry.EventType
-                && __result != null)
+            if (!Main.IsEnabled || __instance == null || __result == null)
+            {
+                return;
+            }
+
+            if (__instance.eventType == PlanetGaugeLevelEventRegistry.EventType)
             {
                 // 정의되지 않은 enum의 ToString()은 숫자를 반환하므로 사람이 읽을 수 있는 계약명으로 저장한다.
                 __result["eventType"] = PlanetGaugeLevelEventRegistry.EventName;
+            }
+            else if (__instance.eventType == PlanetGaugeSkinLevelEventRegistry.EventType)
+            {
+                __result["eventType"] = PlanetGaugeSkinLevelEventRegistry.EventName;
             }
         }
 

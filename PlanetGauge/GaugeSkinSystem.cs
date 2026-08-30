@@ -422,7 +422,7 @@ namespace PlanetGauge
             return new GaugeSkinPixelBounds(minX, minY, maxX, maxY);
         }
 
-        private static bool LoadPng(Texture2D texture, byte[] bytes)
+        internal static bool LoadPng(Texture2D texture, byte[] bytes)
         {
             if (loadImageMethod == null)
             {

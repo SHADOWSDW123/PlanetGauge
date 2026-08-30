@@ -100,17 +100,20 @@ namespace PlanetGauge
 
             try
             {
-                bool wasRegistered = PlanetGaugeLevelEventRegistry.IsRegistered;
-                bool registered = PlanetGaugeLevelEventRegistry.TryRegister();
-                if (!registered && Main.Logger != null)
+                bool settingsWasRegistered = PlanetGaugeLevelEventRegistry.IsRegistered;
+                bool skinWasRegistered = PlanetGaugeSkinLevelEventRegistry.IsRegistered;
+                bool settingsRegistered = PlanetGaugeLevelEventRegistry.TryRegister();
+                bool skinRegistered = PlanetGaugeSkinLevelEventRegistry.TryRegister();
+                if ((!settingsRegistered || !skinRegistered) && Main.Logger != null)
                 {
                     Main.Logger.Error(
                         "ADOStartup.SetupLevelEventsInfo 실행 후에도 레벨 이벤트 사전이 준비되지 않아 "
-                        + "PlanetGauge 설정 이벤트를 등록하지 못했습니다.");
+                        + "PlanetGauge 커스텀 이벤트를 등록하지 못했습니다.");
                 }
-                else if (registered && !wasRegistered && Main.Logger != null)
+                else if (Main.Logger != null
+                    && (!settingsWasRegistered || !skinWasRegistered))
                 {
-                    Main.Logger.Log("SetupLevelEventsInfo 완료 후 PlanetGauge 설정 이벤트를 등록했습니다.");
+                    Main.Logger.Log("SetupLevelEventsInfo 완료 후 PlanetGauge 커스텀 이벤트를 등록했습니다.");
                 }
             }
             catch (Exception exception)
@@ -134,6 +137,7 @@ namespace PlanetGauge
                 try
                 {
                     PlanetGaugeLevelEventRegistry.EnsureIcon();
+                    PlanetGaugeSkinLevelEventRegistry.EnsureIcon();
                 }
                 catch (Exception exception)
                 {
@@ -173,15 +177,19 @@ namespace PlanetGauge
                 return;
             }
 
-            List<LevelEvent> events = editor.GetFloorEvents(
-                floorID,
-                PlanetGaugeLevelEventRegistry.EventType);
+            LevelEventType targetType = PlanetGaugeLevelEventRegistry.EventType;
+            List<LevelEvent> events = editor.GetFloorEvents(floorID, targetType);
             if (events == null || events.Count == 0)
             {
-                return;
+                targetType = PlanetGaugeSkinLevelEventRegistry.EventType;
+                events = editor.GetFloorEvents(floorID, targetType);
+                if (events == null || events.Count == 0)
+                {
+                    return;
+                }
             }
 
-            __instance.ShowPanel(PlanetGaugeLevelEventRegistry.EventType, 0);
+            __instance.ShowPanel(targetType, 0);
         }
     }
 
@@ -239,6 +247,28 @@ namespace PlanetGauge
             {
                 localized = "PlanetGauge 설정";
                 return true;
+            }
+
+            if (string.Equals(key, "editor." + PlanetGaugeSkinLevelEventRegistry.NumericEventId, StringComparison.Ordinal)
+                || string.Equals(key, "editor." + PlanetGaugeSkinLevelEventRegistry.EventName, StringComparison.Ordinal))
+            {
+                localized = "PlanetGauge 스킨";
+                return true;
+            }
+
+            if (key != null && key.IndexOf(nameof(PlanetGaugeSkinGaugeType), StringComparison.Ordinal) >= 0)
+            {
+                if (key.EndsWith(".Horizontal", StringComparison.Ordinal))
+                {
+                    localized = "가로";
+                    return true;
+                }
+
+                if (key.EndsWith(".Vertical", StringComparison.Ordinal))
+                {
+                    localized = "세로";
+                    return true;
+                }
             }
 
             if (key != null && key.IndexOf(nameof(PlanetGaugeAttributeMode), StringComparison.Ordinal) >= 0)
