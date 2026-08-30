@@ -15,13 +15,14 @@ namespace PlanetGauge
     /// </summary>
     internal enum PlanetGaugeAttributeMode
     {
-        Normal,
-        BlockRecovery,
-        AmplifyDecrease,
-        AmplifyIncrease,
-        AmplifyBoth,
-        Blindfold,
-        ForceRecovery
+        Normal = 0,
+        BlockRecovery = 1,
+        AmplifyDecrease = 2,
+        AmplifyIncrease = 3,
+        AmplifyBoth = 4,
+        Blindfold = 5,
+        ForceRecovery = 6,
+        HideGaugeHud = 7
     }
 
     internal enum PlanetGaugeRateSource
@@ -130,6 +131,11 @@ namespace PlanetGauge
         internal bool ForceRecoveryCap;
         internal bool ApplyAutoTileRecovery;
         internal bool AutoTileRecovery;
+        internal bool HideGaugeBar;
+        internal bool HideGaugeValue;
+        internal bool HideAttributeText;
+        internal bool HideRateToken;
+        internal bool HideForceRecoveryVisuals;
     }
 
     internal static class PlanetGaugeValueRules

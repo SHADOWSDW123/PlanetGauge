@@ -132,6 +132,18 @@ namespace PlanetGauge
                 .Append("  PendingDie: ").Append(GaugeRuntime.HasPendingDieCharge)
                 .Append("  ForcingDeath: ").Append(GaugeRuntime.IsForcingDeath).AppendLine();
             builder.Append("Active: ").Append(BuildActiveList(settings)).AppendLine();
+            builder.Append("HUD TargetHidden: Bar=").Append(GaugeHudVisibilityTransitions.GaugeBarHidden)
+                .Append(" Value=").Append(GaugeHudVisibilityTransitions.GaugeValueHidden)
+                .Append(" Attribute=").Append(GaugeHudVisibilityTransitions.AttributeTextHidden)
+                .Append(" Rate=").Append(GaugeHudVisibilityTransitions.RateTokenHidden)
+                .Append(" Force=").Append(GaugeHudVisibilityTransitions.ForceRecoveryVisualsHidden)
+                .AppendLine();
+            builder.Append("HUD Alpha: Bar=").Append(Format(GaugeHudVisibilityTransitions.GaugeBarAlpha))
+                .Append(" Value=").Append(Format(GaugeHudVisibilityTransitions.GaugeValueAlpha))
+                .Append(" Attribute=").Append(Format(GaugeHudVisibilityTransitions.AttributeTextAlpha))
+                .Append(" Rate=").Append(Format(GaugeHudVisibilityTransitions.RateTokenAlpha))
+                .Append(" Force=").Append(Format(GaugeHudVisibilityTransitions.ForceRecoveryVisualsAlpha))
+                .AppendLine();
             builder.AppendLine("Totals (applied)");
             AppendTotal(builder, "TooEarly", HitMargin.TooEarly);
             AppendTotal(builder, "VeryEarly", HitMargin.VeryEarly);
@@ -155,6 +167,14 @@ namespace PlanetGauge
             if (!settings.FailureProtection) builder.Append("NoFailDisabled, ");
             if (settings.RecoveryCapEnabled) builder.Append("RecoveryCap, ");
             if (settings.AutoTileRecovery) builder.Append("AutoTileRecovery, ");
+            if (GaugeHudVisibilityTransitions.GaugeBarHidden
+                || GaugeHudVisibilityTransitions.GaugeValueHidden
+                || GaugeHudVisibilityTransitions.AttributeTextHidden
+                || GaugeHudVisibilityTransitions.RateTokenHidden
+                || GaugeHudVisibilityTransitions.ForceRecoveryVisualsHidden)
+            {
+                builder.Append("HideGaugeHud, ");
+            }
             if (builder.Length == 0) return "None";
             builder.Length -= 2;
             return builder.ToString();

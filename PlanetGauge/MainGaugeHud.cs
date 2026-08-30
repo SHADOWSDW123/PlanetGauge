@@ -57,12 +57,15 @@ namespace PlanetGauge
         private TextMeshProUGUI valueText;
         private RectTransform valueTextRect;
         private Outline valueOutline;
+        private CanvasGroup valueCanvasGroup;
         private TextMeshProUGUI rateText;
         private RectTransform rateTextRect;
         private Outline rateOutline;
+        private CanvasGroup rateCanvasGroup;
         private TextMeshProUGUI effectText;
         private RectTransform effectTextRect;
         private Outline effectOutline;
+        private CanvasGroup effectCanvasGroup;
 
         private Color32 lastUserGaugeColor;
         private int lastStyleRevision = -1;
@@ -93,6 +96,7 @@ namespace PlanetGauge
             SetVisible(true);
             // 스타일은 값 캐시로 변경 시에만 메시를 갱신하고, 레이아웃은 게임 UI를 따라 매 프레임 계산한다.
             UpdateStyle();
+            UpdateVisibility();
             UpdateLayout(meter, meterRect);
             UpdateValue();
         }
@@ -111,12 +115,15 @@ namespace PlanetGauge
             valueText = null;
             valueTextRect = null;
             valueOutline = null;
+            valueCanvasGroup = null;
             rateText = null;
             rateTextRect = null;
             rateOutline = null;
+            rateCanvasGroup = null;
             effectText = null;
             effectTextRect = null;
             effectOutline = null;
+            effectCanvasGroup = null;
             hasLastStyle = false;
             activeEffectCount = 0;
             warningSegments.Clear();
@@ -187,7 +194,8 @@ namespace PlanetGauge
                 typeof(RectTransform),
                 typeof(CanvasRenderer),
                 typeof(TextMeshProUGUI),
-                typeof(Outline));
+                typeof(Outline),
+                typeof(CanvasGroup));
             textObject.transform.SetParent(rootObject.transform, false);
 
             valueTextRect = textObject.GetComponent<RectTransform>();
@@ -211,6 +219,7 @@ namespace PlanetGauge
             valueOutline = textObject.GetComponent<Outline>();
             valueOutline.effectColor = new Color(0f, 0f, 0f, 0.95f);
             valueOutline.useGraphicAlpha = true;
+            valueCanvasGroup = textObject.GetComponent<CanvasGroup>();
         }
 
         private void CreateEffectText()
@@ -220,7 +229,8 @@ namespace PlanetGauge
                 typeof(RectTransform),
                 typeof(CanvasRenderer),
                 typeof(TextMeshProUGUI),
-                typeof(Outline));
+                typeof(Outline),
+                typeof(CanvasGroup));
             textObject.transform.SetParent(rootObject.transform, false);
 
             effectTextRect = textObject.GetComponent<RectTransform>();
@@ -246,6 +256,7 @@ namespace PlanetGauge
             effectOutline = textObject.GetComponent<Outline>();
             effectOutline.effectColor = new Color(0f, 0f, 0f, 0.95f);
             effectOutline.useGraphicAlpha = true;
+            effectCanvasGroup = textObject.GetComponent<CanvasGroup>();
         }
 
         private void CreateRateText()
@@ -255,7 +266,8 @@ namespace PlanetGauge
                 typeof(RectTransform),
                 typeof(CanvasRenderer),
                 typeof(TextMeshProUGUI),
-                typeof(Outline));
+                typeof(Outline),
+                typeof(CanvasGroup));
             textObject.transform.SetParent(rootObject.transform, false);
 
             rateTextRect = textObject.GetComponent<RectTransform>();
@@ -278,6 +290,7 @@ namespace PlanetGauge
             rateOutline = textObject.GetComponent<Outline>();
             rateOutline.effectColor = new Color(0f, 0f, 0f, 0.95f);
             rateOutline.useGraphicAlpha = true;
+            rateCanvasGroup = textObject.GetComponent<CanvasGroup>();
         }
 
         private void UpdateStyle()
@@ -435,6 +448,31 @@ namespace PlanetGauge
 
             gaugeGraphic.SetChamferSize(
                 Mathf.Clamp(BaseChamferSize * meterScale * gaugeScale, 1f, 16f));
+        }
+
+        private void UpdateVisibility()
+        {
+            gaugeGraphic.SetVisibilityAlphas(
+                GaugeHudVisibilityTransitions.GaugeBarAlpha,
+                GaugeHudVisibilityTransitions.ForceRecoveryVisualsAlpha);
+            SetCanvasGroupAlpha(
+                valueCanvasGroup,
+                GaugeHudVisibilityTransitions.GaugeValueAlpha);
+            SetCanvasGroupAlpha(
+                effectCanvasGroup,
+                GaugeHudVisibilityTransitions.AttributeTextAlpha);
+            SetCanvasGroupAlpha(
+                rateCanvasGroup,
+                GaugeHudVisibilityTransitions.RateTokenAlpha);
+        }
+
+        private static void SetCanvasGroupAlpha(CanvasGroup canvasGroup, float alpha)
+        {
+            float clampedAlpha = Mathf.Clamp01(alpha);
+            if (canvasGroup != null && !Mathf.Approximately(canvasGroup.alpha, clampedAlpha))
+            {
+                canvasGroup.alpha = clampedAlpha;
+            }
         }
 
         private static Color32 ResolveGaugeColor(

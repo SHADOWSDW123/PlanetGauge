@@ -284,6 +284,12 @@ namespace PlanetGauge
                     localized = "체력 강제 회복";
                     return true;
                 }
+
+                if (key.EndsWith(".HideGaugeHud", StringComparison.Ordinal))
+                {
+                    localized = "게이지 HUD 숨기기";
+                    return true;
+                }
             }
 
             localized = null;

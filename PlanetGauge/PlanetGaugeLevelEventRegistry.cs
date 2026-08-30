@@ -26,6 +26,11 @@ namespace PlanetGauge
         internal const string RecoveryCapPercentKey = "recoveryCapPercent";
         internal const string ForceRecoveryCapKey = "forceRecoveryCap";
         internal const string AutoTileRecoveryKey = "autoTileRecovery";
+        internal const string HideGaugeBarKey = "hideGaugeBar";
+        internal const string HideGaugeValueKey = "hideGaugeValue";
+        internal const string HideAttributeTextKey = "hideAttributeText";
+        internal const string HideRateTokenKey = "hideRateToken";
+        internal const string HideForceRecoveryVisualsKey = "hideForceRecoveryVisuals";
         internal const string MultiplierReuseNoteKey = "multiplierReuseNote";
         internal const string MultiplierReuseLocalizationKey = "planetGauge.multiplierReuseNote";
         internal const string RecoveryAmountNoteKey = "recoveryAmountNote";
@@ -460,6 +465,51 @@ namespace PlanetGauge
                 PlanetGaugeAttributeMode.ForceRecovery.ToString()));
             AddProperty(info, disableOthers, 2);
 
+            ADOFAI.PropertyInfo hideGaugeBar = CreateProperty(
+                info,
+                HideGaugeBarKey,
+                "Bool",
+                true,
+                "게이지 바 끄기");
+            AddHudHideShowCondition(hideGaugeBar);
+            AddProperty(info, hideGaugeBar, 3);
+
+            ADOFAI.PropertyInfo hideGaugeValue = CreateProperty(
+                info,
+                HideGaugeValueKey,
+                "Bool",
+                true,
+                "체력 숫자 끄기");
+            AddHudHideShowCondition(hideGaugeValue);
+            AddProperty(info, hideGaugeValue, 4);
+
+            ADOFAI.PropertyInfo hideAttributeText = CreateProperty(
+                info,
+                HideAttributeTextKey,
+                "Bool",
+                true,
+                "적용 속성 문구 끄기");
+            AddHudHideShowCondition(hideAttributeText);
+            AddProperty(info, hideAttributeText, 5);
+
+            ADOFAI.PropertyInfo hideRateToken = CreateProperty(
+                info,
+                HideRateTokenKey,
+                "Bool",
+                true,
+                "배율 토큰 끄기");
+            AddHudHideShowCondition(hideRateToken);
+            AddProperty(info, hideRateToken, 6);
+
+            ADOFAI.PropertyInfo hideForceRecoveryVisuals = CreateProperty(
+                info,
+                HideForceRecoveryVisualsKey,
+                "Bool",
+                true,
+                "강제 회복 표시 끄기");
+            AddHudHideShowCondition(hideForceRecoveryVisuals);
+            AddProperty(info, hideForceRecoveryVisuals, 7);
+
             ADOFAI.PropertyInfo multiplier = CreateProperty(
                 info,
                 MultiplierPercentKey,
@@ -473,7 +523,7 @@ namespace PlanetGauge
             multiplier.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyIncrease.ToString()));
             multiplier.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyBoth.ToString()));
             MakeOptional(multiplier, false);
-            AddProperty(info, multiplier, 3);
+            AddProperty(info, multiplier, 8);
 
             ADOFAI.PropertyInfo multiplierNote = CreateNoteProperty(
                 info,
@@ -482,7 +532,7 @@ namespace PlanetGauge
             multiplierNote.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyDecrease.ToString()));
             multiplierNote.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyIncrease.ToString()));
             multiplierNote.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyBoth.ToString()));
-            AddProperty(info, multiplierNote, 4);
+            AddProperty(info, multiplierNote, 9);
 
             ADOFAI.PropertyInfo recoveryAmount = CreateProperty(
                 info,
@@ -496,7 +546,7 @@ namespace PlanetGauge
             recoveryAmount.showIfVals.Add(Tuple.Create(
                 AttributeModeKey,
                 PlanetGaugeAttributeMode.ForceRecovery.ToString()));
-            AddProperty(info, recoveryAmount, 5);
+            AddProperty(info, recoveryAmount, 10);
 
             ADOFAI.PropertyInfo warningOffset = CreateProperty(
                 info,
@@ -509,7 +559,7 @@ namespace PlanetGauge
             warningOffset.showIfVals.Add(Tuple.Create(
                 AttributeModeKey,
                 PlanetGaugeAttributeMode.ForceRecovery.ToString()));
-            AddProperty(info, warningOffset, 6);
+            AddProperty(info, warningOffset, 11);
 
             ADOFAI.PropertyInfo warningPulse = CreateProperty(
                 info,
@@ -523,7 +573,7 @@ namespace PlanetGauge
             warningPulse.showIfVals.Add(Tuple.Create(
                 AttributeModeKey,
                 PlanetGaugeAttributeMode.ForceRecovery.ToString()));
-            AddProperty(info, warningPulse, 7);
+            AddProperty(info, warningPulse, 12);
 
             ADOFAI.PropertyInfo recoveryAmountNote = CreateNoteProperty(
                 info,
@@ -532,7 +582,7 @@ namespace PlanetGauge
             recoveryAmountNote.showIfVals.Add(Tuple.Create(
                 AttributeModeKey,
                 PlanetGaugeAttributeMode.ForceRecovery.ToString()));
-            AddProperty(info, recoveryAmountNote, 8);
+            AddProperty(info, recoveryAmountNote, 13);
 
             ADOFAI.PropertyInfo failureProtection = CreateProperty(
                 info,
@@ -541,7 +591,7 @@ namespace PlanetGauge
                 true,
                 "실패 방지");
             MakeOptional(failureProtection, false);
-            AddProperty(info, failureProtection, 9);
+            AddProperty(info, failureProtection, 14);
 
             ADOFAI.PropertyInfo recoveryCapEnabled = CreateProperty(
                 info,
@@ -550,7 +600,7 @@ namespace PlanetGauge
                 false,
                 "회복 상한 설정");
             MakeOptional(recoveryCapEnabled, false);
-            AddProperty(info, recoveryCapEnabled, 10);
+            AddProperty(info, recoveryCapEnabled, 15);
 
             ADOFAI.PropertyInfo recoveryCap = CreateProperty(
                 info,
@@ -563,7 +613,7 @@ namespace PlanetGauge
             recoveryCap.float_max = 1000f;
             // PropertyInfo.ValueMatch는 Bool 조건에서 소문자 "true"를 요구한다.
             recoveryCap.showIfVals.Add(Tuple.Create(RecoveryCapEnabledKey, "true"));
-            AddProperty(info, recoveryCap, 11);
+            AddProperty(info, recoveryCap, 16);
 
             ADOFAI.PropertyInfo forceCap = CreateProperty(
                 info,
@@ -572,7 +622,7 @@ namespace PlanetGauge
                 true,
                 "체력 상한 강제 제한");
             forceCap.showIfVals.Add(Tuple.Create(RecoveryCapEnabledKey, "true"));
-            AddProperty(info, forceCap, 12);
+            AddProperty(info, forceCap, 17);
 
             ADOFAI.PropertyInfo autoTileRecovery = CreateProperty(
                 info,
@@ -581,7 +631,7 @@ namespace PlanetGauge
                 false,
                 "자동 플레이 타일 체력 회복");
             MakeOptional(autoTileRecovery, false);
-            AddProperty(info, autoTileRecovery, 13);
+            AddProperty(info, autoTileRecovery, 18);
 
             return info;
         }
@@ -593,6 +643,14 @@ namespace PlanetGauge
             property.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyIncrease.ToString()));
             property.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyBoth.ToString()));
             property.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.Blindfold.ToString()));
+            property.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.HideGaugeHud.ToString()));
+        }
+
+        private static void AddHudHideShowCondition(ADOFAI.PropertyInfo property)
+        {
+            property.showIfVals.Add(Tuple.Create(
+                AttributeModeKey,
+                PlanetGaugeAttributeMode.HideGaugeHud.ToString()));
         }
 
         private static ADOFAI.PropertyInfo CreateProperty(

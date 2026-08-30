@@ -47,6 +47,21 @@ namespace PlanetGauge
             bool autoTileRecovery = levelEvent.Get<bool>(
                 PlanetGaugeLevelEventRegistry.AutoTileRecoveryKey,
                 false);
+            bool hideGaugeBar = levelEvent.Get<bool>(
+                PlanetGaugeLevelEventRegistry.HideGaugeBarKey,
+                true);
+            bool hideGaugeValue = levelEvent.Get<bool>(
+                PlanetGaugeLevelEventRegistry.HideGaugeValueKey,
+                true);
+            bool hideAttributeText = levelEvent.Get<bool>(
+                PlanetGaugeLevelEventRegistry.HideAttributeTextKey,
+                true);
+            bool hideRateToken = levelEvent.Get<bool>(
+                PlanetGaugeLevelEventRegistry.HideRateTokenKey,
+                true);
+            bool hideForceRecoveryVisuals = levelEvent.Get<bool>(
+                PlanetGaugeLevelEventRegistry.HideForceRecoveryVisualsKey,
+                true);
 
             command = new PlanetGaugeEventCommand
             {
@@ -78,7 +93,12 @@ namespace PlanetGauge
                 ApplyAutoTileRecovery = IsPropertyEnabled(
                     levelEvent,
                     PlanetGaugeLevelEventRegistry.AutoTileRecoveryKey),
-                AutoTileRecovery = autoTileRecovery
+                AutoTileRecovery = autoTileRecovery,
+                HideGaugeBar = hideGaugeBar,
+                HideGaugeValue = hideGaugeValue,
+                HideAttributeText = hideAttributeText,
+                HideRateToken = hideRateToken,
+                HideForceRecoveryVisuals = hideForceRecoveryVisuals
             };
         }
 

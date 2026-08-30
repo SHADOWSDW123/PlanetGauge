@@ -21,6 +21,8 @@ namespace PlanetGauge
         private float chamferSize;
         private bool transitionVisible;
         private GaugeOverlaySegment transitionSegment;
+        private float baseOpacity = 1f;
+        private float overlayOpacity = 1f;
         private readonly List<GaugeOverlaySegment> warningSegments =
             new List<GaugeOverlaySegment>();
 
@@ -146,6 +148,21 @@ namespace PlanetGauge
             SetVerticesDirty();
         }
 
+        internal void SetVisibilityAlphas(float newBaseOpacity, float newOverlayOpacity)
+        {
+            float clampedBaseOpacity = Mathf.Clamp01(newBaseOpacity);
+            float clampedOverlayOpacity = Mathf.Clamp01(newOverlayOpacity);
+            if (Mathf.Approximately(baseOpacity, clampedBaseOpacity)
+                && Mathf.Approximately(overlayOpacity, clampedOverlayOpacity))
+            {
+                return;
+            }
+
+            baseOpacity = clampedBaseOpacity;
+            overlayOpacity = clampedOverlayOpacity;
+            SetVerticesDirty();
+        }
+
         protected override void OnPopulateMesh(VertexHelper vertexHelper)
         {
             vertexHelper.Clear();
@@ -158,7 +175,14 @@ namespace PlanetGauge
 
             float outerRadius = Mathf.Min(outerRect.width, outerRect.height) * 0.5f;
             // 바깥 도형, 빈 트랙, 현재 값 채움 순서로 메시를 겹쳐 테두리를 만든다.
-            AddBarRect(vertexHelper, outerRect, outerRadius, borderColor, false, outerRect);
+            AddBarRect(
+                vertexHelper,
+                outerRect,
+                outerRadius,
+                ApplyOpacity(borderColor, baseOpacity),
+                false,
+                outerRect,
+                baseOpacity);
 
             float actualBorder = Mathf.Min(
                 borderThickness,
@@ -175,7 +199,14 @@ namespace PlanetGauge
 
             float innerRadius = Mathf.Min(innerRect.width, innerRect.height) * 0.5f;
             Color32 trackColor = gaugeEnabled ? depletedColor : disabledColor;
-            AddBarRect(vertexHelper, innerRect, innerRadius, trackColor, false, innerRect);
+            AddBarRect(
+                vertexHelper,
+                innerRect,
+                innerRadius,
+                ApplyOpacity(trackColor, baseOpacity),
+                false,
+                innerRect,
+                baseOpacity);
 
             if (gaugeEnabled && normalizedValue > 0f)
             {
@@ -184,7 +215,14 @@ namespace PlanetGauge
                 if (fillRect.width > 0f)
                 {
                     float fillRadius = Mathf.Min(fillRect.width, fillRect.height) * 0.5f;
-                    AddBarRect(vertexHelper, fillRect, fillRadius, Color.white, true, innerRect);
+                    AddBarRect(
+                        vertexHelper,
+                        fillRect,
+                        fillRadius,
+                        ApplyOpacity(Color.white, baseOpacity),
+                        true,
+                        innerRect,
+                        baseOpacity);
                 }
             }
 
@@ -227,12 +265,13 @@ namespace PlanetGauge
                 0f,
                 Mathf.Min(rect.width, rect.height * 0.5f));
             int first = vertexHelper.currentVertCount;
-            vertexHelper.AddVert(new Vector2(rect.xMin, rect.yMin), segment.Color, Vector2.zero);
-            vertexHelper.AddVert(new Vector2(rect.xMax - cut, rect.yMin), segment.Color, Vector2.zero);
-            vertexHelper.AddVert(new Vector2(rect.xMax, rect.yMin + cut), segment.Color, Vector2.zero);
-            vertexHelper.AddVert(new Vector2(rect.xMax, rect.yMax - cut), segment.Color, Vector2.zero);
-            vertexHelper.AddVert(new Vector2(rect.xMax - cut, rect.yMax), segment.Color, Vector2.zero);
-            vertexHelper.AddVert(new Vector2(rect.xMin, rect.yMax), segment.Color, Vector2.zero);
+            Color32 overlayColor = ApplyOpacity(segment.Color, overlayOpacity);
+            vertexHelper.AddVert(new Vector2(rect.xMin, rect.yMin), overlayColor, Vector2.zero);
+            vertexHelper.AddVert(new Vector2(rect.xMax - cut, rect.yMin), overlayColor, Vector2.zero);
+            vertexHelper.AddVert(new Vector2(rect.xMax, rect.yMin + cut), overlayColor, Vector2.zero);
+            vertexHelper.AddVert(new Vector2(rect.xMax, rect.yMax - cut), overlayColor, Vector2.zero);
+            vertexHelper.AddVert(new Vector2(rect.xMax - cut, rect.yMax), overlayColor, Vector2.zero);
+            vertexHelper.AddVert(new Vector2(rect.xMin, rect.yMax), overlayColor, Vector2.zero);
             vertexHelper.AddTriangle(first, first + 1, first + 2);
             vertexHelper.AddTriangle(first, first + 2, first + 3);
             vertexHelper.AddTriangle(first, first + 3, first + 4);
@@ -252,7 +291,8 @@ namespace PlanetGauge
             float roundedRadius,
             Color32 solidColor,
             bool useGradient,
-            Rect gradientReference)
+            Rect gradientReference,
+            float opacity)
         {
             if (chamferSize > 0f)
             {
@@ -262,7 +302,8 @@ namespace PlanetGauge
                     chamferSize,
                     solidColor,
                     useGradient,
-                    gradientReference);
+                    gradientReference,
+                    opacity);
                 return;
             }
 
@@ -272,7 +313,8 @@ namespace PlanetGauge
                 roundedRadius,
                 solidColor,
                 useGradient,
-                gradientReference);
+                gradientReference,
+                opacity);
         }
 
         private void AddRoundedRect(
@@ -281,7 +323,8 @@ namespace PlanetGauge
             float radius,
             Color32 solidColor,
             bool useGradient,
-            Rect gradientReference)
+            Rect gradientReference,
+            float opacity)
         {
             float clampedRadius = Mathf.Clamp(
                 radius,
@@ -305,16 +348,16 @@ namespace PlanetGauge
                 GetVerticalBounds(rect, clampedRadius, x1, out bottom1, out top1);
 
                 Color32 bottomLeft = useGradient
-                    ? EvaluateGradient(x0, bottom0, gradientReference)
+                    ? ApplyOpacity(EvaluateGradient(x0, bottom0, gradientReference), opacity)
                     : solidColor;
                 Color32 topLeft = useGradient
-                    ? EvaluateGradient(x0, top0, gradientReference)
+                    ? ApplyOpacity(EvaluateGradient(x0, top0, gradientReference), opacity)
                     : solidColor;
                 Color32 topRight = useGradient
-                    ? EvaluateGradient(x1, top1, gradientReference)
+                    ? ApplyOpacity(EvaluateGradient(x1, top1, gradientReference), opacity)
                     : solidColor;
                 Color32 bottomRight = useGradient
-                    ? EvaluateGradient(x1, bottom1, gradientReference)
+                    ? ApplyOpacity(EvaluateGradient(x1, bottom1, gradientReference), opacity)
                     : solidColor;
 
                 AddQuad(
@@ -336,7 +379,8 @@ namespace PlanetGauge
             float requestedChamfer,
             Color32 solidColor,
             bool useGradient,
-            Rect gradientReference)
+            Rect gradientReference,
+            float opacity)
         {
             float cut = Mathf.Clamp(
                 requestedChamfer,
@@ -357,7 +401,7 @@ namespace PlanetGauge
 
             int centerIndex = vertexHelper.currentVertCount;
             Color32 centerColor = useGradient
-                ? EvaluateGradient(center.x, center.y, gradientReference)
+                ? ApplyOpacity(EvaluateGradient(center.x, center.y, gradientReference), opacity)
                 : solidColor;
             vertexHelper.AddVert(center, centerColor, Vector2.one * 0.5f);
 
@@ -366,7 +410,7 @@ namespace PlanetGauge
             {
                 Vector2 point = points[index];
                 Color32 pointColor = useGradient
-                    ? EvaluateGradient(point.x, point.y, gradientReference)
+                    ? ApplyOpacity(EvaluateGradient(point.x, point.y, gradientReference), opacity)
                     : solidColor;
                 vertexHelper.AddVert(point, pointColor, Vector2.zero);
             }
@@ -403,6 +447,12 @@ namespace PlanetGauge
                 middleColor,
                 highColor,
                 1f - Mathf.Pow(1f - highBlend, MiddleColorFalloff));
+        }
+
+        private static Color32 ApplyOpacity(Color32 color, float opacity)
+        {
+            color.a = (byte)Mathf.RoundToInt(color.a * Mathf.Clamp01(opacity));
+            return color;
         }
 
         private static void GetVerticalBounds(

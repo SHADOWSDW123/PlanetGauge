@@ -65,6 +65,7 @@ namespace PlanetGauge
             Array.Clear(judgementTotals, 0, judgementTotals.Length);
             autoTotal = 0f;
             GaugeVisualTransitions.Reset();
+            GaugeHudVisibilityTransitions.Reset();
             styleRevision++;
         }
 
@@ -98,6 +99,7 @@ namespace PlanetGauge
                     recoveryRate = PlanetGaugeRateChannel.Disabled;
                     damageRate = PlanetGaugeRateChannel.Disabled;
                     blindfoldEnabled = false;
+                    GaugeHudVisibilityTransitions.RevealAll();
                 }
 
                 switch (command.AttributeMode)
@@ -124,6 +126,9 @@ namespace PlanetGauge
                         break;
                     case PlanetGaugeAttributeMode.Blindfold:
                         blindfoldEnabled = command.AttributeEnabled;
+                        break;
+                    case PlanetGaugeAttributeMode.HideGaugeHud:
+                        GaugeHudVisibilityTransitions.Apply(command);
                         break;
                 }
             }
