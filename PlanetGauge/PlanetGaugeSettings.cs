@@ -22,6 +22,8 @@ namespace PlanetGauge
 
         private string frameOffsetXInput;
         private string frameOffsetYInput;
+        private int debugKeyCaptureSlot;
+        private string debugKeyCaptureMessage;
 
         public float MainGaugeOffsetX;
         public float MainGaugeOffsetY = -158f;
@@ -32,6 +34,8 @@ namespace PlanetGauge
         public float MainGaugeValueOffsetY = -14f;
         public float MainGaugeValueSizePercent = 111f;
         public bool MainGaugeShowDecimalValue = true;
+        public KeyCode DebugKey1 = KeyCode.LeftShift;
+        public KeyCode DebugKey2 = KeyCode.F3;
 
         public int MainGaugeColorR = 255;
         public int MainGaugeColorG = 255;
@@ -230,6 +234,7 @@ namespace PlanetGauge
 
             GUILayout.Space(10f);
             GUILayout.Label("Advanced");
+            DrawDebugShortcut();
             MainGaugeShowDecimalValue = GUILayout.Toggle(
                 MainGaugeShowDecimalValue,
                 "Show decimal health (e.g. 73.4)");
@@ -266,6 +271,19 @@ namespace PlanetGauge
             MainGaugeColorR = Mathf.Clamp(MainGaugeColorR, 0, 255);
             MainGaugeColorG = Mathf.Clamp(MainGaugeColorG, 0, 255);
             MainGaugeColorB = Mathf.Clamp(MainGaugeColorB, 0, 255);
+            DebugKey1 = SanitizeKeyCode(DebugKey1, KeyCode.LeftShift);
+            DebugKey2 = SanitizeKeyCode(DebugKey2, KeyCode.F3);
+            if (DebugKey1 == DebugKey2)
+            {
+                if (DebugKey1 == KeyCode.F3)
+                {
+                    DebugKey1 = KeyCode.LeftShift;
+                }
+                else
+                {
+                    DebugKey2 = KeyCode.F3;
+                }
+            }
             HealthSkinImagePath = HealthSkinImagePath ?? string.Empty;
             FrameSkinImagePath = FrameSkinImagePath ?? string.Empty;
             if (!Enum.IsDefined(typeof(GaugeSkinFillDirection), SkinFillDirection))
@@ -313,6 +331,77 @@ namespace PlanetGauge
                 GUILayout.Width(56f));
             GUILayout.EndHorizontal();
             return result;
+        }
+
+        private void DrawDebugShortcut()
+        {
+            GUILayout.Label("Debug shortcut: " + DebugKey1 + " + " + DebugKey2);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Set key 1", GUILayout.Width(120f)))
+            {
+                debugKeyCaptureSlot = 1;
+                debugKeyCaptureMessage = "Press key 1 (Escape to cancel)";
+            }
+            if (GUILayout.Button("Set key 2", GUILayout.Width(120f)))
+            {
+                debugKeyCaptureSlot = 2;
+                debugKeyCaptureMessage = "Press key 2 (Escape to cancel)";
+            }
+            if (GUILayout.Button("Reset shortcut", GUILayout.Width(140f)))
+            {
+                DebugKey1 = KeyCode.LeftShift;
+                DebugKey2 = KeyCode.F3;
+                debugKeyCaptureSlot = 0;
+                debugKeyCaptureMessage = null;
+            }
+            GUILayout.EndHorizontal();
+
+            if (debugKeyCaptureSlot == 0)
+            {
+                return;
+            }
+
+            GUILayout.Label(debugKeyCaptureMessage);
+            Event currentEvent = Event.current;
+            if (currentEvent == null || currentEvent.type != EventType.KeyDown)
+            {
+                return;
+            }
+
+            KeyCode pressedKey = currentEvent.keyCode;
+            if (pressedKey == KeyCode.Escape)
+            {
+                debugKeyCaptureSlot = 0;
+                debugKeyCaptureMessage = null;
+                currentEvent.Use();
+                return;
+            }
+
+            if (pressedKey == KeyCode.None)
+            {
+                return;
+            }
+
+            KeyCode otherKey = debugKeyCaptureSlot == 1 ? DebugKey2 : DebugKey1;
+            if (pressedKey == otherKey)
+            {
+                debugKeyCaptureMessage = "Key 1 and key 2 must be different.";
+                currentEvent.Use();
+                return;
+            }
+
+            if (debugKeyCaptureSlot == 1)
+            {
+                DebugKey1 = pressedKey;
+            }
+            else
+            {
+                DebugKey2 = pressedKey;
+            }
+
+            debugKeyCaptureSlot = 0;
+            debugKeyCaptureMessage = null;
+            currentEvent.Use();
         }
 
         private static float DrawFloatField(
@@ -398,6 +487,13 @@ namespace PlanetGauge
             }
 
             return Mathf.Clamp(value, minimum, maximum);
+        }
+
+        private static KeyCode SanitizeKeyCode(KeyCode value, KeyCode fallback)
+        {
+            return value != KeyCode.None && Enum.IsDefined(typeof(KeyCode), value)
+                ? value
+                : fallback;
         }
     }
 }

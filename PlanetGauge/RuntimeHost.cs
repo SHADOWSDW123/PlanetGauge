@@ -13,6 +13,7 @@ namespace PlanetGauge
         private scnEditor observedEditor;
         private MainGaugeHud mainGaugeHud;
         private GaugeDebugHud debugHud;
+        private bool debugShortcutWasHeld;
 
         internal static void Create()
         {
@@ -83,13 +84,24 @@ namespace PlanetGauge
                 EditorGaugeButton.Destroy();
             }
 
-            if (Input.GetKeyDown(KeyCode.F3)
-                && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)))
+            KeyCode debugKey1 = Main.Settings.DebugKey1;
+            KeyCode debugKey2 = Main.Settings.DebugKey2;
+            bool debugShortcutIsHeld = GetDebugKey(debugKey1) && GetDebugKey(debugKey2);
+            if (debugShortcutIsHeld && !debugShortcutWasHeld)
             {
                 debugHud.Toggle();
             }
+            debugShortcutWasHeld = debugShortcutIsHeld;
 
             debugHud.Update();
+        }
+
+        private static bool GetDebugKey(KeyCode key)
+        {
+            // 기존 기본 단축키의 "Shift"는 좌우 Shift 모두를 의미했다.
+            return key == KeyCode.LeftShift
+                ? Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)
+                : Input.GetKey(key);
         }
 
         private void LateUpdate()

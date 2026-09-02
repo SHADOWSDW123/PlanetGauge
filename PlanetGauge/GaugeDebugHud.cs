@@ -112,7 +112,10 @@ namespace PlanetGauge
             PlanetGaugeEventSettings settings = GaugeRuntime.EventSettings;
             scrController controller = scrController.instance;
             StringBuilder builder = new StringBuilder(768);
-            builder.AppendLine("Shift+F3");
+            builder.Append(Main.Settings.DebugKey1)
+                .Append("+")
+                .Append(Main.Settings.DebugKey2)
+                .AppendLine();
             builder.Append("Gauge: ").Append(Format(GaugeRuntime.Current))
                 .Append(" / ").Append(Format(GaugeRuntime.RecoveryMaximum))
                 .Append("  BaseMax: ").Append(Format(GaugeRuntime.MaximumGauge)).AppendLine();
