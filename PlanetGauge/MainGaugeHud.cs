@@ -16,6 +16,7 @@ namespace PlanetGauge
         private const float BaseBarHeight = 18f;
         private const float BaseGapAboveMeter = 10f;
         private const float BaseTextGap = 5f;
+        private const float BaseEffectTextGap = 2f;
         private const float DefaultValueOffsetY = -14f;
         private const float CompactSpacingRatio = 2f / 3f;
         private const float BaseFontSize = 24f;
@@ -414,9 +415,6 @@ namespace PlanetGauge
                 3f,
                 240f);
             float rateHeight = rateFontSize + 1f;
-            float visibleRateHeight = rateText.enabled && settings.RateTokenAttachedToMainGauge
-                ? rateHeight
-                : 0f;
             float compactTextGap = Mathf.Clamp(
                 BaseTextGap * meterScale * CompactSpacingRatio,
                 1f,
@@ -426,17 +424,6 @@ namespace PlanetGauge
             valueTextRect.sizeDelta = new Vector2(
                 Mathf.Max(barWidth, fontSize * 5f),
                 textHeight);
-            float valueCenterY = barHeight * 0.5f
-                + compactTextGap
-                + textHeight * 0.5f
-                + textOffsetY;
-            if (rateText.enabled)
-            {
-                valueCenterY += visibleRateHeight + compactTextGap;
-            }
-            valueTextRect.anchoredPosition = new Vector2(
-                settings.MainGaugeValueOffsetX,
-                valueCenterY);
             valueOutline.effectDistance = new Vector2(
                 Mathf.Clamp(meterScale, 1f, 2f),
                 -Mathf.Clamp(meterScale, 1f, 2f));
@@ -445,23 +432,6 @@ namespace PlanetGauge
             rateTextRect.sizeDelta = new Vector2(
                 Mathf.Max(barWidth, rateFontSize * 9f),
                 rateHeight);
-            if (settings.RateTokenAttachedToMainGauge)
-            {
-                rateTextRect.pivot = new Vector2(0.5f, 0.5f);
-                rateTextRect.anchoredPosition = new Vector2(
-                    settings.MainGaugeValueOffsetX,
-                    barHeight * 0.5f
-                        + compactTextGap
-                        + rateHeight * 0.5f
-                        + textOffsetY);
-            }
-            else
-            {
-                SetScreenCenteredPosition(
-                    rateTextRect,
-                    settings.RateTokenScreenOffsetX,
-                    settings.RateTokenScreenOffsetY);
-            }
             rateOutline.effectDistance = new Vector2(
                 Mathf.Clamp(rateFontSize / 14f, 1f, 5f),
                 -Mathf.Clamp(rateFontSize / 14f, 1f, 5f));
@@ -480,36 +450,76 @@ namespace PlanetGauge
             effectTextRect.sizeDelta = new Vector2(
                 Mathf.Max(48f, effectFontSize * 18f),
                 effectHeight);
-            ApplyAttributeTextAnchor(settings.AttributeTextAnchor);
-            SetScreenCenteredPosition(
-                effectTextRect,
-                settings.AttributeTextScreenOffsetX,
-                settings.AttributeTextScreenOffsetY);
             effectOutline.effectDistance = new Vector2(
                 Mathf.Clamp(effectFontSize / 12f, 1f, 5f),
                 -Mathf.Clamp(effectFontSize / 12f, 1f, 5f));
 
-            gaugeGraphic.SetChamferSize(
-                Mathf.Clamp(BaseChamferSize * meterScale * gaugeScale, 1f, 16f));
-        }
+            float attachedX = settings.MainGaugeValueOffsetX;
+            float stackBottom = barHeight * 0.5f + compactTextGap + textOffsetY;
+            bool hasAttachedElement = false;
 
-        private void ApplyAttributeTextAnchor(AttributeTextPositionAnchor anchor)
-        {
-            float pivotY;
-            switch (anchor)
+            rateTextRect.pivot = new Vector2(0.5f, 0.5f);
+            if (settings.RateTokenAttachedToMainGauge)
             {
-                case AttributeTextPositionAnchor.Top:
-                    pivotY = 1f;
-                    break;
-                case AttributeTextPositionAnchor.Bottom:
-                    pivotY = 0f;
-                    break;
-                default:
-                    pivotY = 0.5f;
-                    break;
+                if (rateText.enabled)
+                {
+                    rateTextRect.anchoredPosition = new Vector2(
+                        attachedX,
+                        stackBottom + rateHeight * 0.5f);
+                    stackBottom += rateHeight;
+                    hasAttachedElement = true;
+                }
+            }
+            else
+            {
+                SetScreenCenteredPosition(
+                    rateTextRect,
+                    settings.RateTokenScreenOffsetX,
+                    settings.RateTokenScreenOffsetY);
             }
 
-            effectTextRect.pivot = new Vector2(0.5f, pivotY);
+            valueTextRect.pivot = new Vector2(0.5f, 0.5f);
+            if (settings.MainGaugeValueAttachedToMainGauge)
+            {
+                if (hasAttachedElement)
+                {
+                    stackBottom += compactTextGap;
+                }
+                valueTextRect.anchoredPosition = new Vector2(
+                    attachedX,
+                    stackBottom + textHeight * 0.5f);
+                stackBottom += textHeight;
+                hasAttachedElement = true;
+            }
+            else
+            {
+                SetScreenCenteredPosition(
+                    valueTextRect,
+                    settings.MainGaugeValueScreenOffsetX,
+                    settings.MainGaugeValueScreenOffsetY);
+            }
+
+            effectTextRect.pivot = new Vector2(0.5f, 0.5f);
+            if (settings.AttributeTextAttachedToMainGauge)
+            {
+                if (hasAttachedElement)
+                {
+                    stackBottom += BaseEffectTextGap * meterScale * CompactSpacingRatio;
+                }
+                effectTextRect.anchoredPosition = new Vector2(
+                    attachedX,
+                    stackBottom + effectHeight * 0.5f);
+            }
+            else
+            {
+                SetScreenCenteredPosition(
+                    effectTextRect,
+                    settings.AttributeTextScreenOffsetX,
+                    settings.AttributeTextScreenOffsetY);
+            }
+
+            gaugeGraphic.SetChamferSize(
+                Mathf.Clamp(BaseChamferSize * meterScale * gaugeScale, 1f, 16f));
         }
 
         private void SetScreenCenteredPosition(RectTransform target, float offsetX, float offsetY)

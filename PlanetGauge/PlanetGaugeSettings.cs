@@ -6,13 +6,6 @@ using UnityModManagerNet;
 
 namespace PlanetGauge
 {
-    public enum AttributeTextPositionAnchor
-    {
-        Top = 0,
-        Center = 1,
-        Bottom = 2
-    }
-
     /// <summary>
     /// Unity Mod Manager가 직렬화하는 사용자 설정과 설정 GUI를 소유한다.
     /// public 필드 이름은 저장 파일의 키이므로 이름 변경 시 기존 설정 마이그레이션이 필요하다.
@@ -20,8 +13,6 @@ namespace PlanetGauge
     public sealed class PlanetGaugeSettings : UnityModManager.ModSettings
     {
         private const float FrameOffsetLimit = 4096f;
-        private const float PositionSliderLimit = 1000f;
-        private const float PositionSafetyLimit = 100000f;
 
         private static readonly string[] SkinFillDirectionLabels =
         {
@@ -29,17 +20,12 @@ namespace PlanetGauge
             "Vertical (bottom to top)"
         };
 
-        private static readonly string[] AttributeTextAnchorLabels =
-        {
-            "Top",
-            "Center",
-            "Bottom"
-        };
-
         private string frameOffsetXInput;
         private string frameOffsetYInput;
         private string mainGaugeOffsetXInput;
         private string mainGaugeOffsetYInput;
+        private string valueTextOffsetXInput;
+        private string valueTextOffsetYInput;
         private string attributeTextOffsetXInput;
         private string attributeTextOffsetYInput;
         private string rateTokenOffsetXInput;
@@ -56,11 +42,13 @@ namespace PlanetGauge
         public float MainGaugeValueOffsetY = -14f;
         public float MainGaugeValueSizePercent = 111f;
         public bool MainGaugeShowDecimalValue = true;
+        public bool MainGaugeValueAttachedToMainGauge = true;
+        public float MainGaugeValueScreenOffsetX;
+        public float MainGaugeValueScreenOffsetY;
+        public bool AttributeTextAttachedToMainGauge = true;
         public float AttributeTextScreenOffsetX;
         public float AttributeTextScreenOffsetY;
         public float AttributeTextSizePercent = 100f;
-        public AttributeTextPositionAnchor AttributeTextAnchor =
-            AttributeTextPositionAnchor.Center;
         public bool RateTokenAttachedToMainGauge = true;
         public float RateTokenScreenOffsetX;
         public float RateTokenScreenOffsetY;
@@ -167,7 +155,7 @@ namespace PlanetGauge
                 SkinFillDirectionLabels,
                 2,
                 GUILayout.Width(420f));
-            GUILayout.Label("Frame offset (updates live)");
+            GUILayout.Label("Frame offset");
             FrameSkinOffsetX = DrawFloatField(
                 "Frame X",
                 FrameSkinOffsetX,
@@ -218,12 +206,16 @@ namespace PlanetGauge
                 "X",
                 MainGaugeOffsetX,
                 ref mainGaugeOffsetXInput,
-                "PlanetGauge.MainGaugeOffsetX");
+                "PlanetGauge.MainGaugeOffsetX",
+                -1000f,
+                1000f);
             MainGaugeOffsetY = DrawPositionSlider(
                 "Y",
                 MainGaugeOffsetY,
                 ref mainGaugeOffsetYInput,
-                "PlanetGauge.MainGaugeOffsetY");
+                "PlanetGauge.MainGaugeOffsetY",
+                -500f,
+                1400f);
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(96f);
@@ -238,64 +230,86 @@ namespace PlanetGauge
 
             GUILayout.Space(10f);
             GUILayout.Label("Gauge value text");
-            MainGaugeValueOffsetX = DrawFloatSlider(
-                "Text X",
-                MainGaugeValueOffsetX,
-                -500f,
-                500f);
-            MainGaugeValueOffsetY = DrawFloatSlider(
-                "Text Y",
-                MainGaugeValueOffsetY,
-                -300f,
-                300f);
             MainGaugeValueSizePercent = DrawFloatSlider(
                 "Text size",
                 MainGaugeValueSizePercent,
                 50f,
                 200f,
                 "%");
+            bool valueTextIndependent = !MainGaugeValueAttachedToMainGauge;
+            valueTextIndependent = GUILayout.Toggle(
+                valueTextIndependent,
+                "Independent position");
+            MainGaugeValueAttachedToMainGauge = !valueTextIndependent;
+            if (valueTextIndependent)
+            {
+                MainGaugeValueScreenOffsetX = DrawPositionSlider(
+                    "Text X",
+                    MainGaugeValueScreenOffsetX,
+                    ref valueTextOffsetXInput,
+                    "PlanetGauge.ValueTextOffsetX",
+                    -800f,
+                    800f);
+                MainGaugeValueScreenOffsetY = DrawPositionSlider(
+                    "Text Y",
+                    MainGaugeValueScreenOffsetY,
+                    ref valueTextOffsetYInput,
+                    "PlanetGauge.ValueTextOffsetY",
+                    -800f,
+                    800f);
+            }
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(96f);
-            if (GUILayout.Button("Reset text", GUILayout.Width(140f)))
+            if (GUILayout.Button("Reset text position", GUILayout.Width(180f)))
             {
+                MainGaugeValueAttachedToMainGauge = true;
                 MainGaugeValueOffsetX = 0f;
                 MainGaugeValueOffsetY = -14f;
-                MainGaugeValueSizePercent = 111f;
+                MainGaugeValueScreenOffsetX = 0f;
+                MainGaugeValueScreenOffsetY = 0f;
+                valueTextOffsetXInput = null;
+                valueTextOffsetYInput = null;
             }
             GUILayout.EndHorizontal();
 
             GUILayout.Space(10f);
-            GUILayout.Label("Attribute text (screen-centered position)");
-            AttributeTextScreenOffsetX = DrawPositionSlider(
-                "Attribute X",
-                AttributeTextScreenOffsetX,
-                ref attributeTextOffsetXInput,
-                "PlanetGauge.AttributeTextOffsetX");
-            AttributeTextScreenOffsetY = DrawPositionSlider(
-                "Attribute Y",
-                AttributeTextScreenOffsetY,
-                ref attributeTextOffsetYInput,
-                "PlanetGauge.AttributeTextOffsetY");
+            GUILayout.Label("Attribute text");
             AttributeTextSizePercent = DrawFloatSlider(
                 "Attribute size",
                 AttributeTextSizePercent,
                 25f,
                 500f,
                 "%");
-            GUILayout.Label("Multi-line position anchor");
-            AttributeTextAnchor = (AttributeTextPositionAnchor)GUILayout.SelectionGrid(
-                (int)AttributeTextAnchor,
-                AttributeTextAnchorLabels,
-                3,
-                GUILayout.Width(420f));
+            bool attributeTextIndependent = !AttributeTextAttachedToMainGauge;
+            attributeTextIndependent = GUILayout.Toggle(
+                attributeTextIndependent,
+                "Independent position");
+            AttributeTextAttachedToMainGauge = !attributeTextIndependent;
+            if (attributeTextIndependent)
+            {
+                AttributeTextScreenOffsetX = DrawPositionSlider(
+                    "Attribute X",
+                    AttributeTextScreenOffsetX,
+                    ref attributeTextOffsetXInput,
+                    "PlanetGauge.AttributeTextOffsetX",
+                    -1000f,
+                    1000f);
+                AttributeTextScreenOffsetY = DrawPositionSlider(
+                    "Attribute Y",
+                    AttributeTextScreenOffsetY,
+                    ref attributeTextOffsetYInput,
+                    "PlanetGauge.AttributeTextOffsetY",
+                    -1000f,
+                    1000f);
+            }
             GUILayout.BeginHorizontal();
             GUILayout.Space(96f);
             if (GUILayout.Button("Reset attribute position", GUILayout.Width(190f)))
             {
+                AttributeTextAttachedToMainGauge = true;
                 AttributeTextScreenOffsetX = 0f;
                 AttributeTextScreenOffsetY = 0f;
-                AttributeTextAnchor = AttributeTextPositionAnchor.Center;
                 attributeTextOffsetXInput = null;
                 attributeTextOffsetYInput = null;
             }
@@ -303,32 +317,39 @@ namespace PlanetGauge
 
             GUILayout.Space(10f);
             GUILayout.Label("Rate token");
-            RateTokenAttachedToMainGauge = GUILayout.Toggle(
-                RateTokenAttachedToMainGauge,
-                "Attach rate token to main gauge");
-            bool previousGuiEnabled = GUI.enabled;
-            GUI.enabled = previousGuiEnabled && !RateTokenAttachedToMainGauge;
-            RateTokenScreenOffsetX = DrawPositionSlider(
-                "Rate X",
-                RateTokenScreenOffsetX,
-                ref rateTokenOffsetXInput,
-                "PlanetGauge.RateTokenOffsetX");
-            RateTokenScreenOffsetY = DrawPositionSlider(
-                "Rate Y",
-                RateTokenScreenOffsetY,
-                ref rateTokenOffsetYInput,
-                "PlanetGauge.RateTokenOffsetY");
-            GUI.enabled = previousGuiEnabled;
             RateTokenSizePercent = DrawFloatSlider(
                 "Rate size",
                 RateTokenSizePercent,
                 25f,
                 500f,
                 "%");
+            bool rateTokenIndependent = !RateTokenAttachedToMainGauge;
+            rateTokenIndependent = GUILayout.Toggle(
+                rateTokenIndependent,
+                "Independent position");
+            RateTokenAttachedToMainGauge = !rateTokenIndependent;
+            if (rateTokenIndependent)
+            {
+                RateTokenScreenOffsetX = DrawPositionSlider(
+                    "Rate X",
+                    RateTokenScreenOffsetX,
+                    ref rateTokenOffsetXInput,
+                    "PlanetGauge.RateTokenOffsetX",
+                    -1000f,
+                    1000f);
+                RateTokenScreenOffsetY = DrawPositionSlider(
+                    "Rate Y",
+                    RateTokenScreenOffsetY,
+                    ref rateTokenOffsetYInput,
+                    "PlanetGauge.RateTokenOffsetY",
+                    -1000f,
+                    1000f);
+            }
             GUILayout.BeginHorizontal();
             GUILayout.Space(96f);
             if (GUILayout.Button("Reset rate position", GUILayout.Width(190f)))
             {
+                RateTokenAttachedToMainGauge = true;
                 RateTokenScreenOffsetX = 0f;
                 RateTokenScreenOffsetY = 0f;
                 rateTokenOffsetXInput = null;
@@ -372,13 +393,11 @@ namespace PlanetGauge
             MainGaugeValueOffsetX = SanitizeFloat(MainGaugeValueOffsetX, 0f, -500f, 500f);
             MainGaugeValueOffsetY = SanitizeFloat(MainGaugeValueOffsetY, -14f, -300f, 300f);
             MainGaugeValueSizePercent = SanitizeFloat(MainGaugeValueSizePercent, 111f, 50f, 200f);
+            MainGaugeValueScreenOffsetX = SanitizePositionFloat(MainGaugeValueScreenOffsetX, 0f);
+            MainGaugeValueScreenOffsetY = SanitizePositionFloat(MainGaugeValueScreenOffsetY, 0f);
             AttributeTextScreenOffsetX = SanitizePositionFloat(AttributeTextScreenOffsetX, 0f);
             AttributeTextScreenOffsetY = SanitizePositionFloat(AttributeTextScreenOffsetY, 0f);
             AttributeTextSizePercent = SanitizeFloat(AttributeTextSizePercent, 100f, 25f, 500f);
-            if (!Enum.IsDefined(typeof(AttributeTextPositionAnchor), AttributeTextAnchor))
-            {
-                AttributeTextAnchor = AttributeTextPositionAnchor.Center;
-            }
             RateTokenScreenOffsetX = SanitizePositionFloat(RateTokenScreenOffsetX, 0f);
             RateTokenScreenOffsetY = SanitizePositionFloat(RateTokenScreenOffsetY, 0f);
             RateTokenSizePercent = SanitizeFloat(RateTokenSizePercent, 100f, 25f, 500f);
@@ -451,7 +470,9 @@ namespace PlanetGauge
             string label,
             float value,
             ref string input,
-            string controlName)
+            string controlName,
+            float minimum,
+            float maximum)
         {
             bool focused = string.Equals(
                 GUI.GetNameOfFocusedControl(),
@@ -469,12 +490,12 @@ namespace PlanetGauge
             GUI.changed = false;
             float sliderValue = Mathf.Clamp(
                 value,
-                -PositionSliderLimit,
-                PositionSliderLimit);
+                minimum,
+                maximum);
             float sliderResult = GUILayout.HorizontalSlider(
                 sliderValue,
-                -PositionSliderLimit,
-                PositionSliderLimit,
+                minimum,
+                maximum,
                 GUILayout.Width(240f));
             bool sliderChanged = GUI.changed;
             GUI.changed = previousChanged || sliderChanged;
@@ -660,12 +681,9 @@ namespace PlanetGauge
 
         private static float SanitizePositionFloat(float value, float fallback)
         {
-            if (float.IsNaN(value) || float.IsInfinity(value))
-            {
-                value = fallback;
-            }
-
-            return Mathf.Clamp(value, -PositionSafetyLimit, PositionSafetyLimit);
+            return float.IsNaN(value) || float.IsInfinity(value)
+                ? fallback
+                : value;
         }
 
         private static KeyCode SanitizeKeyCode(KeyCode value, KeyCode fallback)
