@@ -16,10 +16,10 @@ namespace PlanetGauge
         private const float BaseBarHeight = 18f;
         private const float BaseGapAboveMeter = 10f;
         private const float BaseTextGap = 5f;
-        private const float BaseEffectTextGap = 2f;
         private const float DefaultValueOffsetY = -14f;
         private const float CompactSpacingRatio = 2f / 3f;
         private const float BaseFontSize = 24f;
+        private const float DefaultValueSizeScale = 1.11f;
         private const float EffectFontSizeRatio = 0.46f;
         private const float RateFontSizeRatio = 0.54f;
         private const float ColorTransitionDuration = 0.5f;
@@ -53,6 +53,7 @@ namespace PlanetGauge
         private scrHitErrorMeter sourceMeter;
         private GameObject rootObject;
         private RectTransform rootRect;
+        private RectTransform screenReferenceRect;
         private GaugeBarGraphic gaugeGraphic;
         private GaugeSkinRenderer skinRenderer;
         private TextMeshProUGUI valueText;
@@ -112,6 +113,7 @@ namespace PlanetGauge
             sourceMeter = null;
             rootObject = null;
             rootRect = null;
+            screenReferenceRect = null;
             gaugeGraphic = null;
             skinRenderer = null;
             valueText = null;
@@ -169,6 +171,12 @@ namespace PlanetGauge
             rootRect.pivot = new Vector2(0.5f, 0.5f);
             rootRect.localRotation = Quaternion.identity;
             rootRect.localScale = Vector3.one;
+
+            Canvas owningCanvas = desiredParent.GetComponentInParent<Canvas>();
+            Canvas rootCanvas = owningCanvas != null ? owningCanvas.rootCanvas : null;
+            screenReferenceRect = rootCanvas != null
+                ? rootCanvas.transform as RectTransform
+                : desiredParent as RectTransform;
 
             LayoutElement layoutElement = rootObject.GetComponent<LayoutElement>();
             layoutElement.ignoreLayout = true;
@@ -398,9 +406,17 @@ namespace PlanetGauge
                 9f,
                 84f);
             float textHeight = fontSize + 4f;
-            float rateFontSize = Mathf.Clamp(fontSize * RateFontSizeRatio, 8f, 40f);
+            float rateFontSize = Mathf.Clamp(
+                BaseFontSize
+                    * DefaultValueSizeScale
+                    * RateFontSizeRatio
+                    * settings.RateTokenSizePercent / 100f,
+                3f,
+                240f);
             float rateHeight = rateFontSize + 1f;
-            float visibleRateHeight = rateText.enabled ? rateHeight : 0f;
+            float visibleRateHeight = rateText.enabled && settings.RateTokenAttachedToMainGauge
+                ? rateHeight
+                : 0f;
             float compactTextGap = Mathf.Clamp(
                 BaseTextGap * meterScale * CompactSpacingRatio,
                 1f,
@@ -429,39 +445,87 @@ namespace PlanetGauge
             rateTextRect.sizeDelta = new Vector2(
                 Mathf.Max(barWidth, rateFontSize * 9f),
                 rateHeight);
-            rateTextRect.anchoredPosition = new Vector2(
-                settings.MainGaugeValueOffsetX,
-                barHeight * 0.5f
-                    + compactTextGap
-                    + rateHeight * 0.5f
-                    + textOffsetY);
+            if (settings.RateTokenAttachedToMainGauge)
+            {
+                rateTextRect.pivot = new Vector2(0.5f, 0.5f);
+                rateTextRect.anchoredPosition = new Vector2(
+                    settings.MainGaugeValueOffsetX,
+                    barHeight * 0.5f
+                        + compactTextGap
+                        + rateHeight * 0.5f
+                        + textOffsetY);
+            }
+            else
+            {
+                SetScreenCenteredPosition(
+                    rateTextRect,
+                    settings.RateTokenScreenOffsetX,
+                    settings.RateTokenScreenOffsetY);
+            }
             rateOutline.effectDistance = new Vector2(
-                Mathf.Clamp(meterScale * 0.7f, 1f, 1.5f),
-                -Mathf.Clamp(meterScale * 0.7f, 1f, 1.5f));
+                Mathf.Clamp(rateFontSize / 14f, 1f, 5f),
+                -Mathf.Clamp(rateFontSize / 14f, 1f, 5f));
 
             float effectFontSize = Mathf.Clamp(
-                fontSize * EffectFontSizeRatio,
-                8f,
-                36f);
+                BaseFontSize
+                    * DefaultValueSizeScale
+                    * EffectFontSizeRatio
+                    * settings.AttributeTextSizePercent / 100f,
+                3f,
+                240f);
             float effectLineHeight = (effectFontSize + 2f) * CompactSpacingRatio;
             float effectHeight = effectLineHeight * Mathf.Max(activeEffectCount, 1);
             effectText.fontSize = effectFontSize;
             effectText.lineSpacing = -effectFontSize * (1f - CompactSpacingRatio);
             effectTextRect.sizeDelta = new Vector2(
-                Mathf.Max(barWidth, effectFontSize * 18f),
+                Mathf.Max(48f, effectFontSize * 18f),
                 effectHeight);
-            effectTextRect.anchoredPosition = new Vector2(
-                settings.MainGaugeValueOffsetX,
-                valueTextRect.anchoredPosition.y
-                    + textHeight * 0.5f
-                    + BaseEffectTextGap * meterScale * CompactSpacingRatio
-                    + effectHeight * 0.5f);
+            ApplyAttributeTextAnchor(settings.AttributeTextAnchor);
+            SetScreenCenteredPosition(
+                effectTextRect,
+                settings.AttributeTextScreenOffsetX,
+                settings.AttributeTextScreenOffsetY);
             effectOutline.effectDistance = new Vector2(
-                Mathf.Clamp(meterScale * 0.75f, 1f, 1.5f),
-                -Mathf.Clamp(meterScale * 0.75f, 1f, 1.5f));
+                Mathf.Clamp(effectFontSize / 12f, 1f, 5f),
+                -Mathf.Clamp(effectFontSize / 12f, 1f, 5f));
 
             gaugeGraphic.SetChamferSize(
                 Mathf.Clamp(BaseChamferSize * meterScale * gaugeScale, 1f, 16f));
+        }
+
+        private void ApplyAttributeTextAnchor(AttributeTextPositionAnchor anchor)
+        {
+            float pivotY;
+            switch (anchor)
+            {
+                case AttributeTextPositionAnchor.Top:
+                    pivotY = 1f;
+                    break;
+                case AttributeTextPositionAnchor.Bottom:
+                    pivotY = 0f;
+                    break;
+                default:
+                    pivotY = 0.5f;
+                    break;
+            }
+
+            effectTextRect.pivot = new Vector2(0.5f, pivotY);
+        }
+
+        private void SetScreenCenteredPosition(RectTransform target, float offsetX, float offsetY)
+        {
+            if (target == null || rootRect == null || screenReferenceRect == null)
+            {
+                return;
+            }
+
+            Vector2 screenCenter = screenReferenceRect.rect.center;
+            Vector3 worldPoint = screenReferenceRect.TransformPoint(new Vector3(
+                screenCenter.x + offsetX,
+                screenCenter.y + offsetY,
+                0f));
+            Vector3 rootLocalPoint = rootRect.InverseTransformPoint(worldPoint);
+            target.localPosition = new Vector3(rootLocalPoint.x, rootLocalPoint.y, 0f);
         }
 
         private void UpdateVisibility()
