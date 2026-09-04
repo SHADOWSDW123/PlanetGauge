@@ -14,11 +14,14 @@ namespace PlanetGauge
     {
         private const float FrameOffsetLimit = 4096f;
 
-        private static readonly string[] SkinFillDirectionLabels =
+        private static readonly string[] LanguageLabels =
         {
-            "Horizontal (left to right)",
-            "Vertical (bottom to top)"
+            "한글",
+            "ENG"
         };
+
+        private string[] skinFillDirectionLabels;
+        private int skinFillDirectionLabelsRevision = -1;
 
         private string frameOffsetXInput;
         private string frameOffsetYInput;
@@ -66,6 +69,9 @@ namespace PlanetGauge
         public GaugeSkinFillDirection SkinFillDirection = GaugeSkinFillDirection.Horizontal;
         public float FrameSkinOffsetX;
         public float FrameSkinOffsetY;
+        public PlanetGaugeLanguage Language;
+        public bool LanguageInitialized;
+        public bool TranslateAttributeDisplayToKorean;
 
         public override void Save(UnityModManager.ModEntry modEntry)
         {
@@ -75,15 +81,18 @@ namespace PlanetGauge
         internal void DrawGui()
         {
             // UMM의 OnGUI에서 매 프레임 호출되는 즉시 모드(IMGUI) 설정 화면이다.
-            GUILayout.Label("Main gauge size");
+            DrawLanguageSelector();
+            GUILayout.Space(14f);
+
+            GUILayout.Label(LocalizedStrings.MainGaugeSize);
             MainGaugeSizePercent = DrawFloatSlider(
-                "Scale",
+                LocalizedStrings.Scale,
                 MainGaugeSizePercent,
                 25f,
                 200f,
                 "%");
             MainGaugeWidthPercent = DrawFloatSlider(
-                "Width",
+                LocalizedStrings.Width,
                 MainGaugeWidthPercent,
                 25f,
                 100f,
@@ -91,7 +100,7 @@ namespace PlanetGauge
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(96f);
-            if (GUILayout.Button("Reset size", GUILayout.Width(140f)))
+            if (GUILayout.Button(LocalizedStrings.ResetSize, GUILayout.Width(140f)))
             {
                 MainGaugeSizePercent = 100f;
                 MainGaugeWidthPercent = 83f;
@@ -99,29 +108,33 @@ namespace PlanetGauge
             GUILayout.EndHorizontal();
 
             GUILayout.Space(14f);
-            GUILayout.Label("Custom gauge skin");
-            GUILayout.Label("Health PNG: " + GetDisplayFileName(HealthSkinImagePath));
+            GUILayout.Label(LocalizedStrings.CustomGaugeSkin);
+            GUILayout.Label(LocalizedStrings.Format(
+                LocalizedStrings.HealthPng,
+                GetDisplayFileName(HealthSkinImagePath)));
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Select health PNG", GUILayout.Width(180f)))
+            if (GUILayout.Button(LocalizedStrings.SelectHealthPng, GUILayout.Width(180f)))
             {
                 HealthSkinImagePath = GaugeSkinManager.PickPng(
                     HealthSkinImagePath,
-                    "Select PlanetGauge health PNG");
+                    LocalizedStrings.SelectHealthPngDialog);
             }
-            if (GUILayout.Button("Clear health PNG", GUILayout.Width(160f)))
+            if (GUILayout.Button(LocalizedStrings.ClearHealthPng, GUILayout.Width(160f)))
             {
                 HealthSkinImagePath = string.Empty;
                 GaugeSkinManager.ResetToDefault(this);
             }
             GUILayout.EndHorizontal();
 
-            GUILayout.Label("Frame PNG (optional): " + GetDisplayFileName(FrameSkinImagePath));
+            GUILayout.Label(LocalizedStrings.Format(
+                LocalizedStrings.FramePngOptional,
+                GetDisplayFileName(FrameSkinImagePath)));
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Select frame PNG", GUILayout.Width(180f)))
+            if (GUILayout.Button(LocalizedStrings.SelectFramePng, GUILayout.Width(180f)))
             {
                 string selectedFramePath = GaugeSkinManager.PickPng(
                     FrameSkinImagePath,
-                    "Select optional PlanetGauge frame PNG");
+                    LocalizedStrings.SelectFramePngDialog);
                 if (!string.Equals(
                     FrameSkinImagePath,
                     selectedFramePath,
@@ -134,7 +147,7 @@ namespace PlanetGauge
                 }
                 FrameSkinImagePath = selectedFramePath;
             }
-            if (GUILayout.Button("Clear frame PNG", GUILayout.Width(160f)))
+            if (GUILayout.Button(LocalizedStrings.ClearFramePng, GUILayout.Width(160f)))
             {
                 FrameSkinImagePath = string.Empty;
                 FrameSkinOffsetX = 0f;
@@ -149,26 +162,27 @@ namespace PlanetGauge
             }
             GUILayout.EndHorizontal();
 
-            GUILayout.Label("Fill direction");
+            GUILayout.Label(LocalizedStrings.FillDirection);
+            RefreshSkinFillDirectionLabels();
             SkinFillDirection = (GaugeSkinFillDirection)GUILayout.SelectionGrid(
                 (int)SkinFillDirection,
-                SkinFillDirectionLabels,
+                skinFillDirectionLabels,
                 2,
                 GUILayout.Width(420f));
-            GUILayout.Label("Frame offset");
+            GUILayout.Label(LocalizedStrings.FrameOffset);
             FrameSkinOffsetX = DrawFloatField(
-                "Frame X",
+                LocalizedStrings.FrameX,
                 FrameSkinOffsetX,
                 ref frameOffsetXInput,
                 "PlanetGauge.FrameOffsetX");
             FrameSkinOffsetY = DrawFloatField(
-                "Frame Y",
+                LocalizedStrings.FrameY,
                 FrameSkinOffsetY,
                 ref frameOffsetYInput,
                 "PlanetGauge.FrameOffsetY");
             GUILayout.BeginHorizontal();
             GUILayout.Space(96f);
-            if (GUILayout.Button("Reset frame offset", GUILayout.Width(180f)))
+            if (GUILayout.Button(LocalizedStrings.ResetFrameOffset, GUILayout.Width(180f)))
             {
                 FrameSkinOffsetX = 0f;
                 FrameSkinOffsetY = 0f;
@@ -178,11 +192,11 @@ namespace PlanetGauge
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Apply custom skin", GUILayout.Width(180f)))
+            if (GUILayout.Button(LocalizedStrings.ApplyCustomSkin, GUILayout.Width(180f)))
             {
                 GaugeSkinManager.TryApply(this, true);
             }
-            if (GUILayout.Button("Use default skin", GUILayout.Width(180f)))
+            if (GUILayout.Button(LocalizedStrings.UseDefaultSkin, GUILayout.Width(180f)))
             {
                 GaugeSkinManager.ResetToDefault(this);
             }
@@ -196,12 +210,14 @@ namespace PlanetGauge
             {
                 Color previousColor = GUI.contentColor;
                 GUI.contentColor = new Color(1f, 0.72f, 0.2f, 1f);
-                GUILayout.Label("Warning: " + GaugeSkinManager.LastWarning);
+                GUILayout.Label(LocalizedStrings.Format(
+                    LocalizedStrings.Warning,
+                    GaugeSkinManager.LastWarning));
                 GUI.contentColor = previousColor;
             }
 
             GUILayout.Space(10f);
-            GUILayout.Label("Main gauge position");
+            GUILayout.Label(LocalizedStrings.MainGaugePosition);
             MainGaugeOffsetX = DrawPositionSlider(
                 "X",
                 MainGaugeOffsetX,
@@ -219,7 +235,7 @@ namespace PlanetGauge
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(96f);
-            if (GUILayout.Button("Reset position", GUILayout.Width(140f)))
+            if (GUILayout.Button(LocalizedStrings.ResetPosition, GUILayout.Width(140f)))
             {
                 MainGaugeOffsetX = 0f;
                 MainGaugeOffsetY = -158f;
@@ -229,9 +245,9 @@ namespace PlanetGauge
             GUILayout.EndHorizontal();
 
             GUILayout.Space(10f);
-            GUILayout.Label("Gauge value text");
+            GUILayout.Label(LocalizedStrings.GaugeValueText);
             MainGaugeValueSizePercent = DrawFloatSlider(
-                "Text size",
+                LocalizedStrings.TextSize,
                 MainGaugeValueSizePercent,
                 50f,
                 200f,
@@ -239,19 +255,19 @@ namespace PlanetGauge
             bool valueTextIndependent = !MainGaugeValueAttachedToMainGauge;
             valueTextIndependent = GUILayout.Toggle(
                 valueTextIndependent,
-                "Independent position");
+                LocalizedStrings.IndependentPosition);
             MainGaugeValueAttachedToMainGauge = !valueTextIndependent;
             if (valueTextIndependent)
             {
                 MainGaugeValueScreenOffsetX = DrawPositionSlider(
-                    "Text X",
+                    LocalizedStrings.TextX,
                     MainGaugeValueScreenOffsetX,
                     ref valueTextOffsetXInput,
                     "PlanetGauge.ValueTextOffsetX",
                     -800f,
                     800f);
                 MainGaugeValueScreenOffsetY = DrawPositionSlider(
-                    "Text Y",
+                    LocalizedStrings.TextY,
                     MainGaugeValueScreenOffsetY,
                     ref valueTextOffsetYInput,
                     "PlanetGauge.ValueTextOffsetY",
@@ -261,7 +277,7 @@ namespace PlanetGauge
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(96f);
-            if (GUILayout.Button("Reset text position", GUILayout.Width(180f)))
+            if (GUILayout.Button(LocalizedStrings.ResetTextPosition, GUILayout.Width(180f)))
             {
                 MainGaugeValueAttachedToMainGauge = true;
                 MainGaugeValueOffsetX = 0f;
@@ -274,9 +290,9 @@ namespace PlanetGauge
             GUILayout.EndHorizontal();
 
             GUILayout.Space(10f);
-            GUILayout.Label("Attribute text");
+            GUILayout.Label(LocalizedStrings.AttributeText);
             AttributeTextSizePercent = DrawFloatSlider(
-                "Attribute size",
+                LocalizedStrings.AttributeSize,
                 AttributeTextSizePercent,
                 25f,
                 500f,
@@ -284,19 +300,19 @@ namespace PlanetGauge
             bool attributeTextIndependent = !AttributeTextAttachedToMainGauge;
             attributeTextIndependent = GUILayout.Toggle(
                 attributeTextIndependent,
-                "Independent position");
+                LocalizedStrings.IndependentPosition);
             AttributeTextAttachedToMainGauge = !attributeTextIndependent;
             if (attributeTextIndependent)
             {
                 AttributeTextScreenOffsetX = DrawPositionSlider(
-                    "Attribute X",
+                    LocalizedStrings.AttributeX,
                     AttributeTextScreenOffsetX,
                     ref attributeTextOffsetXInput,
                     "PlanetGauge.AttributeTextOffsetX",
                     -1000f,
                     1000f);
                 AttributeTextScreenOffsetY = DrawPositionSlider(
-                    "Attribute Y",
+                    LocalizedStrings.AttributeY,
                     AttributeTextScreenOffsetY,
                     ref attributeTextOffsetYInput,
                     "PlanetGauge.AttributeTextOffsetY",
@@ -305,7 +321,7 @@ namespace PlanetGauge
             }
             GUILayout.BeginHorizontal();
             GUILayout.Space(96f);
-            if (GUILayout.Button("Reset attribute position", GUILayout.Width(190f)))
+            if (GUILayout.Button(LocalizedStrings.ResetAttributePosition, GUILayout.Width(190f)))
             {
                 AttributeTextAttachedToMainGauge = true;
                 AttributeTextScreenOffsetX = 0f;
@@ -316,9 +332,9 @@ namespace PlanetGauge
             GUILayout.EndHorizontal();
 
             GUILayout.Space(10f);
-            GUILayout.Label("Rate token");
+            GUILayout.Label(LocalizedStrings.RateToken);
             RateTokenSizePercent = DrawFloatSlider(
-                "Rate size",
+                LocalizedStrings.RateSize,
                 RateTokenSizePercent,
                 25f,
                 500f,
@@ -326,19 +342,19 @@ namespace PlanetGauge
             bool rateTokenIndependent = !RateTokenAttachedToMainGauge;
             rateTokenIndependent = GUILayout.Toggle(
                 rateTokenIndependent,
-                "Independent position");
+                LocalizedStrings.IndependentPosition);
             RateTokenAttachedToMainGauge = !rateTokenIndependent;
             if (rateTokenIndependent)
             {
                 RateTokenScreenOffsetX = DrawPositionSlider(
-                    "Rate X",
+                    LocalizedStrings.RateX,
                     RateTokenScreenOffsetX,
                     ref rateTokenOffsetXInput,
                     "PlanetGauge.RateTokenOffsetX",
                     -1000f,
                     1000f);
                 RateTokenScreenOffsetY = DrawPositionSlider(
-                    "Rate Y",
+                    LocalizedStrings.RateY,
                     RateTokenScreenOffsetY,
                     ref rateTokenOffsetYInput,
                     "PlanetGauge.RateTokenOffsetY",
@@ -347,7 +363,7 @@ namespace PlanetGauge
             }
             GUILayout.BeginHorizontal();
             GUILayout.Space(96f);
-            if (GUILayout.Button("Reset rate position", GUILayout.Width(190f)))
+            if (GUILayout.Button(LocalizedStrings.ResetRatePosition, GUILayout.Width(190f)))
             {
                 RateTokenAttachedToMainGauge = true;
                 RateTokenScreenOffsetX = 0f;
@@ -358,21 +374,21 @@ namespace PlanetGauge
             GUILayout.EndHorizontal();
 
             GUILayout.Space(10f);
-            GUILayout.Label("Advanced");
+            GUILayout.Label(LocalizedStrings.Advanced);
             DrawDebugShortcut();
             MainGaugeShowDecimalValue = GUILayout.Toggle(
                 MainGaugeShowDecimalValue,
-                "Show decimal health (e.g. 73.4)");
+                LocalizedStrings.ShowDecimalHealth);
 
             GUILayout.Space(10f);
-            GUILayout.Label("Main gauge color (RGB)");
+            GUILayout.Label(LocalizedStrings.MainGaugeColor);
             MainGaugeColorR = DrawColorSlider("R", MainGaugeColorR);
             MainGaugeColorG = DrawColorSlider("G", MainGaugeColorG);
             MainGaugeColorB = DrawColorSlider("B", MainGaugeColorB);
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(96f);
-            if (GUILayout.Button("Reset color (#FFFFFF)", GUILayout.Width(180f)))
+            if (GUILayout.Button(LocalizedStrings.ResetColor, GUILayout.Width(180f)))
             {
                 MainGaugeColorR = 255;
                 MainGaugeColorG = 255;
@@ -423,6 +439,10 @@ namespace PlanetGauge
             {
                 SkinFillDirection = GaugeSkinFillDirection.Horizontal;
             }
+            if (!Enum.IsDefined(typeof(PlanetGaugeLanguage), Language))
+            {
+                Language = LocalizedStrings.DetectGameLanguage();
+            }
             FrameSkinOffsetX = SanitizeFloat(
                 FrameSkinOffsetX,
                 0f,
@@ -433,6 +453,83 @@ namespace PlanetGauge
                 0f,
                 -FrameOffsetLimit,
                 FrameOffsetLimit);
+        }
+
+        internal void InitializeLanguageFromGameIfNeeded()
+        {
+            if (LanguageInitialized || !RDString.initialized)
+            {
+                return;
+            }
+
+            Language = LocalizedStrings.DetectGameLanguage();
+            LanguageInitialized = true;
+            LocalizedStrings.NotifyLanguageChanged();
+        }
+
+        private void DrawLanguageSelector()
+        {
+            int selected = Language == PlanetGaugeLanguage.Korean ? 0 : 1;
+            int next = GUILayout.SelectionGrid(
+                selected,
+                LanguageLabels,
+                2,
+                GUILayout.Width(220f));
+            PlanetGaugeLanguage nextLanguage = next == 0
+                ? PlanetGaugeLanguage.Korean
+                : PlanetGaugeLanguage.English;
+            if (nextLanguage != Language)
+            {
+                Language = nextLanguage;
+                LanguageInitialized = true;
+                if (debugKeyCaptureSlot == 1)
+                {
+                    debugKeyCaptureMessage = LocalizedStrings.PressKey1;
+                }
+                else if (debugKeyCaptureSlot == 2)
+                {
+                    debugKeyCaptureMessage = LocalizedStrings.PressKey2;
+                }
+                LocalizedStrings.NotifyLanguageChanged();
+            }
+
+            DrawAttributeDisplayLanguageToggle();
+        }
+
+        private void DrawAttributeDisplayLanguageToggle()
+        {
+            if (Language != PlanetGaugeLanguage.Korean)
+            {
+                return;
+            }
+
+            GUILayout.Space(4f);
+            bool next = GUILayout.Toggle(
+                TranslateAttributeDisplayToKorean,
+                LocalizedStrings.TranslateAttributeDisplay);
+            if (next == TranslateAttributeDisplayToKorean)
+            {
+                return;
+            }
+
+            TranslateAttributeDisplayToKorean = next;
+            LocalizedStrings.NotifyAttributeDisplayLanguageChanged();
+        }
+
+        private void RefreshSkinFillDirectionLabels()
+        {
+            if (skinFillDirectionLabels != null
+                && skinFillDirectionLabelsRevision == LocalizedStrings.Revision)
+            {
+                return;
+            }
+
+            skinFillDirectionLabels = new[]
+            {
+                LocalizedStrings.HorizontalFill,
+                LocalizedStrings.VerticalFill
+            };
+            skinFillDirectionLabelsRevision = LocalizedStrings.Revision;
         }
 
         internal Color32 GetMainGaugeColor()
@@ -507,7 +604,7 @@ namespace PlanetGauge
 
             GUI.SetNextControlName(controlName);
             input = GUILayout.TextField(input, GUILayout.Width(82f));
-            GUILayout.Label("px", GUILayout.Width(28f));
+            GUILayout.Label(LocalizedStrings.PixelUnit, GUILayout.Width(28f));
             GUILayout.EndHorizontal();
 
             float parsed;
@@ -525,19 +622,22 @@ namespace PlanetGauge
 
         private void DrawDebugShortcut()
         {
-            GUILayout.Label("Debug shortcut: " + DebugKey1 + " + " + DebugKey2);
+            GUILayout.Label(LocalizedStrings.Format(
+                LocalizedStrings.DebugShortcut,
+                DebugKey1,
+                DebugKey2));
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Set key 1", GUILayout.Width(120f)))
+            if (GUILayout.Button(LocalizedStrings.SetKey1, GUILayout.Width(120f)))
             {
                 debugKeyCaptureSlot = 1;
-                debugKeyCaptureMessage = "Press key 1 (Escape to cancel)";
+                debugKeyCaptureMessage = LocalizedStrings.PressKey1;
             }
-            if (GUILayout.Button("Set key 2", GUILayout.Width(120f)))
+            if (GUILayout.Button(LocalizedStrings.SetKey2, GUILayout.Width(120f)))
             {
                 debugKeyCaptureSlot = 2;
-                debugKeyCaptureMessage = "Press key 2 (Escape to cancel)";
+                debugKeyCaptureMessage = LocalizedStrings.PressKey2;
             }
-            if (GUILayout.Button("Reset shortcut", GUILayout.Width(140f)))
+            if (GUILayout.Button(LocalizedStrings.ResetShortcut, GUILayout.Width(140f)))
             {
                 DebugKey1 = KeyCode.LeftShift;
                 DebugKey2 = KeyCode.F3;
@@ -575,7 +675,7 @@ namespace PlanetGauge
             KeyCode otherKey = debugKeyCaptureSlot == 1 ? DebugKey2 : DebugKey1;
             if (pressedKey == otherKey)
             {
-                debugKeyCaptureMessage = "Key 1 and key 2 must be different.";
+                debugKeyCaptureMessage = LocalizedStrings.KeysMustDiffer;
                 currentEvent.Use();
                 return;
             }
@@ -613,7 +713,7 @@ namespace PlanetGauge
             GUILayout.Label(label, GUILayout.Width(90f));
             GUI.SetNextControlName(controlName);
             input = GUILayout.TextField(input, GUILayout.Width(160f));
-            GUILayout.Label("px", GUILayout.Width(32f));
+            GUILayout.Label(LocalizedStrings.PixelUnit, GUILayout.Width(32f));
             GUILayout.EndHorizontal();
 
             float parsed;
@@ -652,7 +752,7 @@ namespace PlanetGauge
         {
             if (string.IsNullOrWhiteSpace(path))
             {
-                return "None";
+                return LocalizedStrings.None;
             }
 
             try

@@ -77,7 +77,7 @@ namespace PlanetGauge
             DecorationBinding binding = bindings.Values.FirstOrDefault();
             if (binding == null || binding.AlphaTextureId == 0)
             {
-                return "Pending";
+                return LocalizedStrings.Pending;
             }
 
             return "T:"
@@ -197,7 +197,7 @@ namespace PlanetGauge
         {
             if (commands.Count == 0)
             {
-                return "None";
+                return LocalizedStrings.None;
             }
 
             return string.Join(

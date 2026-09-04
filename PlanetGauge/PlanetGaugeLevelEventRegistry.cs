@@ -78,6 +78,45 @@ namespace PlanetGauge
             }
         }
 
+        internal static void RefreshLocalization()
+        {
+            if (eventInfo == null || eventInfo.propertiesInfo == null)
+            {
+                return;
+            }
+
+            SetPropertyLabel(AttributeModeKey, LocalizedStrings.AttributeModeLabel);
+            SetPropertyLabel(AttributeEnabledKey, LocalizedStrings.AttributeEnabledLabel);
+            SetPropertyLabel(DisableOtherAttributesKey, LocalizedStrings.DisableOtherAttributesLabel);
+            SetPropertyLabel(HideGaugeBarKey, LocalizedStrings.HideGaugeBarLabel);
+            SetPropertyLabel(HideGaugeValueKey, LocalizedStrings.HideGaugeValueLabel);
+            SetPropertyLabel(HideAttributeTextKey, LocalizedStrings.HideAttributeTextLabel);
+            SetPropertyLabel(HideRateTokenKey, LocalizedStrings.HideRateTokenLabel);
+            SetPropertyLabel(HideForceRecoveryVisualsKey, LocalizedStrings.HideForceRecoveryVisualsLabel);
+            SetPropertyLabel(MultiplierPercentKey, LocalizedStrings.MultiplierPercentLabel);
+            SetPropertyLabel(RecoveryAmountPercentKey, LocalizedStrings.RecoveryAmountLabel);
+            SetPropertyLabel(WarningOffsetAngleKey, LocalizedStrings.WarningOffsetLabel);
+            SetPropertyLabel(WarningPulseBeatsKey, LocalizedStrings.WarningPulseLabel);
+            SetPropertyLabel(FailureProtectionKey, LocalizedStrings.FailureProtectionLabel);
+            SetPropertyLabel(RecoveryCapEnabledKey, LocalizedStrings.RecoveryCapEnabledLabel);
+            SetPropertyLabel(RecoveryCapPercentKey, LocalizedStrings.RecoveryCapLabel);
+            SetPropertyLabel(ForceRecoveryCapKey, LocalizedStrings.ForceRecoveryCapLabel);
+            SetPropertyLabel(AutoTileRecoveryKey, LocalizedStrings.AutoTileRecoveryLabel);
+        }
+
+        private static void SetPropertyLabel(string propertyName, string label)
+        {
+            ADOFAI.PropertyInfo property;
+            if (eventInfo.propertiesInfo.TryGetValue(propertyName, out property) && property != null)
+            {
+                property.customLabel = label;
+                if (property.dict != null)
+                {
+                    property.dict["customLabel"] = label;
+                }
+            }
+        }
+
         internal static bool TryRegister()
         {
             if (!AreGameRegistriesReady())
@@ -437,7 +476,7 @@ namespace PlanetGauge
                 AttributeModeKey,
                 "Enum:" + typeof(PlanetGaugeAttributeMode).AssemblyQualifiedName,
                 PlanetGaugeAttributeMode.Normal.ToString(),
-                "속성 설정");
+                LocalizedStrings.AttributeModeLabel);
             MakeOptional(attributeMode, true);
             AddProperty(info, attributeMode, 0);
 
@@ -446,7 +485,7 @@ namespace PlanetGauge
                 AttributeEnabledKey,
                 "Bool",
                 true,
-                "선택 속성 켜기");
+                LocalizedStrings.AttributeEnabledLabel);
             AddAttributeShowConditions(attributeEnabled);
             AddProperty(info, attributeEnabled, 1);
 
@@ -455,7 +494,7 @@ namespace PlanetGauge
                 DisableOtherAttributesKey,
                 "Bool",
                 false,
-                "다른 속성 설정 끄기");
+                LocalizedStrings.DisableOtherAttributesLabel);
             AddAttributeShowConditions(disableOthers);
             disableOthers.showIfVals.Add(Tuple.Create(
                 AttributeModeKey,
@@ -470,7 +509,7 @@ namespace PlanetGauge
                 HideGaugeBarKey,
                 "Bool",
                 true,
-                "게이지 바 끄기");
+                LocalizedStrings.HideGaugeBarLabel);
             AddHudHideShowCondition(hideGaugeBar);
             AddProperty(info, hideGaugeBar, 3);
 
@@ -479,7 +518,7 @@ namespace PlanetGauge
                 HideGaugeValueKey,
                 "Bool",
                 true,
-                "체력 숫자 끄기");
+                LocalizedStrings.HideGaugeValueLabel);
             AddHudHideShowCondition(hideGaugeValue);
             AddProperty(info, hideGaugeValue, 4);
 
@@ -488,7 +527,7 @@ namespace PlanetGauge
                 HideAttributeTextKey,
                 "Bool",
                 true,
-                "적용 속성 문구 끄기");
+                LocalizedStrings.HideAttributeTextLabel);
             AddHudHideShowCondition(hideAttributeText);
             AddProperty(info, hideAttributeText, 5);
 
@@ -497,7 +536,7 @@ namespace PlanetGauge
                 HideRateTokenKey,
                 "Bool",
                 true,
-                "배율 토큰 끄기");
+                LocalizedStrings.HideRateTokenLabel);
             AddHudHideShowCondition(hideRateToken);
             AddProperty(info, hideRateToken, 6);
 
@@ -506,7 +545,7 @@ namespace PlanetGauge
                 HideForceRecoveryVisualsKey,
                 "Bool",
                 true,
-                "강제 회복 표시 끄기");
+                LocalizedStrings.HideForceRecoveryVisualsLabel);
             AddHudHideShowCondition(hideForceRecoveryVisuals);
             AddProperty(info, hideForceRecoveryVisuals, 7);
 
@@ -515,7 +554,7 @@ namespace PlanetGauge
                 MultiplierPercentKey,
                 "Float",
                 100f,
-                "변경값 설정");
+                LocalizedStrings.MultiplierPercentLabel);
             multiplier.unit = "%";
             multiplier.float_min = 0f;
             multiplier.float_max = 1000f;
@@ -539,7 +578,7 @@ namespace PlanetGauge
                 RecoveryAmountPercentKey,
                 "Float",
                 0f,
-                "회복량 설정");
+                LocalizedStrings.RecoveryAmountLabel);
             recoveryAmount.unit = "%";
             recoveryAmount.float_min = -1000f;
             recoveryAmount.float_max = 1000f;
@@ -553,7 +592,7 @@ namespace PlanetGauge
                 WarningOffsetAngleKey,
                 "Float",
                 0f,
-                "사전 경고 각도 오프셋");
+                LocalizedStrings.WarningOffsetLabel);
             warningOffset.unit = "°";
             warningOffset.float_max = 0f;
             warningOffset.showIfVals.Add(Tuple.Create(
@@ -566,7 +605,7 @@ namespace PlanetGauge
                 WarningPulseBeatsKey,
                 "Float",
                 0.5f,
-                "점멸 주기");
+                LocalizedStrings.WarningPulseLabel);
             warningPulse.unit = "beats";
             warningPulse.float_min = 0.125f;
             warningPulse.float_max = 16f;
@@ -589,7 +628,7 @@ namespace PlanetGauge
                 FailureProtectionKey,
                 "Bool",
                 true,
-                "실패 방지");
+                LocalizedStrings.FailureProtectionLabel);
             MakeOptional(failureProtection, false);
             AddProperty(info, failureProtection, 14);
 
@@ -598,7 +637,7 @@ namespace PlanetGauge
                 RecoveryCapEnabledKey,
                 "Bool",
                 false,
-                "회복 상한 설정");
+                LocalizedStrings.RecoveryCapEnabledLabel);
             MakeOptional(recoveryCapEnabled, false);
             AddProperty(info, recoveryCapEnabled, 15);
 
@@ -607,7 +646,7 @@ namespace PlanetGauge
                 RecoveryCapPercentKey,
                 "Float",
                 100f,
-                "회복 상한");
+                LocalizedStrings.RecoveryCapLabel);
             recoveryCap.unit = "%";
             recoveryCap.float_min = 0.1f;
             recoveryCap.float_max = 1000f;
@@ -620,7 +659,7 @@ namespace PlanetGauge
                 ForceRecoveryCapKey,
                 "Bool",
                 true,
-                "체력 상한 강제 제한");
+                LocalizedStrings.ForceRecoveryCapLabel);
             forceCap.showIfVals.Add(Tuple.Create(RecoveryCapEnabledKey, "true"));
             AddProperty(info, forceCap, 17);
 
@@ -629,7 +668,7 @@ namespace PlanetGauge
                 AutoTileRecoveryKey,
                 "Bool",
                 false,
-                "자동 플레이 타일 체력 회복");
+                LocalizedStrings.AutoTileRecoveryLabel);
             MakeOptional(autoTileRecovery, false);
             AddProperty(info, autoTileRecovery, 18);
 

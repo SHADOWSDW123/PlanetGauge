@@ -34,6 +34,7 @@ namespace PlanetGauge
             ModDirectory = modEntry.Path;
             Settings = UnityModManager.ModSettings.Load<PlanetGaugeSettings>(modEntry)
                 ?? new PlanetGaugeSettings();
+            Settings.InitializeLanguageFromGameIfNeeded();
             Settings.Sanitize();
             modEntry.OnToggle = OnToggle;
             modEntry.OnGUI = OnGui;
@@ -45,6 +46,7 @@ namespace PlanetGauge
         {
             if (Settings != null)
             {
+                Settings.InitializeLanguageFromGameIfNeeded();
                 Settings.DrawGui();
             }
         }
@@ -86,6 +88,8 @@ namespace PlanetGauge
             {
                 return;
             }
+
+            Settings.InitializeLanguageFromGameIfNeeded();
 
             ValidateRequiredGameApi();
 

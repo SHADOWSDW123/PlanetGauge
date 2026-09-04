@@ -60,6 +60,31 @@ namespace PlanetGauge
             }
         }
 
+        internal static void RefreshLocalization()
+        {
+            if (eventInfo == null || eventInfo.propertiesInfo == null)
+            {
+                return;
+            }
+
+            SetPropertyLabel(TargetTagKey, LocalizedStrings.TargetTagLabel);
+            SetPropertyLabel(EnabledKey, LocalizedStrings.SkinEnabledLabel);
+            SetPropertyLabel(GaugeTypeKey, LocalizedStrings.GaugeTypeLabel);
+        }
+
+        private static void SetPropertyLabel(string propertyName, string label)
+        {
+            ADOFAI.PropertyInfo property;
+            if (eventInfo.propertiesInfo.TryGetValue(propertyName, out property) && property != null)
+            {
+                property.customLabel = label;
+                if (property.dict != null)
+                {
+                    property.dict["customLabel"] = label;
+                }
+            }
+        }
+
         internal static bool TryRegister()
         {
             if (GCS.levelEventsInfo == null || GCS.levelEventTypeString == null)
@@ -177,21 +202,21 @@ namespace PlanetGauge
                 TargetTagKey,
                 "String",
                 string.Empty,
-                "목표 태그"), 0);
+                LocalizedStrings.TargetTagLabel), 0);
 
             AddProperty(info, CreateProperty(
                 info,
                 EnabledKey,
                 "Bool",
                 true,
-                "기능 가동"), 1);
+                LocalizedStrings.SkinEnabledLabel), 1);
 
             AddProperty(info, CreateProperty(
                 info,
                 GaugeTypeKey,
                 "Enum:" + typeof(PlanetGaugeSkinGaugeType).AssemblyQualifiedName,
                 PlanetGaugeSkinGaugeType.Horizontal.ToString(),
-                "게이지 타입"), 2);
+                LocalizedStrings.GaugeTypeLabel), 2);
 
             return info;
         }

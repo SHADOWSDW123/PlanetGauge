@@ -153,6 +153,17 @@ namespace PlanetGauge
 
     internal static class GaugeSkinManager
     {
+        private enum MessageKind
+        {
+            None,
+            FileSelectionFailed,
+            SelectHealthPngFirst,
+            SkinLoadsWhenEnabled,
+            CustomSkinApplied,
+            SkinApplyFailed,
+            UsingDefaultSkin
+        }
+
         private const long LargeFileBytes = 32L * 1024L * 1024L;
         private const int LargeDimension = 4096;
         private const long LargeDecodedBytes = 64L * 1024L * 1024L;
@@ -160,11 +171,19 @@ namespace PlanetGauge
         private static MethodInfo loadImageMethod;
         private static GaugeSkinAsset current;
         private static int revision;
+        private static MessageKind lastMessageKind;
+        private static string lastMessageArgument;
 
         internal static GaugeSkinAsset Current { get { return current; } }
         internal static int Revision { get { return revision; } }
-        internal static string LastMessage { get; private set; }
+        internal static string LastMessage { get { return GetLastMessage(); } }
         internal static string LastWarning { get; private set; }
+
+        internal static void OnLanguageChanged()
+        {
+            // 경고는 여러 이미지의 측정값을 합친 일회성 문자열이므로 이전 언어 문구를 남기지 않는다.
+            LastWarning = null;
+        }
 
         internal static string PickPng(string currentPath, string title)
         {
@@ -182,7 +201,7 @@ namespace PlanetGauge
 
                 string selected = FileBrowser.PickFile(
                     directory,
-                    "PNG Image",
+                    LocalizedStrings.PngImage,
                     new[] { "png" },
                     title);
                 return string.IsNullOrWhiteSpace(selected)
@@ -191,7 +210,7 @@ namespace PlanetGauge
             }
             catch (Exception exception)
             {
-                LastMessage = "파일 선택 실패: " + exception.Message;
+                SetLastMessage(MessageKind.FileSelectionFailed, exception.Message);
                 Main.LogException("게이지 스킨 PNG 파일 선택에 실패했습니다.", exception);
                 return currentPath;
             }
@@ -201,14 +220,14 @@ namespace PlanetGauge
         {
             if (settings == null || string.IsNullOrWhiteSpace(settings.HealthSkinImagePath))
             {
-                LastMessage = "체력 PNG를 먼저 선택하세요.";
+                SetLastMessage(MessageKind.SelectHealthPngFirst);
                 LastWarning = null;
                 return false;
             }
             if (!Main.IsEnabled)
             {
                 settings.CustomGaugeSkinEnabled = true;
-                LastMessage = "모드를 활성화하면 선택한 스킨을 로드합니다.";
+                SetLastMessage(MessageKind.SkinLoadsWhenEnabled);
                 LastWarning = null;
                 return true;
             }
@@ -218,10 +237,16 @@ namespace PlanetGauge
             try
             {
                 List<string> warnings = new List<string>();
-                health = LoadTexture(settings.HealthSkinImagePath, "체력 PNG", warnings);
+                health = LoadTexture(
+                    settings.HealthSkinImagePath,
+                    LocalizedStrings.HealthPngAsset,
+                    warnings);
                 if (!string.IsNullOrWhiteSpace(settings.FrameSkinImagePath))
                 {
-                    frame = LoadTexture(settings.FrameSkinImagePath, "바 PNG", warnings);
+                    frame = LoadTexture(
+                        settings.FrameSkinImagePath,
+                        LocalizedStrings.FramePngAsset,
+                        warnings);
                 }
 
                 GaugeSkinAsset next = new GaugeSkinAsset(
@@ -235,7 +260,7 @@ namespace PlanetGauge
                 current = next;
                 revision++;
                 settings.CustomGaugeSkinEnabled = true;
-                LastMessage = "커스텀 게이지 스킨을 적용했습니다.";
+                SetLastMessage(MessageKind.CustomSkinApplied);
                 LastWarning = warnings.Count == 0 ? null : string.Join("\n", warnings.ToArray());
                 if (previous != null)
                 {
@@ -255,7 +280,7 @@ namespace PlanetGauge
                     frame.Dispose();
                 }
 
-                LastMessage = "스킨 적용 실패: " + exception.Message;
+                SetLastMessage(MessageKind.SkinApplyFailed, exception.Message);
                 LastWarning = null;
                 if (logFailure)
                 {
@@ -282,7 +307,7 @@ namespace PlanetGauge
             {
                 settings.CustomGaugeSkinEnabled = false;
             }
-            LastMessage = "기본 게이지 스킨을 사용합니다.";
+            SetLastMessage(MessageKind.UsingDefaultSkin);
             LastWarning = null;
             if (previous != null)
             {
@@ -306,16 +331,54 @@ namespace PlanetGauge
             GaugeSkinAsset skin = current;
             if (skin == null)
             {
-                return "Default";
+                return LocalizedStrings.DefaultSkinDescription;
             }
 
-            return "Custom " + skin.Direction
-                + " Health=" + skin.Health.Width + "x" + skin.Health.Height
-                + " Bounds=" + skin.Health.AlphaBounds
-                + (skin.Frame == null
-                    ? " Frame=None"
-                    : " Frame=" + skin.Frame.Width + "x" + skin.Frame.Height
-                        + " Bounds=" + skin.Frame.AlphaBounds);
+            string frameDescription = skin.Frame == null
+                ? LocalizedStrings.NoFrameDescription
+                : LocalizedStrings.Format(
+                    LocalizedStrings.FrameDescription,
+                    skin.Frame.Width,
+                    skin.Frame.Height,
+                    skin.Frame.AlphaBounds);
+            return LocalizedStrings.Format(
+                LocalizedStrings.CustomSkinDescription,
+                skin.Direction,
+                skin.Health.Width,
+                skin.Health.Height,
+                skin.Health.AlphaBounds,
+                frameDescription);
+        }
+
+        private static void SetLastMessage(MessageKind kind, string argument = null)
+        {
+            lastMessageKind = kind;
+            lastMessageArgument = argument;
+        }
+
+        private static string GetLastMessage()
+        {
+            switch (lastMessageKind)
+            {
+                case MessageKind.FileSelectionFailed:
+                    return LocalizedStrings.Format(
+                        LocalizedStrings.FileSelectionFailed,
+                        lastMessageArgument);
+                case MessageKind.SelectHealthPngFirst:
+                    return LocalizedStrings.SelectHealthPngFirst;
+                case MessageKind.SkinLoadsWhenEnabled:
+                    return LocalizedStrings.SkinLoadsWhenEnabled;
+                case MessageKind.CustomSkinApplied:
+                    return LocalizedStrings.CustomSkinApplied;
+                case MessageKind.SkinApplyFailed:
+                    return LocalizedStrings.Format(
+                        LocalizedStrings.SkinApplyFailed,
+                        lastMessageArgument);
+                case MessageKind.UsingDefaultSkin:
+                    return LocalizedStrings.UsingDefaultSkin;
+                default:
+                    return null;
+            }
         }
 
         private static GaugeSkinTexture LoadTexture(
@@ -326,11 +389,14 @@ namespace PlanetGauge
             string fullPath = Path.GetFullPath(path);
             if (!File.Exists(fullPath))
             {
-                throw new FileNotFoundException(label + " 파일을 찾을 수 없습니다.", fullPath);
+                throw new FileNotFoundException(
+                    LocalizedStrings.Format(LocalizedStrings.FileNotFound, label),
+                    fullPath);
             }
             if (!string.Equals(Path.GetExtension(fullPath), ".png", StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidDataException(label + "는 PNG 파일이어야 합니다.");
+                throw new InvalidDataException(
+                    LocalizedStrings.Format(LocalizedStrings.FileMustBePng, label));
             }
 
             byte[] bytes = File.ReadAllBytes(fullPath);
@@ -343,12 +409,13 @@ namespace PlanetGauge
                 || bytes.LongLength > LargeFileBytes
                 || decodedBytes > LargeDecodedBytes)
             {
-                warnings.Add(
-                    label + "가 매우 큽니다 ("
-                    + headerWidth + "x" + headerHeight
-                    + ", 파일 " + FormatMiB(bytes.LongLength)
-                    + " MiB, RGBA " + FormatMiB(decodedBytes)
-                    + " MiB). 메모리 사용량이 크게 증가할 수 있습니다.");
+                warnings.Add(LocalizedStrings.Format(
+                    LocalizedStrings.ImageVeryLarge,
+                    label,
+                    headerWidth,
+                    headerHeight,
+                    FormatMiB(bytes.LongLength),
+                    FormatMiB(decodedBytes)));
             }
 
             Texture2D texture = null;
@@ -358,7 +425,9 @@ namespace PlanetGauge
                 texture.name = "PlanetGauge.Skin." + label;
                 if (!LoadPng(texture, bytes))
                 {
-                    throw new InvalidDataException(label + "를 Unity Texture2D로 변환하지 못했습니다.");
+                    throw new InvalidDataException(LocalizedStrings.Format(
+                        LocalizedStrings.TextureConversionFailed,
+                        label));
                 }
                 texture.wrapMode = TextureWrapMode.Clamp;
                 texture.filterMode = FilterMode.Bilinear;
@@ -416,7 +485,9 @@ namespace PlanetGauge
 
             if (maxX < minX || maxY < minY)
             {
-                throw new InvalidDataException(label + "가 완전히 투명합니다.");
+                throw new InvalidDataException(LocalizedStrings.Format(
+                    LocalizedStrings.ImageFullyTransparent,
+                    label));
             }
 
             return new GaugeSkinPixelBounds(minX, minY, maxX, maxY);
@@ -441,7 +512,7 @@ namespace PlanetGauge
             if (loadImageMethod == null || loadImageMethod.ReturnType != typeof(bool))
             {
                 throw new MissingMethodException(
-                    "UnityEngine.ImageConversion.LoadImage(Texture2D, byte[], bool)을 찾을 수 없습니다.");
+                    LocalizedStrings.LoadImageMethodMissing);
             }
 
             return (bool)loadImageMethod.Invoke(null, new object[] { texture, bytes, false });
@@ -452,13 +523,13 @@ namespace PlanetGauge
             byte[] signature = { 137, 80, 78, 71, 13, 10, 26, 10 };
             if (bytes == null || bytes.Length < 24)
             {
-                throw new InvalidDataException("PNG 헤더가 너무 짧습니다.");
+                throw new InvalidDataException(LocalizedStrings.PngHeaderTooShort);
             }
             for (int index = 0; index < signature.Length; index++)
             {
                 if (bytes[index] != signature[index])
                 {
-                    throw new InvalidDataException("PNG 시그니처가 올바르지 않습니다.");
+                    throw new InvalidDataException(LocalizedStrings.PngSignatureInvalid);
                 }
             }
             if (bytes[12] != (byte)'I'
@@ -466,14 +537,14 @@ namespace PlanetGauge
                 || bytes[14] != (byte)'D'
                 || bytes[15] != (byte)'R')
             {
-                throw new InvalidDataException("PNG IHDR 청크를 찾을 수 없습니다.");
+                throw new InvalidDataException(LocalizedStrings.PngIhdrMissing);
             }
 
             uint rawWidth = ReadUInt32BigEndian(bytes, 16);
             uint rawHeight = ReadUInt32BigEndian(bytes, 20);
             if (rawWidth == 0 || rawHeight == 0 || rawWidth > int.MaxValue || rawHeight > int.MaxValue)
             {
-                throw new InvalidDataException("PNG 크기가 유효하지 않습니다.");
+                throw new InvalidDataException(LocalizedStrings.PngDimensionsInvalid);
             }
             width = (int)rawWidth;
             height = (int)rawHeight;

@@ -229,7 +229,7 @@ namespace PlanetGauge
                 PlanetGaugeLevelEventRegistry.MultiplierReuseLocalizationKey,
                 StringComparison.Ordinal))
             {
-                localized = "X면 이 속성에 마지막으로 설정한 변경값을 사용합니다.";
+                localized = LocalizedStrings.MultiplierReuseNote;
                 return true;
             }
 
@@ -238,21 +238,21 @@ namespace PlanetGauge
                 PlanetGaugeLevelEventRegistry.RecoveryAmountLocalizationKey,
                 StringComparison.Ordinal))
             {
-                localized = "음수로 설정할 시 체력을 깎습니다.\n최대 체력을 넘는 회복은 상쇄됩니다.";
+                localized = LocalizedStrings.RecoveryAmountNote;
                 return true;
             }
 
             if (string.Equals(key, "editor." + PlanetGaugeLevelEventRegistry.NumericEventId, StringComparison.Ordinal)
                 || string.Equals(key, "editor." + PlanetGaugeLevelEventRegistry.EventName, StringComparison.Ordinal))
             {
-                localized = "PlanetGauge 설정";
+                localized = LocalizedStrings.GaugeEventName;
                 return true;
             }
 
             if (string.Equals(key, "editor." + PlanetGaugeSkinLevelEventRegistry.NumericEventId, StringComparison.Ordinal)
                 || string.Equals(key, "editor." + PlanetGaugeSkinLevelEventRegistry.EventName, StringComparison.Ordinal))
             {
-                localized = "PlanetGauge 스킨";
+                localized = LocalizedStrings.SkinEventName;
                 return true;
             }
 
@@ -260,13 +260,13 @@ namespace PlanetGauge
             {
                 if (key.EndsWith(".Horizontal", StringComparison.Ordinal))
                 {
-                    localized = "가로";
+                    localized = LocalizedStrings.Horizontal;
                     return true;
                 }
 
                 if (key.EndsWith(".Vertical", StringComparison.Ordinal))
                 {
-                    localized = "세로";
+                    localized = LocalizedStrings.Vertical;
                     return true;
                 }
             }
@@ -275,49 +275,49 @@ namespace PlanetGauge
             {
                 if (key.EndsWith(".Normal", StringComparison.Ordinal))
                 {
-                    localized = "일반";
+                    localized = LocalizedStrings.Normal;
                     return true;
                 }
 
                 if (key.EndsWith(".BlockRecovery", StringComparison.Ordinal))
                 {
-                    localized = "회복 차단";
+                    localized = LocalizedStrings.BlockRecovery;
                     return true;
                 }
 
                 if (key.EndsWith(".AmplifyDecrease", StringComparison.Ordinal))
                 {
-                    localized = "감소율 변경";
+                    localized = LocalizedStrings.AmplifyDecrease;
                     return true;
                 }
 
                 if (key.EndsWith(".AmplifyIncrease", StringComparison.Ordinal))
                 {
-                    localized = "증가율 변경";
+                    localized = LocalizedStrings.AmplifyIncrease;
                     return true;
                 }
 
                 if (key.EndsWith(".AmplifyBoth", StringComparison.Ordinal))
                 {
-                    localized = "증가·감소율 변경";
+                    localized = LocalizedStrings.AmplifyBoth;
                     return true;
                 }
 
                 if (key.EndsWith(".Blindfold", StringComparison.Ordinal))
                 {
-                    localized = "체력 표시 차단";
+                    localized = LocalizedStrings.Blindfold;
                     return true;
                 }
 
                 if (key.EndsWith(".ForceRecovery", StringComparison.Ordinal))
                 {
-                    localized = "체력 강제 회복";
+                    localized = LocalizedStrings.ForceRecovery;
                     return true;
                 }
 
                 if (key.EndsWith(".HideGaugeHud", StringComparison.Ordinal))
                 {
-                    localized = "게이지 HUD 숨기기";
+                    localized = LocalizedStrings.HideGaugeHud;
                     return true;
                 }
             }

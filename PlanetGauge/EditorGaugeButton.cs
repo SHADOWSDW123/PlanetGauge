@@ -134,8 +134,8 @@ namespace PlanetGauge
             if (owner != null)
             {
                 owner.ShowNotification(enabled
-                    ? "Planet Gauge enabled"
-                    : "Planet Gauge disabled");
+                    ? LocalizedStrings.GaugeEnabled
+                    : LocalizedStrings.GaugeDisabled);
             }
         }
 

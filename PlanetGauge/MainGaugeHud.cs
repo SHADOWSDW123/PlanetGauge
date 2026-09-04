@@ -72,6 +72,7 @@ namespace PlanetGauge
 
         private Color32 lastUserGaugeColor;
         private int lastStyleRevision = -1;
+        private int lastLocalizationRevision = -1;
         private bool hasLastStyle;
         private int activeEffectCount;
         private string lastDisplayedValue;
@@ -312,11 +313,13 @@ namespace PlanetGauge
             Color32 userGaugeColor = settings.GetMainGaugeColor();
             bool styleChanged = !hasLastStyle
                 || !lastUserGaugeColor.Equals(userGaugeColor)
-                || lastStyleRevision != GaugeRuntime.StyleRevision;
+                || lastStyleRevision != GaugeRuntime.StyleRevision
+                || lastLocalizationRevision != LocalizedStrings.Revision;
             if (styleChanged)
             {
                 lastUserGaugeColor = userGaugeColor;
                 lastStyleRevision = GaugeRuntime.StyleRevision;
+                lastLocalizationRevision = LocalizedStrings.Revision;
                 hasLastStyle = true;
 
                 transitionStartColor = currentGaugeColor;
@@ -614,12 +617,12 @@ namespace PlanetGauge
 
             if (settings.BlindfoldEnabled)
             {
-                AppendEffect(ref result, ref effectCount, BlindfoldEffectColor, "Blindfolded");
+                AppendEffect(ref result, ref effectCount, BlindfoldEffectColor, LocalizedStrings.Blindfolded);
             }
 
             if (settings.RecoveryBlocked)
             {
-                AppendEffect(ref result, ref effectCount, BlockRecoveryColor, "Increase Disabled");
+                AppendEffect(ref result, ref effectCount, BlockRecoveryColor, LocalizedStrings.IncreaseDisabled);
             }
 
             bool combinedBoth = IsSameBothChannel(settings.RecoveryRate, settings.DamageRate);
@@ -629,22 +632,32 @@ namespace PlanetGauge
                     ref result,
                     ref effectCount,
                     GetRateColor(settings.RecoveryRate),
-                    settings.RecoveryRate.Percent < 100f ? "Rate Reduced" : "Rate Amplified");
+                    settings.RecoveryRate.Percent < 100f
+                        ? LocalizedStrings.RateReduced
+                        : LocalizedStrings.RateAmplified);
             }
             else
             {
-                AppendRateEffect(ref result, ref effectCount, settings.RecoveryRate, "Increase");
-                AppendRateEffect(ref result, ref effectCount, settings.DamageRate, "Decrease");
+                AppendRateEffect(
+                    ref result,
+                    ref effectCount,
+                    settings.RecoveryRate,
+                    LocalizedStrings.Increase);
+                AppendRateEffect(
+                    ref result,
+                    ref effectCount,
+                    settings.DamageRate,
+                    LocalizedStrings.Decrease);
             }
 
             if (!settings.FailureProtection)
             {
-                AppendEffect(ref result, ref effectCount, NoFailDisabledColor, "No-Fail Disabled");
+                AppendEffect(ref result, ref effectCount, NoFailDisabledColor, LocalizedStrings.NoFailDisabled);
             }
 
             if (settings.RecoveryCapEnabled)
             {
-                AppendEffect(ref result, ref effectCount, IncreaseLimitedColor, "Increase Limited");
+                AppendEffect(ref result, ref effectCount, IncreaseLimitedColor, LocalizedStrings.IncreaseLimited);
             }
 
             return result;
@@ -688,7 +701,11 @@ namespace PlanetGauge
                 ref text,
                 ref effectCount,
                 GetRateColor(channel),
-                prefix + (channel.Percent < 100f ? " Reduced" : " Amplified"));
+                LocalizedStrings.Format(
+                    channel.Percent < 100f
+                        ? LocalizedStrings.ReducedEffect
+                        : LocalizedStrings.AmplifiedEffect,
+                    prefix));
         }
 
         private static bool IsNonNeutral(PlanetGaugeRateChannel channel)
