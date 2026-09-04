@@ -91,6 +91,7 @@ namespace PlanetGauge
         private readonly GameObject layerRootObject;
         private readonly GaugeSkinLayerGraphic healthGraphic;
         private readonly GaugeSkinLayerGraphic frameGraphic;
+        private readonly GaugeSkinLayerGraphic blindfoldGraphic;
 
         internal GaugeSkinRenderer(Transform parent)
         {
@@ -107,6 +108,9 @@ namespace PlanetGauge
             healthGraphic = CreateLayerGraphic(
                 "PlanetGauge.SkinHealth",
                 layerRootObject.transform);
+            blindfoldGraphic = CreateLayerGraphic(
+                "PlanetGauge.SkinBlindfold",
+                layerRootObject.transform);
 
             SetActive(false);
         }
@@ -114,7 +118,7 @@ namespace PlanetGauge
         internal void Update(
             RectTransform rootRect,
             float progress,
-            bool blindfold,
+            float blindfoldOpacity,
             float barAlpha)
         {
             GaugeSkinAsset skin = GaugeSkinManager.Current;
@@ -122,6 +126,7 @@ namespace PlanetGauge
             {
                 healthGraphic.ClearLayer();
                 frameGraphic.ClearLayer();
+                blindfoldGraphic.ClearLayer();
                 SetActive(false);
                 return;
             }
@@ -152,13 +157,38 @@ namespace PlanetGauge
                 healthUv.width *= clampedProgress;
             }
 
-            Color healthTint = blindfold ? Color.black : Color.white;
-            healthTint.a = Mathf.Clamp01(barAlpha);
-            healthGraphic.SetLayer(
-                skin.Health.Texture,
-                ToLocalRect(visibleHealth, skin.ContentRect, pixelsToLocal),
-                healthUv,
-                healthTint);
+            float clampedAlpha = Mathf.Clamp01(barAlpha);
+            float clampedBlindfoldOpacity = Mathf.Clamp01(blindfoldOpacity);
+            if (clampedBlindfoldOpacity >= 0.999f)
+            {
+                // 실제 채움 레이어를 제거해야 반투명 PNG에서도 현재 체력의 경계가 비치지 않는다.
+                healthGraphic.ClearLayer();
+            }
+            else
+            {
+                Color healthTint = Color.white;
+                healthTint.a = clampedAlpha;
+                healthGraphic.SetLayer(
+                    skin.Health.Texture,
+                    ToLocalRect(visibleHealth, skin.ContentRect, pixelsToLocal),
+                    healthUv,
+                    healthTint);
+            }
+
+            if (clampedBlindfoldOpacity <= 0f)
+            {
+                blindfoldGraphic.ClearLayer();
+            }
+            else
+            {
+                Color blindfoldTint = Color.black;
+                blindfoldTint.a = clampedAlpha * clampedBlindfoldOpacity;
+                blindfoldGraphic.SetLayer(
+                    skin.Health.Texture,
+                    ToLocalRect(skin.HealthRect, skin.ContentRect, pixelsToLocal),
+                    GetUvRect(skin.Health),
+                    blindfoldTint);
+            }
 
             if (skin.Frame == null)
             {
@@ -167,7 +197,7 @@ namespace PlanetGauge
             else
             {
                 Color frameTint = Color.white;
-                frameTint.a = Mathf.Clamp01(barAlpha);
+                frameTint.a = clampedAlpha;
                 PlanetGaugeSettings settings = Main.Settings;
                 Vector2 frameOffset = settings == null
                     ? Vector2.zero

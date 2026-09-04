@@ -24,6 +24,7 @@ namespace PlanetGauge
     internal static class GaugeVisualTransitions
     {
         internal const float ForceTransitionDuration = 0.75f;
+        internal const float BlindfoldTransitionDuration = 0.5f;
 
         private static readonly Color32 WarningBaseColor = new Color32(0, 0, 0, 255);
         private static readonly Color32 DamageColor = new Color32(176, 32, 32, 255);
@@ -46,11 +47,21 @@ namespace PlanetGauge
 
         private static readonly List<PendingWarning> warnings = new List<PendingWarning>();
         private static readonly List<ForceTransition> transitions = new List<ForceTransition>();
+        private static float blindfoldAlpha;
+        private static float blindfoldStartAlpha;
+        private static float blindfoldTargetAlpha;
+        private static float blindfoldElapsed;
+
+        internal static float BlindfoldAlpha { get { return blindfoldAlpha; } }
 
         internal static void Reset()
         {
             warnings.Clear();
             transitions.Clear();
+            blindfoldAlpha = 0f;
+            blindfoldStartAlpha = 0f;
+            blindfoldTargetAlpha = 0f;
+            blindfoldElapsed = 0f;
         }
 
         internal static void Tick(float unscaledDeltaTime)
@@ -58,6 +69,8 @@ namespace PlanetGauge
             float elapsed = float.IsNaN(unscaledDeltaTime) || float.IsInfinity(unscaledDeltaTime)
                 ? 0f
                 : Mathf.Max(0f, unscaledDeltaTime);
+
+            UpdateBlindfoldTransition(elapsed);
 
             for (int index = transitions.Count - 1; index >= 0; index--)
             {
@@ -71,6 +84,39 @@ namespace PlanetGauge
                 {
                     transitions[index] = transition;
                 }
+            }
+        }
+
+        private static void UpdateBlindfoldTransition(float deltaTime)
+        {
+            float nextTarget = GaugeRuntime.IsBlindfolded ? 1f : 0f;
+            if (!Mathf.Approximately(blindfoldTargetAlpha, nextTarget))
+            {
+                blindfoldStartAlpha = blindfoldAlpha;
+                blindfoldTargetAlpha = nextTarget;
+                blindfoldElapsed = 0f;
+            }
+
+            if (Mathf.Approximately(blindfoldAlpha, blindfoldTargetAlpha))
+            {
+                blindfoldAlpha = blindfoldTargetAlpha;
+                return;
+            }
+
+            blindfoldElapsed = Mathf.Min(
+                BlindfoldTransitionDuration,
+                blindfoldElapsed + deltaTime);
+            float progress = BlindfoldTransitionDuration <= 0f
+                ? 1f
+                : blindfoldElapsed / BlindfoldTransitionDuration;
+            float eased = 1f - (1f - progress) * (1f - progress);
+            blindfoldAlpha = Mathf.Lerp(
+                blindfoldStartAlpha,
+                blindfoldTargetAlpha,
+                eased);
+            if (blindfoldElapsed >= BlindfoldTransitionDuration)
+            {
+                blindfoldAlpha = blindfoldTargetAlpha;
             }
         }
 

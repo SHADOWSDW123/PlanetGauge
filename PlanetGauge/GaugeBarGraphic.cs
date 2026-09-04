@@ -20,6 +20,7 @@ namespace PlanetGauge
         private float borderThickness = 2f;
         private float chamferSize;
         private bool transitionVisible;
+        private float blindfoldOpacity;
         private GaugeOverlaySegment transitionSegment;
         private float baseOpacity = 1f;
         private float overlayOpacity = 1f;
@@ -55,6 +56,21 @@ namespace PlanetGauge
 
             gaugeEnabled = enabled;
             normalizedValue = clampedValue;
+            SetVerticesDirty();
+        }
+
+        /// <summary>
+        /// 실제 채움값과 무관한 검은색 고정 바를 표시해 Blindfold 중 체력량을 숨긴다.
+        /// </summary>
+        internal void SetBlindfoldOpacity(float value)
+        {
+            float clampedValue = Mathf.Clamp01(value);
+            if (Mathf.Approximately(blindfoldOpacity, clampedValue))
+            {
+                return;
+            }
+
+            blindfoldOpacity = clampedValue;
             SetVerticesDirty();
         }
 
@@ -251,6 +267,18 @@ namespace PlanetGauge
             for (int index = 0; index < warningSegments.Count; index++)
             {
                 AddOverlaySegment(vertexHelper, innerRect, warningSegments[index]);
+            }
+
+            if (blindfoldOpacity > 0f)
+            {
+                AddBarRect(
+                    vertexHelper,
+                    innerRect,
+                    innerRadius,
+                    new Color(0f, 0f, 0f, baseOpacity * blindfoldOpacity),
+                    false,
+                    innerRect,
+                    baseOpacity);
             }
         }
 

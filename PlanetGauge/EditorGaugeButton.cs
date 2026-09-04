@@ -103,9 +103,15 @@ namespace PlanetGauge
                 PositionAboveShield();
             }
 
-            float normalizedValue = GaugeRuntime.MaximumGauge <= 0f
+            bool blindfolded = GaugeRuntime.IsBlindfolded;
+            float blindfoldAlpha = GaugeVisualTransitions.BlindfoldAlpha;
+            bool fullyBlindfolded = blindfolded && blindfoldAlpha >= 0.999f;
+            float normalizedValue = fullyBlindfolded
+                ? 1f
+                : GaugeRuntime.MaximumGauge <= 0f
                 ? 0f
                 : GaugeRuntime.Current / GaugeRuntime.MaximumGauge;
+            gaugeGraphic.SetBlindfoldOpacity(blindfoldAlpha);
             gaugeGraphic.SetState(Main.EditorGaugeEnabled, normalizedValue);
         }
 

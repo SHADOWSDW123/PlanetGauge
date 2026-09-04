@@ -344,7 +344,7 @@ namespace PlanetGauge
             gaugeGraphic.SetStyle(
                 BorderColor, DisabledColor, DepletedColor,
                 currentGaugeColor, currentGaugeColor, currentGaugeColor, 2f);
-            valueText.color = eventSettings.BlindfoldEnabled
+            valueText.color = GaugeRuntime.IsBlindfolded
                 ? (Color)BlindfoldTextColor
                 : currentGaugeColor;
         }
@@ -575,7 +575,7 @@ namespace PlanetGauge
              * 여러 효과가 동시에 켜졌을 때 게이지와 숫자는 한 색만 가질 수 있다.
              * 우선순위를 바꾸려면 아래 검사 순서를 옮기면 된다. 모든 활성 효과 문구는 별도로 표시된다.
              */
-            if (settings.BlindfoldEnabled)
+            if (GaugeRuntime.IsBlindfolded)
             {
                 return BlindfoldGaugeColor;
             }
@@ -761,13 +761,19 @@ namespace PlanetGauge
         private void UpdateValue()
         {
             bool customSkin = GaugeSkinManager.Current != null && skinRenderer != null;
-            bool hideForceVisuals = GaugeRuntime.EventSettings.BlindfoldEnabled || customSkin;
+            bool blindfolded = GaugeRuntime.IsBlindfolded;
+            float blindfoldAlpha = GaugeVisualTransitions.BlindfoldAlpha;
+            bool fullyBlindfolded = blindfolded && blindfoldAlpha >= 0.999f;
+            bool hideForceVisuals = blindfolded || customSkin;
             float displayedCurrent = hideForceVisuals
                 ? GaugeRuntime.Current
                 : GaugeVisualTransitions.GetDisplayedCurrent();
-            float normalizedValue = GaugeRuntime.RecoveryMaximum <= 0f
+            float normalizedValue = fullyBlindfolded
+                ? 1f
+                : GaugeRuntime.RecoveryMaximum <= 0f
                 ? 0f 
                 : displayedCurrent / GaugeRuntime.RecoveryMaximum;
+            gaugeGraphic.SetBlindfoldOpacity(blindfoldAlpha);
             gaugeGraphic.SetState(true, normalizedValue);
 
             GaugeOverlaySegment transitionSegment;
@@ -789,7 +795,7 @@ namespace PlanetGauge
                 gaugeGraphic.SetOverlays(showTransition, transitionSegment, warningSegments);
                 if (skinRenderer != null)
                 {
-                    skinRenderer.Update(rootRect, normalizedValue, false, 0f);
+                    skinRenderer.Update(rootRect, normalizedValue, 0f, 0f);
                 }
             }
             else
@@ -798,7 +804,7 @@ namespace PlanetGauge
                 skinRenderer.Update(
                     rootRect,
                     normalizedValue,
-                    GaugeRuntime.EventSettings.BlindfoldEnabled,
+                    blindfoldAlpha,
                     GaugeHudVisibilityTransitions.GaugeBarAlpha);
             }
 
