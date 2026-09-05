@@ -13,6 +13,9 @@ namespace PlanetGauge
     public sealed class PlanetGaugeSettings : UnityModManager.ModSettings
     {
         private const float FrameOffsetLimit = 4096f;
+        private const int CurrentHudTextDefaultsVersion = 1;
+        private const float DefaultAttributeTextSizePercent = 300f;
+        private const float DefaultRateTokenSizePercent = 200f;
 
         private static readonly string[] LanguageLabels =
         {
@@ -51,11 +54,12 @@ namespace PlanetGauge
         public bool AttributeTextAttachedToMainGauge = true;
         public float AttributeTextScreenOffsetX;
         public float AttributeTextScreenOffsetY;
-        public float AttributeTextSizePercent = 100f;
+        public float AttributeTextSizePercent = DefaultAttributeTextSizePercent;
         public bool RateTokenAttachedToMainGauge = true;
         public float RateTokenScreenOffsetX;
         public float RateTokenScreenOffsetY;
-        public float RateTokenSizePercent = 100f;
+        public float RateTokenSizePercent = DefaultRateTokenSizePercent;
+        public int HudTextDefaultsVersion;
         public KeyCode DebugKey1 = KeyCode.LeftShift;
         public KeyCode DebugKey2 = KeyCode.F3;
 
@@ -326,6 +330,7 @@ namespace PlanetGauge
                 AttributeTextAttachedToMainGauge = true;
                 AttributeTextScreenOffsetX = 0f;
                 AttributeTextScreenOffsetY = 0f;
+                AttributeTextSizePercent = DefaultAttributeTextSizePercent;
                 attributeTextOffsetXInput = null;
                 attributeTextOffsetYInput = null;
             }
@@ -368,6 +373,7 @@ namespace PlanetGauge
                 RateTokenAttachedToMainGauge = true;
                 RateTokenScreenOffsetX = 0f;
                 RateTokenScreenOffsetY = 0f;
+                RateTokenSizePercent = DefaultRateTokenSizePercent;
                 rateTokenOffsetXInput = null;
                 rateTokenOffsetYInput = null;
             }
@@ -401,6 +407,8 @@ namespace PlanetGauge
 
         internal void Sanitize()
         {
+            MigrateHudTextDefaultsIfNeeded();
+
             // 저장 파일을 사용자가 직접 수정했거나 이전 버전 값이 남아 있어도 UI 범위를 보장한다.
             MainGaugeOffsetX = SanitizePositionFloat(MainGaugeOffsetX, 0f);
             MainGaugeOffsetY = SanitizePositionFloat(MainGaugeOffsetY, -158f);
@@ -413,10 +421,18 @@ namespace PlanetGauge
             MainGaugeValueScreenOffsetY = SanitizePositionFloat(MainGaugeValueScreenOffsetY, 0f);
             AttributeTextScreenOffsetX = SanitizePositionFloat(AttributeTextScreenOffsetX, 0f);
             AttributeTextScreenOffsetY = SanitizePositionFloat(AttributeTextScreenOffsetY, 0f);
-            AttributeTextSizePercent = SanitizeFloat(AttributeTextSizePercent, 100f, 25f, 500f);
+            AttributeTextSizePercent = SanitizeFloat(
+                AttributeTextSizePercent,
+                DefaultAttributeTextSizePercent,
+                25f,
+                500f);
             RateTokenScreenOffsetX = SanitizePositionFloat(RateTokenScreenOffsetX, 0f);
             RateTokenScreenOffsetY = SanitizePositionFloat(RateTokenScreenOffsetY, 0f);
-            RateTokenSizePercent = SanitizeFloat(RateTokenSizePercent, 100f, 25f, 500f);
+            RateTokenSizePercent = SanitizeFloat(
+                RateTokenSizePercent,
+                DefaultRateTokenSizePercent,
+                25f,
+                500f);
             MainGaugeColorR = Mathf.Clamp(MainGaugeColorR, 0, 255);
             MainGaugeColorG = Mathf.Clamp(MainGaugeColorG, 0, 255);
             MainGaugeColorB = Mathf.Clamp(MainGaugeColorB, 0, 255);
@@ -453,6 +469,27 @@ namespace PlanetGauge
                 0f,
                 -FrameOffsetLimit,
                 FrameOffsetLimit);
+        }
+
+        private void MigrateHudTextDefaultsIfNeeded()
+        {
+            if (HudTextDefaultsVersion >= CurrentHudTextDefaultsVersion)
+            {
+                return;
+            }
+
+            // 0.3.0까지의 정확한 기본값만 새 기본값으로 올리고 다른 사용자 지정값은 보존한다.
+            if (Mathf.Approximately(AttributeTextSizePercent, 100f))
+            {
+                AttributeTextSizePercent = DefaultAttributeTextSizePercent;
+            }
+
+            if (Mathf.Approximately(RateTokenSizePercent, 100f))
+            {
+                RateTokenSizePercent = DefaultRateTokenSizePercent;
+            }
+
+            HudTextDefaultsVersion = CurrentHudTextDefaultsVersion;
         }
 
         internal void InitializeLanguageFromGameIfNeeded()

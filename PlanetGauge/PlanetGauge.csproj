@@ -16,7 +16,7 @@
       유지보수 시 게임 설치 위치가 바뀌면 이 값만 바꾸거나
       `dotnet build /p:GameManagedDir="...\A Dance of Fire and Ice_Data\Managed"`로 덮어쓴다.
     -->
-    <GameManagedDir Condition="'$(GameManagedDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\A Dance of Fire and Ice\A Dance of Fire and Ice_Data\Managed</GameManagedDir>
+    <GameManagedDir Condition="'$(GameManagedDir)' == ''">G:\SteamLibrary\steamapps\common\A Dance of Fire and Ice\A Dance of Fire and Ice_Data\Managed</GameManagedDir>
     <UnityModManagerDir Condition="'$(UnityModManagerDir)' == ''">$(GameManagedDir)\UnityModManager</UnityModManagerDir>
     <ModOutputDir Condition="'$(ModOutputDir)' == ''">$(MSBuildProjectDirectory)\..\dist\PlanetGauge</ModOutputDir>
   </PropertyGroup>

@@ -25,6 +25,9 @@ namespace PlanetGauge
         private const float RateFontSizeRatio = 0.54f;
         private const float ColorTransitionDuration = 0.5f;
         private const float BaseChamferSize = 4f;
+        private const int HudSortingOrder = short.MaxValue - 1;
+        private static readonly Vector2 HudReferenceResolution = new Vector2(1920f, 1080f);
+        private static readonly Vector2 FallbackMeterSize = new Vector2(600f, 24f);
 
         private static readonly Color32 BorderColor = new Color32(0, 0, 0, 255);
         private static readonly Color32 DisabledColor = new Color32(184, 184, 184, 255);
@@ -51,7 +54,10 @@ namespace PlanetGauge
         private readonly List<GaugeOverlaySegment> warningSegments =
             new List<GaugeOverlaySegment>();
 
-        private scrHitErrorMeter sourceMeter;
+        private GameObject canvasObject;
+        private RectTransform canvasRect;
+        private CanvasScaler canvasScaler;
+        private CanvasScaler sourceCanvasScaler;
         private GameObject rootObject;
         private RectTransform rootRect;
         private RectTransform screenReferenceRect;
@@ -85,13 +91,13 @@ namespace PlanetGauge
         {
             scrHitErrorMeter meter;
             RectTransform meterRect;
-            if (!TryGetVisibleMeter(out meter, out meterRect))
+            if (!TryGetLayoutReference(out meter, out meterRect))
             {
                 SetVisible(false);
                 return;
             }
 
-            EnsureCreated(meter);
+            EnsureCreated();
             if (rootObject == null || rootRect == null || gaugeGraphic == null)
             {
                 return;
@@ -107,12 +113,15 @@ namespace PlanetGauge
 
         public void Dispose()
         {
-            if (rootObject != null)
+            if (canvasObject != null)
             {
-                UnityEngine.Object.Destroy(rootObject);
+                UnityEngine.Object.Destroy(canvasObject);
             }
 
-            sourceMeter = null;
+            canvasObject = null;
+            canvasRect = null;
+            canvasScaler = null;
+            sourceCanvasScaler = null;
             rootObject = null;
             rootRect = null;
             screenReferenceRect = null;
@@ -135,28 +144,34 @@ namespace PlanetGauge
             warningSegments.Clear();
         }
 
-        private void EnsureCreated(scrHitErrorMeter meter)
+        private void EnsureCreated()
         {
-            // scaler 아래에 두어 게임의 판정 미터 확대/축소와 동일한 좌표계를 사용한다.
-            Transform desiredParent = meter.scaler != null
-                ? meter.scaler.transform
-                : meter.wrapperRectTransform.parent;
-            if (desiredParent == null)
+            if (canvasObject != null && rootObject != null)
             {
-                return;
-            }
-
-            if (sourceMeter == meter
-                && rootObject != null
-                && rootObject.transform.parent == desiredParent)
-            {
-                // 다른 HUD가 런타임에 추가되어도 게이지가 가려지지 않게 렌더 순서를 복구한다.
-                rootObject.transform.SetAsLastSibling();
                 return;
             }
 
             Dispose();
-            sourceMeter = meter;
+
+            canvasObject = new GameObject(
+                "PlanetGauge.MainHudCanvas",
+                typeof(RectTransform),
+                typeof(Canvas),
+                typeof(CanvasScaler),
+                typeof(GraphicRaycaster));
+            UnityEngine.Object.DontDestroyOnLoad(canvasObject);
+
+            Canvas canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = HudSortingOrder;
+
+            canvasScaler = canvasObject.GetComponent<CanvasScaler>();
+            canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            canvasScaler.referenceResolution = HudReferenceResolution;
+            canvasScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            canvasScaler.matchWidthOrHeight = 0.5f;
+            canvasObject.GetComponent<GraphicRaycaster>().enabled = false;
+            canvasRect = canvasObject.transform as RectTransform;
 
             rootObject = new GameObject(
                 "PlanetGauge.MainGauge",
@@ -164,8 +179,7 @@ namespace PlanetGauge
                 typeof(CanvasRenderer),
                 typeof(GaugeBarGraphic),
                 typeof(LayoutElement));
-            rootObject.transform.SetParent(desiredParent, false);
-            rootObject.transform.SetAsLastSibling();
+            rootObject.transform.SetParent(canvasObject.transform, false);
 
             rootRect = rootObject.GetComponent<RectTransform>();
             rootRect.anchorMin = new Vector2(0.5f, 0.5f);
@@ -174,11 +188,7 @@ namespace PlanetGauge
             rootRect.localRotation = Quaternion.identity;
             rootRect.localScale = Vector3.one;
 
-            Canvas owningCanvas = desiredParent.GetComponentInParent<Canvas>();
-            Canvas rootCanvas = owningCanvas != null ? owningCanvas.rootCanvas : null;
-            screenReferenceRect = rootCanvas != null
-                ? rootCanvas.transform as RectTransform
-                : desiredParent as RectTransform;
+            screenReferenceRect = canvasRect;
 
             LayoutElement layoutElement = rootObject.GetComponent<LayoutElement>();
             layoutElement.ignoreLayout = true;
@@ -351,22 +361,21 @@ namespace PlanetGauge
 
         private void UpdateLayout(scrHitErrorMeter meter, RectTransform meterRect)
         {
-            Transform parent = rootRect.parent;
-            meterRect.GetWorldCorners(meterWorldCorners);
+            SyncCanvasScaler(meter);
 
-            // 월드 모서리를 게이지 부모의 로컬 좌표로 변환해 해상도와 Canvas 스케일 변화에 대응한다.
-            float minimumX = float.PositiveInfinity;
-            float maximumX = float.NegativeInfinity;
-            float maximumY = float.NegativeInfinity;
-            for (int index = 0; index < meterWorldCorners.Length; index++)
+            float minimumX;
+            float maximumX;
+            float maximumY;
+            if (!TryGetMeterBounds(meterRect, out minimumX, out maximumX, out maximumY))
             {
-                Vector3 localPoint = parent.InverseTransformPoint(meterWorldCorners[index]);
-                minimumX = Mathf.Min(minimumX, localPoint.x);
-                maximumX = Mathf.Max(maximumX, localPoint.x);
-                maximumY = Mathf.Max(maximumY, localPoint.y);
+                minimumX = -FallbackMeterSize.x * 0.5f;
+                maximumX = FallbackMeterSize.x * 0.5f;
+                maximumY = FallbackMeterSize.y * 0.5f;
             }
 
-            float meterScale = Mathf.Clamp(Mathf.Abs(meter.meterScale), 0.5f, 2.5f);
+            float meterScale = meter == null
+                ? 1f
+                : Mathf.Clamp(Mathf.Abs(meter.meterScale), 0.5f, 2.5f);
             PlanetGaugeSettings settings = Main.Settings;
             float gaugeScale = settings.MainGaugeSizePercent / 100f;
             float widthScale = settings.MainGaugeWidthPercent / 100f;
@@ -525,6 +534,28 @@ namespace PlanetGauge
                 Mathf.Clamp(BaseChamferSize * meterScale * gaugeScale, 1f, 16f));
         }
 
+        private void SyncCanvasScaler(scrHitErrorMeter meter)
+        {
+            CanvasScaler source = meter != null ? meter.scaler : null;
+            if (source == null || canvasScaler == null || source == sourceCanvasScaler)
+            {
+                return;
+            }
+
+            // 별도 Canvas를 소유하되 게임 HUD와 같은 배율 규칙을 사용해 기존 크기를 보존한다.
+            sourceCanvasScaler = source;
+            canvasScaler.uiScaleMode = source.uiScaleMode;
+            canvasScaler.referencePixelsPerUnit = source.referencePixelsPerUnit;
+            canvasScaler.scaleFactor = source.scaleFactor;
+            canvasScaler.referenceResolution = source.referenceResolution;
+            canvasScaler.screenMatchMode = source.screenMatchMode;
+            canvasScaler.matchWidthOrHeight = source.matchWidthOrHeight;
+            canvasScaler.physicalUnit = source.physicalUnit;
+            canvasScaler.fallbackScreenDPI = source.fallbackScreenDPI;
+            canvasScaler.defaultSpriteDPI = source.defaultSpriteDPI;
+            canvasScaler.dynamicPixelsPerUnit = source.dynamicPixelsPerUnit;
+        }
+
         private void SetScreenCenteredPosition(RectTransform target, float offsetX, float offsetY)
         {
             if (target == null || rootRect == null || screenReferenceRect == null)
@@ -539,6 +570,57 @@ namespace PlanetGauge
                 0f));
             Vector3 rootLocalPoint = rootRect.InverseTransformPoint(worldPoint);
             target.localPosition = new Vector3(rootLocalPoint.x, rootLocalPoint.y, 0f);
+        }
+
+        private bool TryGetMeterBounds(
+            RectTransform meterRect,
+            out float minimumX,
+            out float maximumX,
+            out float maximumY)
+        {
+            minimumX = float.PositiveInfinity;
+            maximumX = float.NegativeInfinity;
+            maximumY = float.NegativeInfinity;
+            if (meterRect == null || canvasRect == null)
+            {
+                return false;
+            }
+
+            Canvas sourceCanvas = meterRect.GetComponentInParent<Canvas>();
+            Camera sourceCamera = sourceCanvas != null
+                && sourceCanvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? sourceCanvas.worldCamera
+                : null;
+            meterRect.GetWorldCorners(meterWorldCorners);
+            for (int index = 0; index < meterWorldCorners.Length; index++)
+            {
+                Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(
+                    sourceCamera,
+                    meterWorldCorners[index]);
+                Vector2 localPoint;
+                if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                    canvasRect,
+                    screenPoint,
+                    null,
+                    out localPoint))
+                {
+                    return false;
+                }
+
+                minimumX = Mathf.Min(minimumX, localPoint.x);
+                maximumX = Mathf.Max(maximumX, localPoint.x);
+                maximumY = Mathf.Max(maximumY, localPoint.y);
+            }
+
+            return IsFinite(minimumX)
+                && IsFinite(maximumX)
+                && IsFinite(maximumY)
+                && maximumX > minimumX;
+        }
+
+        private static bool IsFinite(float value)
+        {
+            return !float.IsNaN(value) && !float.IsInfinity(value);
         }
 
         private void UpdateVisibility()
@@ -847,13 +929,13 @@ namespace PlanetGauge
 
         private void SetVisible(bool visible)
         {
-            if (rootObject != null && rootObject.activeSelf != visible)
+            if (canvasObject != null && canvasObject.activeSelf != visible)
             {
-                rootObject.SetActive(visible);
+                canvasObject.SetActive(visible);
             }
         }
 
-        private static bool TryGetVisibleMeter(
+        private static bool TryGetLayoutReference(
             out scrHitErrorMeter meter,
             out RectTransform meterRect)
         {
@@ -866,34 +948,34 @@ namespace PlanetGauge
             }
 
             scrController controller = scrController.instance;
-            if (controller == null || controller.errorMeter == null)
+            if (controller == null)
             {
                 return false;
             }
 
             meter = controller.errorMeter;
-            if (!meter.gameObject.activeInHierarchy
-                || Persistence.hitErrorMeterSize == ErrorMeterSize.Off)
+            if (meter == null)
             {
-                return false;
+                // HUD 자체 Canvas와 폴백 배치는 입력 계기판 객체 없이도 동작한다.
+                return true;
             }
 
-            if (meter.straightMeter != null && meter.straightMeter.activeInHierarchy) 
+            if (meter.straightMeter != null && meter.straightMeter.activeSelf)
             {
                 meterRect = meter.straightMeter.GetComponent<RectTransform>();
             }
-            else if (meter.curvedMeter != null && meter.curvedMeter.activeInHierarchy)
+            else if (meter.curvedMeter != null && meter.curvedMeter.activeSelf)
             {
                 meterRect = meter.curvedMeter.GetComponent<RectTransform>();
             }
 
-            if (meterRect == null)
+            if (meterRect == null && meter.wrapperRectTransform != null)
             {
-                // 게임 버전별 세부 미터 구조가 달라도 공통 wrapper를 최후 기준점으로 사용한다.
                 meterRect = meter.wrapperRectTransform;
             }
 
-            return meterRect != null;
+            // 입력 계기판 OFF/비활성은 HUD 표시 조건이 아니다. meterRect는 위치 재현용 선택 입력이다.
+            return true;
         }
     }
 }
