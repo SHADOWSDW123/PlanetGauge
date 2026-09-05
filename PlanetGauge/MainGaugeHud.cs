@@ -666,20 +666,22 @@ namespace PlanetGauge
         private static string BuildRateText(PlanetGaugeEventSettings settings)
         {
             bool combinedBoth = IsSameBothChannel(settings.RecoveryRate, settings.DamageRate);
-            if (combinedBoth && IsNonNeutral(settings.RecoveryRate))
-            {
-                return FormatRateToken(settings.RecoveryRate);
-            }
-
             string result = string.Empty;
             if (IsNonNeutral(settings.RecoveryRate))
             {
                 result = FormatRateToken(settings.RecoveryRate);
             }
-            if (IsNonNeutral(settings.DamageRate))
+            if (!combinedBoth && IsNonNeutral(settings.DamageRate))
             {
                 if (result.Length > 0) result += "  ";
                 result += FormatRateToken(settings.DamageRate);
+            }
+            if (settings.RecoveryCapEnabled)
+            {
+                if (result.Length > 0) result += "  ";
+                result += "<color=#" + ColorUtility.ToHtmlStringRGB(IncreaseLimitedColor) + ">"
+                    + PlanetGaugeValueRules.SanitizeRecoveryCap(settings.RecoveryCapPercent)
+                        .ToString("0.#", CultureInfo.InvariantCulture) + "%</color>";
             }
             return result;
         }

@@ -499,6 +499,8 @@ namespace PlanetGauge
                 || previous.BlindfoldEnabled != next.BlindfoldEnabled
                 || previous.FailureProtection != next.FailureProtection
                 || previous.RecoveryCapEnabled != next.RecoveryCapEnabled
+                || (next.RecoveryCapEnabled
+                    && previous.RecoveryCapPercent != next.RecoveryCapPercent)
                 || !ChannelsEqual(previous.RecoveryRate, next.RecoveryRate)
                 || !ChannelsEqual(previous.DamageRate, next.DamageRate);
         }
