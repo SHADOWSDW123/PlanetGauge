@@ -14,6 +14,7 @@ namespace PlanetGauge
     internal sealed class MainGaugeHud : IDisposable
     {
         private const float BaseBarHeight = 18f;
+        private const float BaseBarWidth = 600f;
         private const float BaseGapAboveMeter = 10f;
         private const float BaseTextGap = 5f;
         private const float BaseEffectTextGap = 2f;
@@ -25,9 +26,10 @@ namespace PlanetGauge
         private const float RateFontSizeRatio = 0.54f;
         private const float ColorTransitionDuration = 0.5f;
         private const float BaseChamferSize = 4f;
+        private const float FixedMeterScale = 2f;
         private const int HudSortingOrder = short.MaxValue - 1;
         private static readonly Vector2 HudReferenceResolution = new Vector2(1920f, 1080f);
-        private static readonly Vector2 FallbackMeterSize = new Vector2(600f, 24f);
+        private static readonly Vector2 FallbackMeterSize = new Vector2(BaseBarWidth, 24f);
 
         private static readonly Color32 BorderColor = new Color32(0, 0, 0, 255);
         private static readonly Color32 DisabledColor = new Color32(184, 184, 184, 255);
@@ -373,15 +375,12 @@ namespace PlanetGauge
                 maximumY = FallbackMeterSize.y * 0.5f;
             }
 
-            float meterScale = meter == null
-                ? 1f
-                : Mathf.Clamp(Mathf.Abs(meter.meterScale), 0.5f, 2.5f);
             PlanetGaugeSettings settings = Main.Settings;
             float gaugeScale = settings.MainGaugeSizePercent / 100f;
             float widthScale = settings.MainGaugeWidthPercent / 100f;
             float barWidth = Mathf.Max(
                 48f * gaugeScale,
-                (maximumX - minimumX) * widthScale * gaugeScale);
+                BaseBarWidth * FixedMeterScale * widthScale * gaugeScale);
             GaugeSkinAsset skin = GaugeSkinManager.Current;
             float barHeight;
             if (skin != null && skin.ContentRect.Width > 0f && skin.ContentRect.Height > 0f)
@@ -393,12 +392,12 @@ namespace PlanetGauge
             else
             {
                 barHeight = Mathf.Clamp(
-                    BaseBarHeight * meterScale * gaugeScale,
+                    BaseBarHeight * FixedMeterScale * gaugeScale,
                     5f,
                     72f);
             }
             float gapAboveMeter = Mathf.Clamp(
-                BaseGapAboveMeter * meterScale * gaugeScale,
+                BaseGapAboveMeter * FixedMeterScale * gaugeScale,
                 2f,
                 48f);
 
@@ -415,7 +414,7 @@ namespace PlanetGauge
 
             float textSizeScale = settings.MainGaugeValueSizePercent / 100f;
             float fontSize = Mathf.Clamp(
-                BaseFontSize * meterScale * textSizeScale,
+                BaseFontSize * FixedMeterScale * textSizeScale,
                 9f,
                 84f);
             float textHeight = fontSize + 4f;
@@ -428,7 +427,7 @@ namespace PlanetGauge
                 240f);
             float rateHeight = rateFontSize + 1f;
             float compactTextGap = Mathf.Clamp(
-                BaseTextGap * meterScale * CompactSpacingRatio,
+                BaseTextGap * FixedMeterScale * CompactSpacingRatio,
                 1f,
                 8f);
             float textOffsetY = settings.MainGaugeValueOffsetY - DefaultValueOffsetY;
@@ -437,8 +436,8 @@ namespace PlanetGauge
                 Mathf.Max(barWidth, fontSize * 5f),
                 textHeight);
             valueOutline.effectDistance = new Vector2(
-                Mathf.Clamp(meterScale, 1f, 2f),
-                -Mathf.Clamp(meterScale, 1f, 2f));
+                Mathf.Clamp(FixedMeterScale, 1f, 2f),
+                -Mathf.Clamp(FixedMeterScale, 1f, 2f));
 
             rateText.fontSize = rateFontSize;
             rateTextRect.sizeDelta = new Vector2(
@@ -516,7 +515,7 @@ namespace PlanetGauge
             {
                 if (hasAttachedElement)
                 {
-                    stackBottom += BaseEffectTextGap * meterScale * CompactSpacingRatio;
+                    stackBottom += BaseEffectTextGap * FixedMeterScale * CompactSpacingRatio;
                 }
                 effectTextRect.anchoredPosition = new Vector2(
                     attachedX,
@@ -531,7 +530,7 @@ namespace PlanetGauge
             }
 
             gaugeGraphic.SetChamferSize(
-                Mathf.Clamp(BaseChamferSize * meterScale * gaugeScale, 1f, 16f));
+                Mathf.Clamp(BaseChamferSize * FixedMeterScale * gaugeScale, 1f, 16f));
         }
 
         private void SyncCanvasScaler(scrHitErrorMeter meter)

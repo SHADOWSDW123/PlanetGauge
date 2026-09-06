@@ -20,11 +20,56 @@ namespace PlanetGauge
     [HarmonyPatch(typeof(scnGame), nameof(scnGame.Play), typeof(int), typeof(bool))]
     internal static class GamePlayStartFloorPatch
     {
-        private static void Prefix(int seqID)
+        private static void Prefix(int seqID, ref bool __state)
         {
+            __state = false;
             if (Main.IsEnabled && Main.EditorGaugeEnabled)
             {
-                GaugeRuntime.SetSessionStartFloor(seqID);
+                GaugeRuntime.PrepareSessionStart(seqID);
+                __state = true;
+            }
+        }
+
+        private static Exception Finalizer(Exception __exception, ref bool __state)
+        {
+            if (__state && __exception != null)
+            {
+                GaugeRuntime.CancelSessionStartRestore();
+                __state = false;
+            }
+
+            return __exception;
+        }
+    }
+
+    // WaitForStartCo 코루틴이 실제 과거 효과를 실행하는 정확한 동기 구간이다.
+    [HarmonyPatch(typeof(scrVfxPlus), nameof(scrVfxPlus.ScrubToTime), typeof(float))]
+    internal static class InitialVfxScrubPatch
+    {
+        private static void Prefix(ref bool __state)
+        {
+            __state = Main.IsEnabled
+                && Main.EditorGaugeEnabled
+                && GaugeRuntime.TryBeginInitialVfxScrub();
+        }
+
+        private static void Postfix(ref bool __state)
+        {
+            FinishScrub(ref __state, true);
+        }
+
+        private static Exception Finalizer(Exception __exception, ref bool __state)
+        {
+            FinishScrub(ref __state, false);
+            return __exception;
+        }
+
+        private static void FinishScrub(ref bool state, bool applyDeferredCap)
+        {
+            if (state)
+            {
+                GaugeRuntime.EndInitialVfxScrub(applyDeferredCap);
+                state = false;
             }
         }
     }

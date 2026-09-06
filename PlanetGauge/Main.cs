@@ -159,6 +159,10 @@ namespace PlanetGauge
                 nameof(scnGame.Play),
                 new[] { typeof(int), typeof(bool) });
             RequireMethod(
+                typeof(scrVfxPlus),
+                nameof(scrVfxPlus.ScrubToTime),
+                new[] { typeof(float) });
+            RequireMethod(
                 typeof(scnEditor),
                 nameof(scnEditor.SwitchToEditMode),
                 new[] { typeof(bool) });

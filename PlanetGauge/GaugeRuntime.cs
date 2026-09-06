@@ -25,6 +25,9 @@ namespace PlanetGauge
         private static bool runtimeFaulted;
         private static int styleRevision;
         private static int sessionStartFloorId;
+        private static bool awaitingInitialVfxScrub;
+        private static int initialVfxScrubDepth;
+        private static bool deferredHistoricalForceRecoveryCap;
         private static readonly float[] judgementTotals = new float[8];
         private static float autoTotal;
 
@@ -63,6 +66,9 @@ namespace PlanetGauge
             blindfoldRevealed = false;
             runtimeFaulted = false;
             sessionStartFloorId = 0;
+            awaitingInitialVfxScrub = false;
+            initialVfxScrubDepth = 0;
+            deferredHistoricalForceRecoveryCap = false;
             EventSettings = PlanetGaugeEventSettings.Default;
             Array.Clear(judgementTotals, 0, judgementTotals.Length);
             autoTotal = 0f;
@@ -71,28 +77,70 @@ namespace PlanetGauge
             styleRevision++;
         }
 
-        internal static void SetSessionStartFloor(int floorId)
+        internal static void PrepareSessionStart(int floorId)
         {
             sessionStartFloorId = floorId > 0 ? floorId : 0;
+            awaitingInitialVfxScrub = sessionStartFloorId > 0;
+            initialVfxScrubDepth = 0;
+            deferredHistoricalForceRecoveryCap = false;
         }
 
-        internal static bool ShouldSuppressHistoricalForcedDamage(
-            PlanetGaugeEventCommand command,
-            int effectFloorId)
+        internal static bool TryBeginInitialVfxScrub()
         {
-            // 중간 시작 복원은 이전 타일의 효과도 StartEffect로 재생한다. 음수 일회성 명령만
-            // 건너뛰고, 상한 100% 초과에 필요한 양수 강제회복과 지속 설정은 그대로 복원한다.
-            return effectFloorId >= 0
-                && effectFloorId < sessionStartFloorId
-                && command.ApplyAttributeMode
-                && command.AttributeMode == PlanetGaugeAttributeMode.ForceRecovery
-                && command.RecoveryAmountPercent < 0f;
+            if (!awaitingInitialVfxScrub && initialVfxScrubDepth <= 0)
+            {
+                return false;
+            }
+
+            if (initialVfxScrubDepth == 0)
+            {
+                awaitingInitialVfxScrub = false;
+                deferredHistoricalForceRecoveryCap = false;
+            }
+
+            initialVfxScrubDepth++;
+            return true;
+        }
+
+        internal static void EndInitialVfxScrub(bool applyDeferredCap)
+        {
+            if (initialVfxScrubDepth <= 0)
+            {
+                deferredHistoricalForceRecoveryCap = false;
+                return;
+            }
+
+            initialVfxScrubDepth--;
+            if (initialVfxScrubDepth > 0)
+            {
+                return;
+            }
+
+            if (applyDeferredCap
+                && deferredHistoricalForceRecoveryCap
+                && EventSettings.RecoveryCapEnabled
+                && Current > EventSettings.RecoveryCapPercent)
+            {
+                Current = EventSettings.RecoveryCapPercent;
+            }
+
+            deferredHistoricalForceRecoveryCap = false;
+        }
+
+        internal static void CancelSessionStartRestore()
+        {
+            sessionStartFloorId = 0;
+            awaitingInitialVfxScrub = false;
+            initialVfxScrubDepth = 0;
+            deferredHistoricalForceRecoveryCap = false;
         }
 
         internal static void ApplyEventSettings(
             PlanetGaugeEventCommand command,
-            bool suppressForcedDamage = false)
+            int effectFloorId = -1)
         {
+            bool historicalEvent = effectFloorId >= 0
+                && effectFloorId < sessionStartFloorId;
             PlanetGaugeEventSettings current = EventSettings;
             bool recoveryBlocked = current.RecoveryBlocked;
             PlanetGaugeRateChannel recoveryRate = current.RecoveryRate;
@@ -173,14 +221,25 @@ namespace PlanetGauge
                 styleRevision++;
             }
 
-            if (command.ForceRecoveryCap && recoveryCapEnabled && Current > recoveryCapPercent)
+            if (initialVfxScrubDepth > 0 && command.ApplyRecoveryCap)
+            {
+                // 과거의 상한 즉시 적용은 최종 시작 상태가 확정된 뒤 한 번만 평가한다.
+                // 이후 이벤트(시작 타일 포함)가 상한을 끄거나 강제 제한 없이 다시 설정하면
+                // 이전 보류를 취소한다. 시작 타일의 강제 제한은 아래에서 즉시 적용된다.
+                deferredHistoricalForceRecoveryCap = historicalEvent && command.ForceRecoveryCap;
+            }
+
+            if (!historicalEvent
+                && command.ForceRecoveryCap
+                && recoveryCapEnabled
+                && Current > recoveryCapPercent)
             {
                 Current = recoveryCapPercent;
             }
 
             if (command.ApplyAttributeMode
                 && command.AttributeMode == PlanetGaugeAttributeMode.ForceRecovery
-                && !suppressForcedDamage)
+                && !(historicalEvent && command.RecoveryAmountPercent < 0f))
             {
                 float before = Current;
                 bool shouldDie = ApplyForcedRecovery(command.RecoveryAmountPercent);

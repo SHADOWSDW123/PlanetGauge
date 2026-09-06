@@ -13,9 +13,15 @@ namespace PlanetGauge
     public sealed class PlanetGaugeSettings : UnityModManager.ModSettings
     {
         private const float FrameOffsetLimit = 4096f;
-        private const int CurrentHudTextDefaultsVersion = 1;
+        private const int CurrentHudTextDefaultsVersion = 2;
+        private const float DefaultMainGaugeWidthPercent = 55f;
+        private const float DefaultMainGaugeValueSizePercent = 120f;
         private const float DefaultAttributeTextSizePercent = 300f;
         private const float DefaultRateTokenSizePercent = 200f;
+        private const float MinMainGaugeWidthPercent = 25f;
+        private const float MaxMainGaugeWidthPercent = 150f;
+        private const float MinAttributeTextSizePercent = 125f;
+        private const float MaxAttributeTextSizePercent = 800f;
 
         private static readonly string[] LanguageLabels =
         {
@@ -42,11 +48,11 @@ namespace PlanetGauge
         public float MainGaugeOffsetX;
         public float MainGaugeOffsetY = -158f;
         public float MainGaugeSizePercent = 100f;
-        public float MainGaugeWidthPercent = 83f;
+        public float MainGaugeWidthPercent = DefaultMainGaugeWidthPercent;
 
         public float MainGaugeValueOffsetX;
         public float MainGaugeValueOffsetY = -14f;
-        public float MainGaugeValueSizePercent = 111f;
+        public float MainGaugeValueSizePercent = DefaultMainGaugeValueSizePercent;
         public bool MainGaugeShowDecimalValue = true;
         public bool MainGaugeValueAttachedToMainGauge = true;
         public float MainGaugeValueScreenOffsetX;
@@ -98,8 +104,8 @@ namespace PlanetGauge
             MainGaugeWidthPercent = DrawFloatSlider(
                 LocalizedStrings.Width,
                 MainGaugeWidthPercent,
-                25f,
-                100f,
+                MinMainGaugeWidthPercent,
+                MaxMainGaugeWidthPercent,
                 "%");
 
             GUILayout.BeginHorizontal();
@@ -107,7 +113,7 @@ namespace PlanetGauge
             if (GUILayout.Button(LocalizedStrings.ResetSize, GUILayout.Width(140f)))
             {
                 MainGaugeSizePercent = 100f;
-                MainGaugeWidthPercent = 83f;
+                MainGaugeWidthPercent = DefaultMainGaugeWidthPercent;
             }
             GUILayout.EndHorizontal();
 
@@ -286,6 +292,7 @@ namespace PlanetGauge
                 MainGaugeValueAttachedToMainGauge = true;
                 MainGaugeValueOffsetX = 0f;
                 MainGaugeValueOffsetY = -14f;
+                MainGaugeValueSizePercent = DefaultMainGaugeValueSizePercent;
                 MainGaugeValueScreenOffsetX = 0f;
                 MainGaugeValueScreenOffsetY = 0f;
                 valueTextOffsetXInput = null;
@@ -298,8 +305,8 @@ namespace PlanetGauge
             AttributeTextSizePercent = DrawFloatSlider(
                 LocalizedStrings.AttributeSize,
                 AttributeTextSizePercent,
-                25f,
-                500f,
+                MinAttributeTextSizePercent,
+                MaxAttributeTextSizePercent,
                 "%");
             bool attributeTextIndependent = !AttributeTextAttachedToMainGauge;
             attributeTextIndependent = GUILayout.Toggle(
@@ -413,10 +420,18 @@ namespace PlanetGauge
             MainGaugeOffsetX = SanitizePositionFloat(MainGaugeOffsetX, 0f);
             MainGaugeOffsetY = SanitizePositionFloat(MainGaugeOffsetY, -158f);
             MainGaugeSizePercent = SanitizeFloat(MainGaugeSizePercent, 100f, 25f, 200f);
-            MainGaugeWidthPercent = SanitizeFloat(MainGaugeWidthPercent, 83f, 25f, 100f);
+            MainGaugeWidthPercent = SanitizeFloat(
+                MainGaugeWidthPercent,
+                DefaultMainGaugeWidthPercent,
+                MinMainGaugeWidthPercent,
+                MaxMainGaugeWidthPercent);
             MainGaugeValueOffsetX = SanitizeFloat(MainGaugeValueOffsetX, 0f, -500f, 500f);
             MainGaugeValueOffsetY = SanitizeFloat(MainGaugeValueOffsetY, -14f, -300f, 300f);
-            MainGaugeValueSizePercent = SanitizeFloat(MainGaugeValueSizePercent, 111f, 50f, 200f);
+            MainGaugeValueSizePercent = SanitizeFloat(
+                MainGaugeValueSizePercent,
+                DefaultMainGaugeValueSizePercent,
+                50f,
+                200f);
             MainGaugeValueScreenOffsetX = SanitizePositionFloat(MainGaugeValueScreenOffsetX, 0f);
             MainGaugeValueScreenOffsetY = SanitizePositionFloat(MainGaugeValueScreenOffsetY, 0f);
             AttributeTextScreenOffsetX = SanitizePositionFloat(AttributeTextScreenOffsetX, 0f);
@@ -424,8 +439,8 @@ namespace PlanetGauge
             AttributeTextSizePercent = SanitizeFloat(
                 AttributeTextSizePercent,
                 DefaultAttributeTextSizePercent,
-                25f,
-                500f);
+                MinAttributeTextSizePercent,
+                MaxAttributeTextSizePercent);
             RateTokenScreenOffsetX = SanitizePositionFloat(RateTokenScreenOffsetX, 0f);
             RateTokenScreenOffsetY = SanitizePositionFloat(RateTokenScreenOffsetY, 0f);
             RateTokenSizePercent = SanitizeFloat(
@@ -478,15 +493,31 @@ namespace PlanetGauge
                 return;
             }
 
-            // 0.3.0까지의 정확한 기본값만 새 기본값으로 올리고 다른 사용자 지정값은 보존한다.
-            if (Mathf.Approximately(AttributeTextSizePercent, 100f))
+            // 각 단계의 정확한 구 기본값만 올리고 다른 사용자 지정값은 보존한다.
+            if (HudTextDefaultsVersion < 1)
             {
-                AttributeTextSizePercent = DefaultAttributeTextSizePercent;
+                if (Mathf.Approximately(AttributeTextSizePercent, 100f))
+                {
+                    AttributeTextSizePercent = DefaultAttributeTextSizePercent;
+                }
+
+                if (Mathf.Approximately(RateTokenSizePercent, 100f))
+                {
+                    RateTokenSizePercent = DefaultRateTokenSizePercent;
+                }
             }
 
-            if (Mathf.Approximately(RateTokenSizePercent, 100f))
+            if (HudTextDefaultsVersion < 2)
             {
-                RateTokenSizePercent = DefaultRateTokenSizePercent;
+                if (Mathf.Approximately(MainGaugeWidthPercent, 83f))
+                {
+                    MainGaugeWidthPercent = DefaultMainGaugeWidthPercent;
+                }
+
+                if (Mathf.Approximately(MainGaugeValueSizePercent, 111f))
+                {
+                    MainGaugeValueSizePercent = DefaultMainGaugeValueSizePercent;
+                }
             }
 
             HudTextDefaultsVersion = CurrentHudTextDefaultsVersion;
