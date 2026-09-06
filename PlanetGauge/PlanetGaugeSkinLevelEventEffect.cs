@@ -27,6 +27,10 @@ namespace PlanetGauge
             {
                 gaugeType = PlanetGaugeSkinGaugeType.Horizontal;
             }
+
+            // ApplyEvent/Decode는 실제 타일 이벤트보다 먼저 실행된다. 이 시점에 대상 PNG의
+            // 알파 범위를 준비해 기능 가동 T 순간에 파일 읽기와 전체 픽셀 스캔이 몰리지 않게 한다.
+            PlanetGaugeDecorationSkinRuntime.QueuePreparation(targetTag);
         }
 
         public override void StartEffect(scrPlanet planet)

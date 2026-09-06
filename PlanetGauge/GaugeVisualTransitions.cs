@@ -46,7 +46,8 @@ namespace PlanetGauge
         }
 
         private static readonly List<PendingWarning> warnings = new List<PendingWarning>();
-        private static readonly List<ForceTransition> transitions = new List<ForceTransition>();
+        private static ForceTransition forceTransition;
+        private static bool forceTransitionActive;
         private static float blindfoldAlpha;
         private static float blindfoldStartAlpha;
         private static float blindfoldTargetAlpha;
@@ -57,7 +58,8 @@ namespace PlanetGauge
         internal static void Reset()
         {
             warnings.Clear();
-            transitions.Clear();
+            forceTransition = default(ForceTransition);
+            forceTransitionActive = false;
             blindfoldAlpha = 0f;
             blindfoldStartAlpha = 0f;
             blindfoldTargetAlpha = 0f;
@@ -72,17 +74,13 @@ namespace PlanetGauge
 
             UpdateBlindfoldTransition(elapsed);
 
-            for (int index = transitions.Count - 1; index >= 0; index--)
+            if (forceTransitionActive)
             {
-                ForceTransition transition = transitions[index];
-                transition.Elapsed += elapsed;
-                if (transition.Elapsed >= ForceTransitionDuration)
+                forceTransition.Elapsed += elapsed;
+                if (forceTransition.Elapsed >= ForceTransitionDuration)
                 {
-                    transitions.RemoveAt(index);
-                }
-                else
-                {
-                    transitions[index] = transition;
+                    forceTransition = default(ForceTransition);
+                    forceTransitionActive = false;
                 }
             }
         }
@@ -167,11 +165,15 @@ namespace PlanetGauge
                 return;
             }
 
-            transitions.Add(new ForceTransition
+            // 겹친 강제 회복은 현재 표시 오프셋에서 새 실제값으로 자연스럽게 이어 붙인다.
+            // List.Add의 최초 backing-array 할당과 이벤트 수만큼의 매 프레임 순회를 피한다.
+            float remainingOffset = GetRemainingOffset();
+            forceTransition = new ForceTransition
             {
-                InitialOffset = -actualDelta,
+                InitialOffset = remainingOffset - actualDelta,
                 Elapsed = 0f
-            });
+            };
+            forceTransitionActive = true;
         }
 
         internal static float GetDisplayedCurrent()
@@ -241,18 +243,16 @@ namespace PlanetGauge
 
         private static float GetRemainingOffset()
         {
-            float offset = 0f;
-            for (int index = 0; index < transitions.Count; index++)
+            if (!forceTransitionActive)
             {
-                ForceTransition transition = transitions[index];
-                float progress = Mathf.Clamp01(
-                    transition.Elapsed / ForceTransitionDuration);
-                float eased = Mathf.Sqrt(
-                    Mathf.Max(0f, 1f - (progress - 1f) * (progress - 1f)));
-                offset += transition.InitialOffset * (1f - eased);
+                return 0f;
             }
 
-            return offset;
+            float progress = Mathf.Clamp01(
+                forceTransition.Elapsed / ForceTransitionDuration);
+            float eased = Mathf.Sqrt(
+                Mathf.Max(0f, 1f - (progress - 1f) * (progress - 1f)));
+            return forceTransition.InitialOffset * (1f - eased);
         }
 
         private static float SanitizeBeatDuration(float value)

@@ -61,9 +61,22 @@ namespace PlanetGauge
             new Dictionary<scrVisualDecoration, DecorationBinding>();
         private static readonly Dictionary<int, TextureAlphaBounds> alphaBoundsCache =
             new Dictionary<int, TextureAlphaBounds>();
+        private static readonly Dictionary<string, TextureAlphaBounds> alphaBoundsByImagePath =
+            new Dictionary<string, TextureAlphaBounds>(StringComparer.OrdinalIgnoreCase);
         private static readonly HashSet<int> unsupportedDecorationIds = new HashSet<int>();
+        private static readonly HashSet<string> pendingPreparationTags =
+            new HashSet<string>(StringComparer.Ordinal);
+        private static readonly List<string> preparationBuffer = new List<string>();
+        private static readonly Dictionary<scrVisualDecoration, TagCommand> desiredBindings =
+            new Dictionary<scrVisualDecoration, TagCommand>();
+        private static readonly List<scrVisualDecoration> removalBuffer =
+            new List<scrVisualDecoration>();
 
         private static long nextSequence;
+        private static bool bindingsDirty;
+        private static int lastReconcileFrame = -1;
+        private static float lastAppliedProgress = float.NaN;
+        private const int ReconcileIntervalFrames = 15;
 
         internal static int ActiveTagCount { get { return commands.Count; } }
         internal static int BoundDecorationCount { get { return bindings.Count; } }
@@ -134,14 +147,29 @@ namespace PlanetGauge
                 }
             }
 
+            // StartEffect 안에서 전체 태그 조회, PNG 스캔, Mesh 복제를 실행하면 이벤트 프레임이
+            // 멈출 수 있다. 다음 decoration LateUpdate에서 한 번에 조정한다.
+            bindingsDirty = true;
+            if (commands.Count == 0 && scrDecorationManager.instance == null)
+            {
+                RestoreAll();
+            }
+        }
+
+        internal static void QueuePreparation(string targetTag)
+        {
+            string[] tags = SplitTags(targetTag);
+            for (int index = 0; index < tags.Length; index++)
+            {
+                pendingPreparationTags.Add(tags[index]);
+            }
+
+            // Decode는 보통 레벨 준비 중 호출된다. 장식 매니저가 이미 준비됐다면 여기서
+            // 읽기 전용 알파 스캔을 끝내 실제 이벤트 실행 프레임으로 비용을 넘기지 않는다.
             scrDecorationManager manager = scrDecorationManager.instance;
             if (manager != null)
             {
-                RefreshBindings(manager, true);
-            }
-            else if (commands.Count == 0)
-            {
-                RestoreAll();
+                PrewarmPendingTags(manager);
             }
         }
 
@@ -152,13 +180,54 @@ namespace PlanetGauge
                 return;
             }
 
+            PrewarmPendingTags(manager);
+
             if (!GaugeRuntime.IsGameplayContext(true) || commands.Count == 0)
             {
-                RestoreAll();
+                if (bindings.Count > 0)
+                {
+                    RestoreAll();
+                }
                 return;
             }
 
-            RefreshBindings(manager, false);
+            int frame = Time.frameCount;
+            bool periodicReconcile = lastReconcileFrame < 0
+                || frame - lastReconcileFrame >= ReconcileIntervalFrames;
+            if (bindingsDirty || periodicReconcile)
+            {
+                RefreshBindings(manager, false);
+                bindingsDirty = false;
+                lastReconcileFrame = frame;
+                lastAppliedProgress = Progress;
+                return;
+            }
+
+            float progress = Progress;
+            if (Mathf.Approximately(lastAppliedProgress, progress))
+            {
+                return;
+            }
+
+            foreach (DecorationBinding binding in bindings.Values)
+            {
+                if (binding == null || binding.Decoration == null)
+                {
+                    bindingsDirty = true;
+                    continue;
+                }
+
+                if (!OwnsWorkingMesh(binding) && !RebuildBindingMesh(binding))
+                {
+                    bindingsDirty = true;
+                    continue;
+                }
+
+                EnsureVisibleRenderPath(binding);
+                ApplyCrop(binding, progress, false);
+            }
+
+            lastAppliedProgress = progress;
         }
 
         internal static void ApplyAfterShaderUpdate(scrVisualDecoration decoration)
@@ -189,8 +258,16 @@ namespace PlanetGauge
             commands.Clear();
             bindings.Clear();
             alphaBoundsCache.Clear();
+            alphaBoundsByImagePath.Clear();
             unsupportedDecorationIds.Clear();
+            pendingPreparationTags.Clear();
+            preparationBuffer.Clear();
+            desiredBindings.Clear();
+            removalBuffer.Clear();
             nextSequence = 0;
+            bindingsDirty = false;
+            lastReconcileFrame = -1;
+            lastAppliedProgress = float.NaN;
         }
 
         internal static string DescribeCurrent()
@@ -209,8 +286,7 @@ namespace PlanetGauge
 
         private static void RefreshBindings(scrDecorationManager manager, bool forceApply)
         {
-            Dictionary<scrVisualDecoration, TagCommand> desired =
-                new Dictionary<scrVisualDecoration, TagCommand>();
+            desiredBindings.Clear();
 
             foreach (KeyValuePair<string, TagCommand> pair in commands)
             {
@@ -234,28 +310,32 @@ namespace PlanetGauge
                     }
 
                     TagCommand previous;
-                    if (!desired.TryGetValue(visual, out previous)
+                    if (!desiredBindings.TryGetValue(visual, out previous)
                         || pair.Value.Sequence > previous.Sequence)
                     {
-                        desired[visual] = pair.Value;
+                        desiredBindings[visual] = pair.Value;
                     }
                 }
             }
 
-            scrVisualDecoration[] previouslyBound = bindings.Keys.ToArray();
-            for (int index = 0; index < previouslyBound.Length; index++)
+            removalBuffer.Clear();
+            foreach (scrVisualDecoration decoration in bindings.Keys)
             {
-                scrVisualDecoration decoration = previouslyBound[index];
-                if (decoration == null || !desired.ContainsKey(decoration))
+                if (decoration == null || !desiredBindings.ContainsKey(decoration))
                 {
-                    RestoreAndRemove(decoration);
+                    removalBuffer.Add(decoration);
                 }
+            }
+            for (int index = 0; index < removalBuffer.Count; index++)
+            {
+                RestoreAndRemove(removalBuffer[index]);
             }
 
             float progress = Progress;
-            foreach (KeyValuePair<scrVisualDecoration, TagCommand> pair in desired)
+            foreach (KeyValuePair<scrVisualDecoration, TagCommand> pair in desiredBindings)
             {
                 DecorationBinding binding;
+                bool bindingCreated = false;
                 if (!bindings.TryGetValue(pair.Key, out binding))
                 {
                     binding = CreateBinding(pair.Key);
@@ -265,7 +345,7 @@ namespace PlanetGauge
                     }
 
                     bindings[pair.Key] = binding;
-                    forceApply = true;
+                    bindingCreated = true;
                 }
 
                 bool gaugeTypeChanged = binding.GaugeType != pair.Value.GaugeType;
@@ -278,7 +358,62 @@ namespace PlanetGauge
                 }
 
                 EnsureVisibleRenderPath(binding);
-                ApplyCrop(binding, progress, forceApply || gaugeTypeChanged);
+                ApplyCrop(binding, progress, forceApply || bindingCreated || gaugeTypeChanged);
+            }
+        }
+
+        private static void PrewarmPendingTags(scrDecorationManager manager)
+        {
+            if (manager == null || pendingPreparationTags.Count == 0)
+            {
+                return;
+            }
+
+            preparationBuffer.Clear();
+            preparationBuffer.AddRange(pendingPreparationTags);
+            for (int tagIndex = 0; tagIndex < preparationBuffer.Count; tagIndex++)
+            {
+                string tag = preparationBuffer[tagIndex];
+                bool foundVisual = false;
+                IEnumerable<scrDecoration> tagged;
+                try
+                {
+                    tagged = manager.GetTaggedDecorations(tag);
+                }
+                catch (Exception exception)
+                {
+                    Main.LogException("장식 스킨 사전 준비 중 태그 조회에 실패했습니다: " + tag, exception);
+                    continue;
+                }
+
+                foreach (scrDecoration decoration in tagged)
+                {
+                    scrVisualDecoration visual = decoration as scrVisualDecoration;
+                    if (visual == null)
+                    {
+                        continue;
+                    }
+
+                    foundVisual = true;
+                    PrewarmAlphaBounds(visual);
+                }
+
+                if (foundVisual)
+                {
+                    pendingPreparationTags.Remove(tag);
+                }
+            }
+        }
+
+        private static void PrewarmAlphaBounds(scrVisualDecoration decoration)
+        {
+            Sprite sprite = decoration == null || decoration.spriteRenderer == null
+                ? null
+                : decoration.spriteRenderer.sprite;
+            Texture2D texture = sprite == null ? null : sprite.texture;
+            if (texture != null)
+            {
+                GetOrScanAlphaBounds(texture, decoration);
             }
         }
 
@@ -426,11 +561,33 @@ namespace PlanetGauge
             }
 
             progress = Mathf.Clamp01(progress);
-            CalculateAxis(binding);
-            bool alphaRangeChanged = RefreshAlphaRange(binding);
+            scrVisualDecoration decoration = binding.Decoration;
+            Sprite sprite = decoration == null || decoration.spriteRenderer == null
+                ? null
+                : decoration.spriteRenderer.sprite;
+            Texture2D texture = sprite == null ? null : sprite.texture;
+            int textureId = texture == null ? 0 : texture.GetInstanceID();
+            bool gaugeTypeChanged = binding.LastGaugeType != binding.GaugeType;
+            bool sourceChanged = float.IsNaN(binding.LastProgress)
+                || binding.AlphaTextureId != textureId;
+            if (!forceApply
+                && !gaugeTypeChanged
+                && !sourceChanged
+                && Mathf.Approximately(binding.LastProgress, progress))
+            {
+                return;
+            }
+
+            if (gaugeTypeChanged || sourceChanged)
+            {
+                CalculateAxis(binding);
+            }
+            bool alphaRangeChanged = gaugeTypeChanged || sourceChanged
+                ? RefreshAlphaRange(binding)
+                : false;
             if (!forceApply
                 && !alphaRangeChanged
-                && binding.LastGaugeType == binding.GaugeType
+                && !gaugeTypeChanged
                 && Mathf.Approximately(binding.LastProgress, progress))
             {
                 return;
@@ -510,12 +667,7 @@ namespace PlanetGauge
             }
 
             int textureId = texture.GetInstanceID();
-            TextureAlphaBounds bounds;
-            if (!alphaBoundsCache.TryGetValue(textureId, out bounds))
-            {
-                bounds = ScanTextureAlphaBounds(texture, decoration);
-                alphaBoundsCache[textureId] = bounds;
-            }
+            TextureAlphaBounds bounds = GetOrScanAlphaBounds(texture, decoration);
 
             float textureMinimum = binding.GaugeType == PlanetGaugeSkinGaugeType.Vertical
                 ? bounds.MinimumY
@@ -548,6 +700,34 @@ namespace PlanetGauge
             return previousTextureId != textureId
                 || !Mathf.Approximately(previousMinimum, binding.AlphaMinimum)
                 || !Mathf.Approximately(previousMaximum, binding.AlphaMaximum);
+        }
+
+        private static TextureAlphaBounds GetOrScanAlphaBounds(
+            Texture2D texture,
+            scrVisualDecoration decoration)
+        {
+            int textureId = texture.GetInstanceID();
+            TextureAlphaBounds bounds;
+            if (alphaBoundsCache.TryGetValue(textureId, out bounds))
+            {
+                return bounds;
+            }
+
+            string imagePath = TryGetOriginalImagePath(decoration);
+            if (!string.IsNullOrEmpty(imagePath)
+                && alphaBoundsByImagePath.TryGetValue(imagePath, out bounds))
+            {
+                alphaBoundsCache[textureId] = bounds;
+                return bounds;
+            }
+
+            bounds = ScanTextureAlphaBounds(texture, decoration);
+            alphaBoundsCache[textureId] = bounds;
+            if (!string.IsNullOrEmpty(imagePath))
+            {
+                alphaBoundsByImagePath[imagePath] = bounds;
+            }
+            return bounds;
         }
 
         private static TextureAlphaBounds ScanTextureAlphaBounds(
@@ -639,27 +819,8 @@ namespace PlanetGauge
         {
             width = 0;
             height = 0;
-            if (decoration == null || decoration.sourceLevelEvent == null)
-            {
-                return null;
-            }
-
-            string imageName = decoration.sourceLevelEvent.GetString("decorationImage");
-            string levelPath = ADOBase.levelPath;
-            if (string.IsNullOrWhiteSpace(imageName)
-                || imageName.StartsWith("prefab:", StringComparison.OrdinalIgnoreCase)
-                || string.IsNullOrWhiteSpace(levelPath))
-            {
-                return null;
-            }
-
-            string levelDirectory = Path.GetDirectoryName(levelPath);
-            if (string.IsNullOrWhiteSpace(levelDirectory))
-            {
-                return null;
-            }
-
-            string imagePath = Path.Combine(levelDirectory, imageName);
+            string imagePath = TryGetOriginalImagePath(decoration);
+            if (string.IsNullOrEmpty(imagePath)) return null;
             LoadResult status;
             byte[] bytes = RDFile.ReadAllBytes(imagePath, out status);
             if (bytes == null || bytes.Length == 0 || status != LoadResult.Successful)
@@ -687,6 +848,38 @@ namespace PlanetGauge
                 {
                     UnityEngine.Object.Destroy(readable);
                 }
+            }
+        }
+
+        private static string TryGetOriginalImagePath(scrVisualDecoration decoration)
+        {
+            if (decoration == null || decoration.sourceLevelEvent == null)
+            {
+                return null;
+            }
+
+            string imageName = decoration.sourceLevelEvent.GetString("decorationImage");
+            string levelPath = ADOBase.levelPath;
+            if (string.IsNullOrWhiteSpace(imageName)
+                || imageName.StartsWith("prefab:", StringComparison.OrdinalIgnoreCase)
+                || string.IsNullOrWhiteSpace(levelPath))
+            {
+                return null;
+            }
+
+            string levelDirectory = Path.GetDirectoryName(levelPath);
+            if (string.IsNullOrWhiteSpace(levelDirectory))
+            {
+                return null;
+            }
+
+            try
+            {
+                return Path.GetFullPath(Path.Combine(levelDirectory, imageName));
+            }
+            catch (Exception)
+            {
+                return null;
             }
         }
 

@@ -116,7 +116,10 @@ namespace PlanetGauge
             }
             if (GaugeRuntime.ShouldHandle())
             {
-                GaugeRuntime.ApplyEventSettings(command);
+                bool suppressForcedDamage = GaugeRuntime.ShouldSuppressHistoricalForcedDamage(
+                    command,
+                    floorID);
+                GaugeRuntime.ApplyEventSettings(command, suppressForcedDamage);
             }
         }
 

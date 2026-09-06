@@ -24,6 +24,7 @@ namespace PlanetGauge
         private static bool blindfoldRevealed;
         private static bool runtimeFaulted;
         private static int styleRevision;
+        private static int sessionStartFloorId;
         private static readonly float[] judgementTotals = new float[8];
         private static float autoTotal;
 
@@ -61,6 +62,7 @@ namespace PlanetGauge
             forcingDeath = false;
             blindfoldRevealed = false;
             runtimeFaulted = false;
+            sessionStartFloorId = 0;
             EventSettings = PlanetGaugeEventSettings.Default;
             Array.Clear(judgementTotals, 0, judgementTotals.Length);
             autoTotal = 0f;
@@ -69,7 +71,27 @@ namespace PlanetGauge
             styleRevision++;
         }
 
-        internal static void ApplyEventSettings(PlanetGaugeEventCommand command)
+        internal static void SetSessionStartFloor(int floorId)
+        {
+            sessionStartFloorId = floorId > 0 ? floorId : 0;
+        }
+
+        internal static bool ShouldSuppressHistoricalForcedDamage(
+            PlanetGaugeEventCommand command,
+            int effectFloorId)
+        {
+            // 중간 시작 복원은 이전 타일의 효과도 StartEffect로 재생한다. 음수 일회성 명령만
+            // 건너뛰고, 상한 100% 초과에 필요한 양수 강제회복과 지속 설정은 그대로 복원한다.
+            return effectFloorId >= 0
+                && effectFloorId < sessionStartFloorId
+                && command.ApplyAttributeMode
+                && command.AttributeMode == PlanetGaugeAttributeMode.ForceRecovery
+                && command.RecoveryAmountPercent < 0f;
+        }
+
+        internal static void ApplyEventSettings(
+            PlanetGaugeEventCommand command,
+            bool suppressForcedDamage = false)
         {
             PlanetGaugeEventSettings current = EventSettings;
             bool recoveryBlocked = current.RecoveryBlocked;
@@ -157,7 +179,8 @@ namespace PlanetGauge
             }
 
             if (command.ApplyAttributeMode
-                && command.AttributeMode == PlanetGaugeAttributeMode.ForceRecovery)
+                && command.AttributeMode == PlanetGaugeAttributeMode.ForceRecovery
+                && !suppressForcedDamage)
             {
                 float before = Current;
                 bool shouldDie = ApplyForcedRecovery(command.RecoveryAmountPercent);

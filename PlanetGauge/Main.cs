@@ -155,6 +155,10 @@ namespace PlanetGauge
         {
             RequireMethod(typeof(scnEditor), nameof(scnEditor.Play), Type.EmptyTypes);
             RequireMethod(
+                typeof(scnGame),
+                nameof(scnGame.Play),
+                new[] { typeof(int), typeof(bool) });
+            RequireMethod(
                 typeof(scnEditor),
                 nameof(scnEditor.SwitchToEditMode),
                 new[] { typeof(bool) });

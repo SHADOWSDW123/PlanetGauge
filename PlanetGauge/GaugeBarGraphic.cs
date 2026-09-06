@@ -443,17 +443,6 @@ namespace PlanetGauge
                 0f,
                 Mathf.Min(rect.width, rect.height) * 0.5f);
             Vector2 center = rect.center;
-            Vector2[] points =
-            {
-                new Vector2(rect.xMin + cut, rect.yMin),
-                new Vector2(rect.xMax - cut, rect.yMin),
-                new Vector2(rect.xMax, rect.yMin + cut),
-                new Vector2(rect.xMax, rect.yMax - cut),
-                new Vector2(rect.xMax - cut, rect.yMax),
-                new Vector2(rect.xMin + cut, rect.yMax),
-                new Vector2(rect.xMin, rect.yMax - cut),
-                new Vector2(rect.xMin, rect.yMin + cut)
-            };
 
             int centerIndex = vertexHelper.currentVertCount;
             Color32 centerColor = useGradient
@@ -461,22 +450,45 @@ namespace PlanetGauge
                 : solidColor;
             vertexHelper.AddVert(center, centerColor, Vector2.one * 0.5f);
 
-            // 중심과 외곽 꼭짓점을 잇는 삼각형 팬으로 볼록한 팔각형을 구성한다.
-            for (int index = 0; index < points.Length; index++)
-            {
-                Vector2 point = points[index];
-                Color32 pointColor = useGradient
-                    ? ApplyOpacity(EvaluateGradient(point.x, point.y, gradientReference), opacity)
-                    : solidColor;
-                vertexHelper.AddVert(point, pointColor, Vector2.zero);
-            }
+            // ForceRecovery 전환 중에는 이 메시가 매 프레임 다시 만들어진다. 고정 8점 배열을
+            // 만들지 않고 직접 추가해 이벤트 발동 뒤의 짧은 GC 압력을 없앤다.
+            AddChamferPoint(vertexHelper, new Vector2(rect.xMin + cut, rect.yMin), solidColor,
+                useGradient, gradientReference, opacity);
+            AddChamferPoint(vertexHelper, new Vector2(rect.xMax - cut, rect.yMin), solidColor,
+                useGradient, gradientReference, opacity);
+            AddChamferPoint(vertexHelper, new Vector2(rect.xMax, rect.yMin + cut), solidColor,
+                useGradient, gradientReference, opacity);
+            AddChamferPoint(vertexHelper, new Vector2(rect.xMax, rect.yMax - cut), solidColor,
+                useGradient, gradientReference, opacity);
+            AddChamferPoint(vertexHelper, new Vector2(rect.xMax - cut, rect.yMax), solidColor,
+                useGradient, gradientReference, opacity);
+            AddChamferPoint(vertexHelper, new Vector2(rect.xMin + cut, rect.yMax), solidColor,
+                useGradient, gradientReference, opacity);
+            AddChamferPoint(vertexHelper, new Vector2(rect.xMin, rect.yMax - cut), solidColor,
+                useGradient, gradientReference, opacity);
+            AddChamferPoint(vertexHelper, new Vector2(rect.xMin, rect.yMin + cut), solidColor,
+                useGradient, gradientReference, opacity);
 
-            for (int index = 0; index < points.Length; index++)
+            for (int index = 0; index < 8; index++)
             {
                 int current = centerIndex + 1 + index;
-                int next = centerIndex + 1 + ((index + 1) % points.Length);
+                int next = centerIndex + 1 + ((index + 1) % 8);
                 vertexHelper.AddTriangle(centerIndex, current, next);
             }
+        }
+
+        private void AddChamferPoint(
+            VertexHelper vertexHelper,
+            Vector2 point,
+            Color32 solidColor,
+            bool useGradient,
+            Rect gradientReference,
+            float opacity)
+        {
+            Color32 pointColor = useGradient
+                ? ApplyOpacity(EvaluateGradient(point.x, point.y, gradientReference), opacity)
+                : solidColor;
+            vertexHelper.AddVert(point, pointColor, Vector2.zero);
         }
 
         private Color32 EvaluateGradient(float x, float y, Rect referenceRect)

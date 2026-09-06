@@ -16,6 +16,19 @@ namespace PlanetGauge
         }
     }
 
+    // 중간 타일 재생 준비 중 과거 ffxPlusBase 효과가 다시 실행되므로 실제 시작 타일을 보존한다.
+    [HarmonyPatch(typeof(scnGame), nameof(scnGame.Play), typeof(int), typeof(bool))]
+    internal static class GamePlayStartFloorPatch
+    {
+        private static void Prefix(int seqID)
+        {
+            if (Main.IsEnabled && Main.EditorGaugeEnabled)
+            {
+                GaugeRuntime.SetSessionStartFloor(seqID);
+            }
+        }
+    }
+
     [HarmonyPatch(typeof(scnEditor), nameof(scnEditor.SwitchToEditMode))]
     internal static class EditorSwitchToEditModePatch
     {
