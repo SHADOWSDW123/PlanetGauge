@@ -6,11 +6,18 @@ ADOFAI에 체력 시스템을 추가합니다.
 
 MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 
-# 목차 및 기능
-- Gauge Detail - 체력 시스템 세부
+# 기능
 - PlanetGauge 설정 - 커스텀 이벤트
+- Gauge Attributes - 특수 속성(with PlanetGauge 설정)
 - PlanetGauge Custom Skins - 커스텀 스킨
-- 
+- PlanetGauge 스킨 - 커스텀 이벤트(장식 연동)
+
+# 사용 방법
+<img width="615" height="137" alt="image" src="https://github.com/user-attachments/assets/63a66c1b-feae-40ec-a662-c8df9b549291" />
+
+모드를 적용한 후 레벨 에디터를 들어가면 실패 방지 아이콘 위에 체력 바가 뜹니다.
+해당 체력 바를 눌러 PlanetGauge를 활성화할 수 있습니다.
+체력 바가 무지개로 빛난다면 활성화 성공!
 
 # Gauge Detail
 
@@ -24,25 +31,18 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
   
 해당 수치는 변동될 수 있습니다.
 
-# 사용 방법
-<img width="615" height="137" alt="image" src="https://github.com/user-attachments/assets/63a66c1b-feae-40ec-a662-c8df9b549291" />
-
-모드를 적용한 후 레벨 에디터를 들어가면 실패 방지 아이콘 위에 체력 바가 뜹니다.
-해당 체력 바를 눌러 PlanetGauge를 활성화할 수 있습니다.
-체력 바가 무지개로 빛난다면 활성화 성공!
-
 # PlanetGauge 설정 이벤트
 <img width="500" height="868" alt="wip_setgauge" src="https://github.com/user-attachments/assets/5bf46a38-33f6-4d96-a6bf-c763351ea0a9" />
 
 * PlanetGauge 게임플레이에 영향을 주는 속성들을 설정할 수 있습니다.
-* `체력 강제 회복`은 `회복량 설정`만큼 현재 체력을 직접 더하거나 뺍니다. 음수는 체력을 깎고, 회복 상한을 넘는 양수 회복은 상쇄됩니다.
-* 0.1.5부터 `사전 경고 각도 오프셋`을 음수로 설정하면 실제 강제 회복/차감 시점보다 먼저 게이지 범위를 점멸해 예고합니다. `0°`는 경고 없이 기존 시점에 즉시 실행합니다.
-* 경고의 `점멸 주기`는 비트 단위이며 기본값은 `0.5 비트`입니다. 에디터에서도 블룸의 `지속 시간`과 같은 네이티브 단위 표기를 사용합니다. 실제 체력과 숫자는 이벤트 시점에 즉시 확정되고, 색 구간만 0.75초 OutCirc로 소멸합니다.
+
 # 게이지 설정에 따른 체력바 변형
 * 게이지 속성에 따라 체력과 텍스트의 색상과 특징이 변화합니다.
 * 속성이 다음과 같이 기재됩니다.
 
-> - 체력 회복 차단: Increase Disabled
+> - 체력 회복 차단/정지: Increase Disabled / Increase Frozen
+> - 체력 감소 정지: Decrease Frozen
+> - 게이지 정지: Gauge Frozen
 > - 체력 회복량 증폭: Increase Amplified
 > - 체력 감소량 증폭: Decrease Amplified
 > - 체력 증감량 증폭: Rate Amplified
@@ -50,8 +50,10 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 > - 체력 표시 차단: Blindfolded 
 > - 실패방지 해제: No-Fail Disabled (*PlanetGauge 모드의 실패방지만 해제됩니다.)
 > - 체력 상한 설정: Increase Limited
+> 
 >
 > - 체력 강제 회복: N/A(속성 기재 없음)
+> - 게이지 HUD 숨기기: N/A(속성 기재 없음)
 
 # 알아두면 좋은 거
 - GUI 창의 설정에서 체력 텍스트를 소수점 단위까지 표시할 수 있습니다.(Show decimal health)
@@ -61,9 +63,8 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 
 - 게이지랑 무적모드를 동시에 켜서 게이지 폭사 후에도 게임을 계속하실 수 있습니다.
 - PlanetGauge, 무적모드, 무적모드 해제 속성 3개가 다 켜진 상태에서 폭사시 게이지만 폭사합니다.
-- 체력 강제 회복 속성은 -1000~1000까지 회복이 가능합니다.
 - 사전 경고 각도 오프셋(체력 강제 회복) 변수는 음수 각도로만 설정할 수 있습니다.
-- 체력 상한 설정은 1000까지 설정할 수 있습니다.
+- 증가/감소율 설정을 0%로 만들면 Frozen 속성으로 변합니다.
 
 - 인게임에서 게이지 온오프 아이콘도 같이 체력이 변화합니다.
 - 커스텀 게이지 스킨은 일부 게이지 애니메이션의 영향을 받지 않습니다.
