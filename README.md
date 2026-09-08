@@ -1,20 +1,32 @@
 # PlanetGauge
+<img width="620" height="260" alt="image" src="https://github.com/user-attachments/assets/ef2181dc-0b11-4374-8472-58c33b02229f" />
+
 ADOFAI에 체력 시스템을 추가합니다.
 # SHOWCASE
 
 MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 
+# 목차 및 기능
+- Gauge Detail - 체력 시스템 세부
+- PlanetGauge 설정 - 커스텀 이벤트
+- PlanetGauge Custom Skins - 커스텀 스킨
+- 
+
 # Gauge Detail
-기본 체력(Default) - 100
-정확!(Perfect) - +0.1
-빠름/느림(EPerfect/LPerfect) - -0.8
-빠름!/느림!(Early / Late) - -1.5
-매우 빠름(Too Early) - -3
-과부하(Overload | Fail) - -8
-놓침 (Miss | Fail) - -6
+
+- 기본 체력(Default) - 100 
+- 정확!(Perfect) - +0.1 
+- 빠름/느림(EPerfect/LPerfect) - -0.8 
+- 빠름!/느림!(Early / Late) - -1.5 
+- 매우 빠름(Too Early) - -3 
+- 과부하(Overload | Fail Trigger) - -8 
+- 놓침 (Miss | Fail Trigger) - -6
+  
 해당 수치는 변동될 수 있습니다.
 
 # 사용 방법
+<img width="615" height="137" alt="image" src="https://github.com/user-attachments/assets/63a66c1b-feae-40ec-a662-c8df9b549291" />
+
 모드를 적용한 후 레벨 에디터를 들어가면 실패 방지 아이콘 위에 체력 바가 뜹니다.
 해당 체력 바를 눌러 PlanetGauge를 활성화할 수 있습니다.
 체력 바가 무지개로 빛난다면 활성화 성공!
@@ -22,7 +34,7 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 # PlanetGauge 설정 이벤트
 <img width="500" height="868" alt="wip_setgauge" src="https://github.com/user-attachments/assets/5bf46a38-33f6-4d96-a6bf-c763351ea0a9" />
 
-* 게이지 증감률 변경(감쇠/증폭), 회복 차단, 체력 표시 차단(Blindfold), 체력 강제 회복/감소, 체력상한 설정, 실패방지 오프(게이지 모드에서만) 등과 같은 내용들을 인게임에서 설정할 수 있습니다.
+* PlanetGauge 게임플레이에 영향을 주는 속성들을 설정할 수 있습니다.
 * `체력 강제 회복`은 `회복량 설정`만큼 현재 체력을 직접 더하거나 뺍니다. 음수는 체력을 깎고, 회복 상한을 넘는 양수 회복은 상쇄됩니다.
 * 0.1.5부터 `사전 경고 각도 오프셋`을 음수로 설정하면 실제 강제 회복/차감 시점보다 먼저 게이지 범위를 점멸해 예고합니다. `0°`는 경고 없이 기존 시점에 즉시 실행합니다.
 * 경고의 `점멸 주기`는 비트 단위이며 기본값은 `0.5 비트`입니다. 에디터에서도 블룸의 `지속 시간`과 같은 네이티브 단위 표기를 사용합니다. 실제 체력과 숫자는 이벤트 시점에 즉시 확정되고, 색 구간만 0.75초 OutCirc로 소멸합니다.
@@ -50,7 +62,8 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 - 게이지랑 무적모드를 동시에 켜서 게이지 폭사 후에도 게임을 계속하실 수 있습니다.
 - PlanetGauge, 무적모드, 무적모드 해제 속성 3개가 다 켜진 상태에서 폭사시 게이지만 폭사합니다.
 - 체력 강제 회복 속성은 -1000~1000까지 회복이 가능합니다.
-- 체력 상한 설정도 1000까지 설정할 수 있습니다.
+- 사전 경고 각도 오프셋(체력 강제 회복) 변수는 음수 각도로만 설정할 수 있습니다.
+- 체력 상한 설정은 1000까지 설정할 수 있습니다.
 
 - 인게임에서 게이지 온오프 아이콘도 같이 체력이 변화합니다.
 - 커스텀 게이지 스킨은 일부 게이지 애니메이션의 영향을 받지 않습니다.
@@ -70,10 +83,9 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 # 이런 분들에게 추천합니다
 - 손풀기 혹은 라이트하게 게임을 플레이하고 싶으신 분들
 - 고레벨 챌린지를 하고 싶으신 분들
-- 레벨을 팔때 어디서 막히는지 감을 잡고 싶으신 분들
-- 이미 깬 맵을 다시 찍먹하고 싶은데 무적모드는 좀 짜치다 생각하시는 분들
+- 레벨을 연습할 때 부족한 곳을 찾고 싶으신 분들
+- 이미 깬 맵을 다시 찍먹하고 싶은데 무적모드는 별로라고 생각하시는 분들
 - 판정을 전체적으로 개선하고 싶으신 분들
-- 무한리트가 싫으신 분들
 - 맵에 체력시스템을 편하게 추가하고 싶으신 분들
 
 ---
