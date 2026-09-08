@@ -55,6 +55,14 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 > - 체력 강제 회복: N/A(속성 기재 없음)
 > - 게이지 HUD 숨기기: N/A(속성 기재 없음)
 
+# 커스텀 스킨
+<img width="594" height="220" alt="image" src="https://github.com/user-attachments/assets/33615786-0ecf-4a5a-92c2-291776e3fa84" />
+<img width="651" height="195" alt="image" src="https://github.com/user-attachments/assets/5c46ea29-6b74-4f0c-97dc-890820b7906f" />
+
+직접 PNG 사진을 넣어 커스텀 스킨을 만들 수 있습니다.
+프레임 PNG까지 넣어 게이지를 감쌀 수 있습니다.
++게이지 소모 방법을 수직/수평으로 나누어 다양한 게이지 설정이 가능합니다.
+
 # 알아두면 좋은 거
 - GUI 창의 설정에서 체력 텍스트를 소수점 단위까지 표시할 수 있습니다.(Show decimal health)
 - 위치 독립화(Independent position)를 켜면 화면 중앙 기준 X/Y를 직접 설정할 수 있습니다.
