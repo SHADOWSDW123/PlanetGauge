@@ -142,17 +142,17 @@ namespace PlanetGauge
     {
         internal static float SanitizeMultiplier(float value)
         {
-            return SanitizePercent(value, 100f, 0f, 1000f);
+            return SanitizeMinimum(value, 100f, 0f);
         }
 
         internal static float SanitizeRecoveryCap(float value)
         {
-            return SanitizePercent(value, 100f, 0.1f, 1000f);
+            return SanitizeMinimum(value, 100f, 0.1f);
         }
 
         internal static float SanitizeRecoveryAmount(float value)
         {
-            return SanitizePercent(value, 0f, -1000f, 1000f);
+            return SanitizeFinite(value, 0f);
         }
 
         internal static float SanitizeWarningOffsetAngle(float value)
@@ -167,7 +167,7 @@ namespace PlanetGauge
 
         internal static float SanitizeWarningPulseBeats(float value)
         {
-            return SanitizePercent(value, 0.5f, 0.125f, 16f);
+            return SanitizeMinimum(value, 0.5f, 0.0125f);
         }
 
         internal static bool IsAmplificationMode(PlanetGaugeAttributeMode mode)
@@ -177,18 +177,24 @@ namespace PlanetGauge
                 || mode == PlanetGaugeAttributeMode.AmplifyBoth;
         }
 
-        private static float SanitizePercent(
+        private static float SanitizeMinimum(
             float value,
             float fallback,
-            float minimum,
-            float maximum)
+            float minimum)
         {
             if (float.IsNaN(value) || float.IsInfinity(value))
             {
                 return fallback;
             }
 
-            return Mathf.Clamp(value, minimum, maximum);
+            return Mathf.Max(value, minimum);
+        }
+
+        private static float SanitizeFinite(float value, float fallback)
+        {
+            return float.IsNaN(value) || float.IsInfinity(value)
+                ? fallback
+                : value;
         }
     }
 

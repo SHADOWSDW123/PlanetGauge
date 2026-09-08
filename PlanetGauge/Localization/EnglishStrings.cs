@@ -68,6 +68,8 @@ namespace PlanetGauge
         internal const string IncreaseLimited = "Increase Limited";
         internal const string ReducedEffect = "{0} Reduced";
         internal const string AmplifiedEffect = "{0} Amplified";
+        internal const string FrozenEffect = "{0} Frozen";
+        internal const string GaugeFrozen = "Gauge Frozen";
 
         internal const string GaugeEnabled = "PlanetGauge enabled";
         internal const string GaugeDisabled = "PlanetGauge disabled";

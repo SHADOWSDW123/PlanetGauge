@@ -7,7 +7,7 @@ namespace PlanetGauge
     {
         internal const float InitialGauge = 100f;
         internal const float MaximumGauge = 100f;
-        internal const float NoFailMinimumGauge = -5f;
+        internal const float NoFailMinimumGauge = 0f;
         internal const float PerfectDelta = 0.1f;
         internal const float EarlyPerfectDelta = -0.8f;
         internal const float LatePerfectDelta = -0.8f;
@@ -593,6 +593,7 @@ namespace PlanetGauge
         {
             return left.Enabled == right.Enabled
                 && left.Source == right.Source
+                && (left.Percent <= 0f) == (right.Percent <= 0f)
                 && Mathf.Approximately(left.Percent, right.Percent);
         }
     }

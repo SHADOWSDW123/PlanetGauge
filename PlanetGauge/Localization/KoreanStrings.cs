@@ -68,6 +68,8 @@ namespace PlanetGauge
         internal const string IncreaseLimited = "최대체력 조정됨";
         internal const string ReducedEffect = "{0} 감소됨";
         internal const string AmplifiedEffect = "{0} 증폭됨";
+        internal const string FrozenEffect = "{0} 정지";
+        internal const string GaugeFrozen = "게이지 정지";
         //PG 기계적 에딧
         internal const string GaugeEnabled = "PlanetGauge 켜짐";
         internal const string GaugeDisabled = "PlanetGauge 꺼짐";

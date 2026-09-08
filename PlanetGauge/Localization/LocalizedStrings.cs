@@ -137,6 +137,8 @@ namespace PlanetGauge
         internal static string IncreaseLimited { get { return IsAttributeDisplayKorean ? KoreanStrings.IncreaseLimited : EnglishStrings.IncreaseLimited; } }
         internal static string ReducedEffect { get { return IsAttributeDisplayKorean ? KoreanStrings.ReducedEffect : EnglishStrings.ReducedEffect; } }
         internal static string AmplifiedEffect { get { return IsAttributeDisplayKorean ? KoreanStrings.AmplifiedEffect : EnglishStrings.AmplifiedEffect; } }
+        internal static string FrozenEffect { get { return IsAttributeDisplayKorean ? KoreanStrings.FrozenEffect : EnglishStrings.FrozenEffect; } }
+        internal static string GaugeFrozen { get { return IsAttributeDisplayKorean ? KoreanStrings.GaugeFrozen : EnglishStrings.GaugeFrozen; } }
         internal static string GaugeEnabled { get { return IsKorean ? KoreanStrings.GaugeEnabled : EnglishStrings.GaugeEnabled; } }
         internal static string GaugeDisabled { get { return IsKorean ? KoreanStrings.GaugeDisabled : EnglishStrings.GaugeDisabled; } }
         internal static string PngImage { get { return IsKorean ? KoreanStrings.PngImage : EnglishStrings.PngImage; } }

@@ -557,7 +557,7 @@ namespace PlanetGauge
                 LocalizedStrings.MultiplierPercentLabel);
             multiplier.unit = "%";
             multiplier.float_min = 0f;
-            multiplier.float_max = 1000f;
+            multiplier.float_max = float.MaxValue;
             multiplier.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyDecrease.ToString()));
             multiplier.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyIncrease.ToString()));
             multiplier.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyBoth.ToString()));
@@ -580,8 +580,8 @@ namespace PlanetGauge
                 0f,
                 LocalizedStrings.RecoveryAmountLabel);
             recoveryAmount.unit = "%";
-            recoveryAmount.float_min = -1000f;
-            recoveryAmount.float_max = 1000f;
+            recoveryAmount.float_min = float.MinValue;
+            recoveryAmount.float_max = float.MaxValue;
             recoveryAmount.showIfVals.Add(Tuple.Create(
                 AttributeModeKey,
                 PlanetGaugeAttributeMode.ForceRecovery.ToString()));
@@ -607,8 +607,8 @@ namespace PlanetGauge
                 0.5f,
                 LocalizedStrings.WarningPulseLabel);
             warningPulse.unit = "beats";
-            warningPulse.float_min = 0.125f;
-            warningPulse.float_max = 16f;
+            warningPulse.float_min = 0.0125f;
+            warningPulse.float_max = float.MaxValue;
             warningPulse.showIfVals.Add(Tuple.Create(
                 AttributeModeKey,
                 PlanetGaugeAttributeMode.ForceRecovery.ToString()));
@@ -649,7 +649,7 @@ namespace PlanetGauge
                 LocalizedStrings.RecoveryCapLabel);
             recoveryCap.unit = "%";
             recoveryCap.float_min = 0.1f;
-            recoveryCap.float_max = 1000f;
+            recoveryCap.float_max = float.MaxValue;
             // PropertyInfo.ValueMatch는 Bool 조건에서 소문자 "true"를 요구한다.
             recoveryCap.showIfVals.Add(Tuple.Create(RecoveryCapEnabledKey, "true"));
             AddProperty(info, recoveryCap, 16);

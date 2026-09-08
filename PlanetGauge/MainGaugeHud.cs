@@ -40,15 +40,14 @@ namespace PlanetGauge
 
         /*
          * 이벤트 상태별 HUD 강조색. 색상을 조정하려면 아래 RGB 값만 변경하면 된다.
-         * 앞의 네 값은 사용자와 합의한 HEX 색상이며, 마지막 두 값은 각각 짙은 파랑과 보라다.
+         * Reduced는 회색에서 0%의 얼음색으로 이어지고, Amplified는 출처별 색상을 유지한다.
          */
         private static readonly Color32 BlockRecoveryColor = new Color32(176, 32, 32, 255);       // #B02020
         private static readonly Color32 AmplifyIncreaseColor = new Color32(69, 214, 107, 255);    // #45D66B
         private static readonly Color32 AmplifyDecreaseColor = new Color32(255, 159, 28, 255);    // #FF9F1C
         private static readonly Color32 AmplifyBothColor = new Color32(255, 227, 110, 255);       // #FFE36E
-        private static readonly Color32 ReduceIncreaseColor = new Color32(60, 207, 207, 255);     // #3CCFCF
-        private static readonly Color32 ReduceDecreaseColor = new Color32(93, 173, 226, 255);     // #5DADE2
-        private static readonly Color32 ReduceBothColor = new Color32(183, 148, 244, 255);        // #B794F4
+        private static readonly Color32 ReducedRateGray = new Color32(169, 169, 169, 255);        // #A9A9A9
+        private static readonly Color32 FrozenRateColor = new Color32(127, 219, 255, 255);        // #7FDBFF
         private static readonly Color32 NoFailDisabledColor = new Color32(40, 80, 167, 255);      // #2850A7
         private static readonly Color32 IncreaseLimitedColor = new Color32(155, 89, 208, 255);    // #9B59D0
 
@@ -709,11 +708,14 @@ namespace PlanetGauge
             bool combinedBoth = IsSameBothChannel(settings.RecoveryRate, settings.DamageRate);
             if (combinedBoth && IsNonNeutral(settings.RecoveryRate))
             {
+                bool frozen = IsFrozenRate(settings.RecoveryRate);
                 AppendEffect(
                     ref result,
                     ref effectCount,
                     GetRateColor(settings.RecoveryRate),
-                    settings.RecoveryRate.Percent < 100f
+                    frozen
+                        ? LocalizedStrings.GaugeFrozen
+                        : settings.RecoveryRate.Percent < 100f
                         ? LocalizedStrings.RateReduced
                         : LocalizedStrings.RateAmplified);
             }
@@ -785,7 +787,9 @@ namespace PlanetGauge
                 ref effectCount,
                 GetRateColor(channel),
                 LocalizedStrings.Format(
-                    channel.Percent < 100f
+                    IsFrozenRate(channel)
+                        ? LocalizedStrings.FrozenEffect
+                        : channel.Percent < 100f
                         ? LocalizedStrings.ReducedEffect
                         : LocalizedStrings.AmplifiedEffect,
                     prefix));
@@ -794,6 +798,11 @@ namespace PlanetGauge
         private static bool IsNonNeutral(PlanetGaugeRateChannel channel)
         {
             return channel.Enabled && !Mathf.Approximately(channel.Percent, 100f);
+        }
+
+        private static bool IsFrozenRate(PlanetGaugeRateChannel channel)
+        {
+            return channel.Enabled && channel.Percent <= 0f;
         }
 
         private static bool IsSameBothChannel(
@@ -809,16 +818,22 @@ namespace PlanetGauge
         private static Color32 GetRateColor(PlanetGaugeRateChannel channel)
         {
             bool reduced = channel.Percent < 100f;
+            if (reduced)
+            {
+                float frozenWeight = Mathf.Clamp01(1f - channel.Percent / 100f);
+                return Color32.Lerp(ReducedRateGray, FrozenRateColor, frozenWeight);
+            }
+
             switch (channel.Source)
             {
                 case PlanetGaugeRateSource.Increase:
-                    return reduced ? ReduceIncreaseColor : AmplifyIncreaseColor;
+                    return AmplifyIncreaseColor;
                 case PlanetGaugeRateSource.Decrease:
-                    return reduced ? ReduceDecreaseColor : AmplifyDecreaseColor;
+                    return AmplifyDecreaseColor;
                 case PlanetGaugeRateSource.Both:
-                    return reduced ? ReduceBothColor : AmplifyBothColor;
+                    return AmplifyBothColor;
                 default:
-                    return reduced ? ReduceBothColor : AmplifyBothColor;
+                    return AmplifyBothColor;
             }
         }
 
