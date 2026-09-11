@@ -28,6 +28,11 @@ namespace PlanetGauge
         private const float BaseChamferSize = 4f;
         private const float FixedMeterScale = 2f;
         private const int HudSortingOrder = short.MaxValue - 1;
+
+        // 곡 클리어 후 결과 화면에서 메인 게이지 HUD 전체에 적용할 불투명도다.
+        // 0f(완전 투명)부터 1f(완전 불투명) 사이에서 직접 조절할 수 있다.
+        internal const float ResultsHudOpacity = 0.5f;
+
         private static readonly Vector2 HudReferenceResolution = new Vector2(1920f, 1080f);
         private static readonly Vector2 FallbackMeterSize = new Vector2(BaseBarWidth, 24f);
 
@@ -61,6 +66,7 @@ namespace PlanetGauge
         private CanvasScaler sourceCanvasScaler;
         private GameObject rootObject;
         private RectTransform rootRect;
+        private CanvasGroup rootCanvasGroup;
         private RectTransform screenReferenceRect;
         private GaugeBarGraphic gaugeGraphic;
         private GaugeSkinRenderer skinRenderer;
@@ -125,6 +131,7 @@ namespace PlanetGauge
             sourceCanvasScaler = null;
             rootObject = null;
             rootRect = null;
+            rootCanvasGroup = null;
             screenReferenceRect = null;
             gaugeGraphic = null;
             skinRenderer = null;
@@ -178,11 +185,13 @@ namespace PlanetGauge
                 "PlanetGauge.MainGauge",
                 typeof(RectTransform),
                 typeof(CanvasRenderer),
+                typeof(CanvasGroup),
                 typeof(GaugeBarGraphic),
                 typeof(LayoutElement));
             rootObject.transform.SetParent(canvasObject.transform, false);
 
             rootRect = rootObject.GetComponent<RectTransform>();
+            rootCanvasGroup = rootObject.GetComponent<CanvasGroup>();
             rootRect.anchorMin = new Vector2(0.5f, 0.5f);
             rootRect.anchorMax = new Vector2(0.5f, 0.5f);
             rootRect.pivot = new Vector2(0.5f, 0.5f);
@@ -623,6 +632,10 @@ namespace PlanetGauge
 
         private void UpdateVisibility()
         {
+            SetCanvasGroupAlpha(
+                rootCanvasGroup,
+                GaugeRuntime.IsLevelCompleted ? ResultsHudOpacity : 1f);
+
             bool customSkin = GaugeSkinManager.Current != null;
             gaugeGraphic.SetVisibilityAlphas(
                 customSkin ? 0f : GaugeHudVisibilityTransitions.GaugeBarAlpha,

@@ -166,7 +166,42 @@ namespace PlanetGauge
                 typeof(scnEditor),
                 nameof(scnEditor.SwitchToEditMode),
                 new[] { typeof(bool) });
-            RequireMethod(typeof(scrPlanet), nameof(scrPlanet.SwitchChosen), Type.EmptyTypes);
+            RequireMethod(
+                typeof(scrPlanet),
+                nameof(scrPlanet.SwitchChosen),
+                new[] { typeof(long?) });
+            RequireMethod(
+                typeof(AsyncInputUtils),
+                nameof(AsyncInputUtils.GetSongPositionAt),
+                new[] { typeof(scrConductor), typeof(double) });
+            RequireMethod(
+                typeof(scrMisc),
+                nameof(scrMisc.GetHitMarginInSec),
+                new[]
+                {
+                    typeof(Difficulty),
+                    typeof(double),
+                    typeof(float),
+                    typeof(float),
+                    typeof(double)
+                });
+            RequireMethod(
+                typeof(scrMisc),
+                nameof(scrMisc.GetHitMarginInDeg),
+                new[]
+                {
+                    typeof(Difficulty),
+                    typeof(float),
+                    typeof(float),
+                    typeof(bool),
+                    typeof(float),
+                    typeof(float),
+                    typeof(double)
+                });
+            RequireMethod(
+                typeof(HitMarginHelper),
+                nameof(HitMarginHelper.IsCounted),
+                new[] { typeof(HitMargin), typeof(HitMarginLimit?) });
             RequireMethod(
                 typeof(scrController),
                 nameof(scrController.OnLandOnPortal),
@@ -188,6 +223,9 @@ namespace PlanetGauge
             RequireField(typeof(scrController), nameof(scrController.noFail));
             RequireField(typeof(scrController), nameof(scrController.noFailInfiniteMargin));
             RequireField(typeof(scrPlayer), nameof(scrPlayer.failBar));
+            RequireField(
+                typeof(AsyncInputManager),
+                nameof(AsyncInputManager.offsetTick));
 
             PlanetGaugeLevelEventRegistry.ValidateRequiredGameApi();
 
@@ -563,7 +601,7 @@ namespace PlanetGauge
                     && !method.IsStatic
                     && method.ReturnType == typeof(void)
                     && parameters.Length == 1
-                    && parameters[0].ParameterType == typeof(ulong?))
+                    && parameters[0].ParameterType == typeof(long?))
                 {
                     return method;
                 }

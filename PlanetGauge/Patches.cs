@@ -123,7 +123,9 @@ namespace PlanetGauge
         {
             if (GaugeRuntime.ShouldHandle())
             {
-                // 커스텀 레벨의 승리 시간, 축하 문구, 결과 저장이 시작되기 전에 해제한다.
+                // 커스텀 레벨의 승리 시간, 축하 문구, 결과 저장이 시작되기 전에
+                // 결과 HUD 상태를 확정하고 Blindfold를 해제한다.
+                GaugeRuntime.MarkLevelCompleted();
                 GaugeRuntime.DisableBlindfoldForLevelCompletion();
             }
         }
@@ -133,7 +135,7 @@ namespace PlanetGauge
     /// 타일 전환 직전 판정을 계산해 게이지에 반영한다.
     /// Prefix에서 원본 메서드가 바꿀 수 있는 값을 캡처하고 Postfix에서 최종 실패 여부를 결정한다.
     /// </summary>
-    [HarmonyPatch(typeof(scrPlanet), nameof(scrPlanet.SwitchChosen))]
+    [HarmonyPatch(typeof(scrPlanet), nameof(scrPlanet.SwitchChosen), typeof(long?))]
     internal static class SwitchChosenPatch
     {
         private static bool[] judgementAppliedByDieAtDepth = new bool[4];
@@ -150,7 +152,10 @@ namespace PlanetGauge
             internal bool TrackAutomaticRecovery;
         }
 
-        private static void Prefix(scrPlanet __instance, ref SwitchState __state)
+        private static void Prefix(
+            scrPlanet __instance,
+            long? hitTick,
+            ref SwitchState __state)
         {
             __state = default(SwitchState);
 
@@ -197,13 +202,34 @@ namespace PlanetGauge
             __state.Track = true;
             __state.NoFailAtStart = controller.noFail;
             __state.Player = __instance.player;
-            __state.Judgement = scrMisc.GetHitMargin(
-                (float)__instance.cachedAngle,
-                (float)__instance.targetExitAngle,
-                planetarySystem.isCW,
-                effectiveBpm,
-                conductor.song.pitch,
-                marginScale);
+            if (hitTick.HasValue)
+            {
+                scrFloor judgementFloor = nextFloor == null
+                    ? currentFloor
+                    : nextFloor;
+                double targetSongPosition = AsyncInputUtils.GetSongPositionAt(
+                    conductor,
+                    judgementFloor.entryTime);
+                double hitSongPosition = (hitTick.Value - AsyncInputManager.offsetTick)
+                    / 10000000d;
+                __state.Judgement = scrMisc.GetHitMarginInSec(
+                    GCS.difficulty,
+                    hitSongPosition - targetSongPosition,
+                    effectiveBpm,
+                    conductor.song.pitch,
+                    marginScale);
+            }
+            else
+            {
+                __state.Judgement = scrMisc.GetHitMarginInDeg(
+                    GCS.difficulty,
+                    (float)__instance.cachedAngle,
+                    (float)__instance.targetExitAngle,
+                    planetarySystem.isCW,
+                    effectiveBpm,
+                    conductor.song.pitch,
+                    marginScale);
+            }
             __state.ObservationDepth = BeginObservation();
         }
 
@@ -244,7 +270,9 @@ namespace PlanetGauge
 
             HitMargin judgement = __state.Judgement;
             scrFailBar failBar = __state.Player.failBar;
-            bool invalidHit = !scrMisc.IsValidHit(judgement);
+            bool invalidHit = !HitMarginHelper.IsCounted(
+                judgement,
+                GCS.hitMarginLimit);
             bool overload = failBar != null
                 && failBar.DidFail(false)
                 && (!__state.NoFailAtStart || invalidHit);

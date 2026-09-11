@@ -28,6 +28,7 @@ namespace PlanetGauge
         private static bool awaitingInitialVfxScrub;
         private static int initialVfxScrubDepth;
         private static bool deferredHistoricalForceRecoveryCap;
+        private static bool levelCompleted;
         private static readonly float[] judgementTotals = new float[8];
         private static float autoTotal;
 
@@ -38,6 +39,7 @@ namespace PlanetGauge
         internal static bool IsFrozen { get { return frozen; } }
         internal static bool IsRuntimeFaulted { get { return runtimeFaulted; } }
         internal static bool HasPendingDieCharge { get { return nextDieAlreadyCharged; } }
+        internal static bool IsLevelCompleted { get { return levelCompleted; } }
         internal static bool IsBlindfolded
         {
             get { return EventSettings.BlindfoldEnabled && !blindfoldRevealed; }
@@ -69,6 +71,7 @@ namespace PlanetGauge
             awaitingInitialVfxScrub = false;
             initialVfxScrubDepth = 0;
             deferredHistoricalForceRecoveryCap = false;
+            levelCompleted = false;
             EventSettings = PlanetGaugeEventSettings.Default;
             Array.Clear(judgementTotals, 0, judgementTotals.Length);
             autoTotal = 0f;
@@ -500,6 +503,7 @@ namespace PlanetGauge
                 AttributeEnabled = false
             });
         }
+        internal static void MarkLevelCompleted() { levelCompleted = true; }
         internal static void BeginFailureRecovery() { failureRecoveryDepth++; }
         internal static void EndFailureRecovery() { if (failureRecoveryDepth > 0) failureRecoveryDepth--; }
 
@@ -529,7 +533,11 @@ namespace PlanetGauge
         {
             switch (judgement)
             {
-                case HitMargin.Perfect: delta = PerfectDelta; return true;
+                case HitMargin.PerfectMinus:
+                case HitMargin.XPerfect:
+                case HitMargin.PerfectPlus:
+                    delta = PerfectDelta;
+                    return true;
                 case HitMargin.EarlyPerfect: delta = EarlyPerfectDelta; return true;
                 case HitMargin.LatePerfect: delta = LatePerfectDelta; return true;
                 case HitMargin.VeryEarly: delta = VeryEarlyDelta; return true;
@@ -559,7 +567,10 @@ namespace PlanetGauge
                 case HitMargin.TooEarly: return 0;
                 case HitMargin.VeryEarly: return 1;
                 case HitMargin.EarlyPerfect: return 2;
-                case HitMargin.Perfect: return 3;
+                case HitMargin.PerfectMinus:
+                case HitMargin.XPerfect:
+                case HitMargin.PerfectPlus:
+                    return 3;
                 case HitMargin.LatePerfect: return 4;
                 case HitMargin.VeryLate: return 5;
                 case HitMargin.FailMiss: return 6;
