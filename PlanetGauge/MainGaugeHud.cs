@@ -31,7 +31,7 @@ namespace PlanetGauge
 
         // 곡 클리어 후 결과 화면에서 메인 게이지 HUD 전체에 적용할 불투명도다.
         // 0f(완전 투명)부터 1f(완전 불투명) 사이에서 직접 조절할 수 있다.
-        internal const float ResultsHudOpacity = 0.5f;
+        internal const float ResultsHudOpacity = 0.3f;
 
         private static readonly Vector2 HudReferenceResolution = new Vector2(1920f, 1080f);
         private static readonly Vector2 FallbackMeterSize = new Vector2(BaseBarWidth, 24f);
@@ -632,9 +632,12 @@ namespace PlanetGauge
 
         private void UpdateVisibility()
         {
+            // HideGaugeHud와 동일한 4초 EaseInOutCubic 채널로 결과 화면 불투명도를 보간한다.
+            GaugeHudVisibilityTransitions.SetResultsHudOpacity(
+                GaugeRuntime.IsLevelCompleted ? ResultsHudOpacity : 1f);
             SetCanvasGroupAlpha(
                 rootCanvasGroup,
-                GaugeRuntime.IsLevelCompleted ? ResultsHudOpacity : 1f);
+                GaugeHudVisibilityTransitions.ResultsHudAlpha);
 
             bool customSkin = GaugeSkinManager.Current != null;
             gaugeGraphic.SetVisibilityAlphas(

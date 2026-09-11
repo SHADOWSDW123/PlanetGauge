@@ -8,19 +8,21 @@ namespace PlanetGauge
     /// </summary>
     internal static class GaugeHudVisibilityTransitions
     {
-        private const float DefaultDuration = 4f;
+        private const float DefaultDuration = 3f;
 
         private static FadeChannel gaugeBar = FadeChannel.Visible;
         private static FadeChannel gaugeValue = FadeChannel.Visible;
         private static FadeChannel attributeText = FadeChannel.Visible;
         private static FadeChannel rateToken = FadeChannel.Visible;
         private static FadeChannel forceRecoveryVisuals = FadeChannel.Visible;
+        private static FadeChannel resultsHud = FadeChannel.Visible;
 
         internal static float GaugeBarAlpha { get { return gaugeBar.Alpha; } }
         internal static float GaugeValueAlpha { get { return gaugeValue.Alpha; } }
         internal static float AttributeTextAlpha { get { return attributeText.Alpha; } }
         internal static float RateTokenAlpha { get { return rateToken.Alpha; } }
         internal static float ForceRecoveryVisualsAlpha { get { return forceRecoveryVisuals.Alpha; } }
+        internal static float ResultsHudAlpha { get { return resultsHud.Alpha; } }
         internal static bool GaugeBarHidden { get { return gaugeBar.TargetHidden; } }
         internal static bool GaugeValueHidden { get { return gaugeValue.TargetHidden; } }
         internal static bool AttributeTextHidden { get { return attributeText.TargetHidden; } }
@@ -34,6 +36,7 @@ namespace PlanetGauge
             attributeText = FadeChannel.Visible;
             rateToken = FadeChannel.Visible;
             forceRecoveryVisuals = FadeChannel.Visible;
+            resultsHud = FadeChannel.Visible;
         }
 
         internal static void Tick(float unscaledDeltaTime)
@@ -48,6 +51,7 @@ namespace PlanetGauge
             attributeText.Tick(deltaTime);
             rateToken.Tick(deltaTime);
             forceRecoveryVisuals.Tick(deltaTime);
+            resultsHud.Tick(deltaTime);
         }
 
         internal static void RevealAll()
@@ -74,6 +78,11 @@ namespace PlanetGauge
             attributeText.SetHidden(command.HideAttributeText);
             rateToken.SetHidden(command.HideRateToken);
             forceRecoveryVisuals.SetHidden(command.HideForceRecoveryVisuals);
+        }
+
+        internal static void SetResultsHudOpacity(float opacity)
+        {
+            resultsHud.SetTargetAlpha(opacity);
         }
 
         private struct FadeChannel
@@ -105,7 +114,12 @@ namespace PlanetGauge
 
             internal void SetHidden(bool hidden)
             {
-                float nextTarget = hidden ? 0f : 1f;
+                SetTargetAlpha(hidden ? 0f : 1f);
+            }
+
+            internal void SetTargetAlpha(float alpha)
+            {
+                float nextTarget = Mathf.Clamp01(alpha);
                 if (Mathf.Approximately(targetAlpha, nextTarget)
                     && (transitioning || Mathf.Approximately(Alpha, nextTarget)))
                 {
