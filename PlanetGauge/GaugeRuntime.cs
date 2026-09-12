@@ -9,13 +9,14 @@ namespace PlanetGauge
         internal const float MaximumGauge = 100f;
         internal const float NoFailMinimumGauge = 0f;
         internal const float PerfectDelta = 0.1f;
+        internal const float XPlanetGaugePerfectDelta = -0.1f;
         internal const float EarlyPerfectDelta = -0.8f;
         internal const float LatePerfectDelta = -0.8f;
         internal const float VeryEarlyDelta = -1.5f;
         internal const float VeryLateDelta = -1.5f;
         internal const float TooEarlyDelta = -3f;
         internal const float FailMissDelta = -6f;
-        internal const float FailOverloadDelta = -8f;
+        internal const float FailOverloadDelta = -6f;
 
         private static bool frozen;
         private static bool nextDieAlreadyCharged;
@@ -40,6 +41,17 @@ namespace PlanetGauge
         internal static bool IsRuntimeFaulted { get { return runtimeFaulted; } }
         internal static bool HasPendingDieCharge { get { return nextDieAlreadyCharged; } }
         internal static bool IsLevelCompleted { get { return levelCompleted; } }
+        internal static bool IsXPlanetGaugeActive
+        {
+            get
+            {
+                return Main.Settings != null
+                    && Main.Settings.XPlanetGaugeMode
+                    && HitMarginHelper.IsShowXPerfect(
+                        Persistence.hitMarginPerfectText,
+                        false);
+            }
+        }
         internal static bool IsBlindfolded
         {
             get { return EventSettings.BlindfoldEnabled && !blindfoldRevealed; }
@@ -534,10 +546,12 @@ namespace PlanetGauge
             switch (judgement)
             {
                 case HitMargin.PerfectMinus:
-                case HitMargin.XPerfect:
                 case HitMargin.PerfectPlus:
-                    delta = PerfectDelta;
+                    delta = IsXPlanetGaugeActive
+                        ? XPlanetGaugePerfectDelta
+                        : PerfectDelta;
                     return true;
+                case HitMargin.XPerfect: delta = PerfectDelta; return true;
                 case HitMargin.EarlyPerfect: delta = EarlyPerfectDelta; return true;
                 case HitMargin.LatePerfect: delta = LatePerfectDelta; return true;
                 case HitMargin.VeryEarly: delta = VeryEarlyDelta; return true;

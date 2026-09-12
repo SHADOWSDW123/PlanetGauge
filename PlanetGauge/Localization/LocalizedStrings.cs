@@ -115,6 +115,8 @@ namespace PlanetGauge
         internal static string ResetRatePosition { get { return IsKorean ? KoreanStrings.ResetRatePosition : EnglishStrings.ResetRatePosition; } }
         internal static string Advanced { get { return IsKorean ? KoreanStrings.Advanced : EnglishStrings.Advanced; } }
         internal static string ShowDecimalHealth { get { return IsKorean ? KoreanStrings.ShowDecimalHealth : EnglishStrings.ShowDecimalHealth; } }
+        internal static string XPlanetGaugeMode { get { return IsKorean ? KoreanStrings.XPlanetGaugeMode : EnglishStrings.XPlanetGaugeMode; } }
+        internal static string XPlanetGaugeModeRequirement { get { return IsKorean ? KoreanStrings.XPlanetGaugeModeRequirement : EnglishStrings.XPlanetGaugeModeRequirement; } }
         internal static string MainGaugeColor { get { return IsKorean ? KoreanStrings.MainGaugeColor : EnglishStrings.MainGaugeColor; } }
         internal static string ResetColor { get { return IsKorean ? KoreanStrings.ResetColor : EnglishStrings.ResetColor; } }
         internal static string DebugShortcut { get { return IsKorean ? KoreanStrings.DebugShortcut : EnglishStrings.DebugShortcut; } }

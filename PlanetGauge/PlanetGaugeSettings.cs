@@ -82,6 +82,7 @@ namespace PlanetGauge
         public PlanetGaugeLanguage Language;
         public bool LanguageInitialized;
         public bool TranslateAttributeDisplayToKorean;
+        public bool XPlanetGaugeMode;
 
         public override void Save(UnityModManager.ModEntry modEntry)
         {
@@ -392,6 +393,10 @@ namespace PlanetGauge
             MainGaugeShowDecimalValue = GUILayout.Toggle(
                 MainGaugeShowDecimalValue,
                 LocalizedStrings.ShowDecimalHealth);
+            XPlanetGaugeMode = GUILayout.Toggle(
+                XPlanetGaugeMode,
+                LocalizedStrings.XPlanetGaugeMode);
+            GUILayout.Label(LocalizedStrings.XPlanetGaugeModeRequirement);
 
             GUILayout.Space(10f);
             GUILayout.Label(LocalizedStrings.MainGaugeColor);

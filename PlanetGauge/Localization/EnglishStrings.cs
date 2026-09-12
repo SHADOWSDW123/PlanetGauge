@@ -45,6 +45,8 @@ namespace PlanetGauge
         internal const string ResetRatePosition = "Reset rate position";
         internal const string Advanced = "Advanced";
         internal const string ShowDecimalHealth = "Show decimal health (e.g. 73.4)";
+        internal const string XPlanetGaugeMode = "X-PlanetGauge mode";
+        internal const string XPlanetGaugeModeRequirement = "Perfect± (± accuracy) reduces health by 0.1.\nActive only when ADOFAI's X-Perfect judgment text display is enabled. Otherwise, standard PlanetGauge mode is used.";
         internal const string MainGaugeColor = "Main gauge color (RGB)";
         internal const string ResetColor = "Reset color (#FFFFFF)";
         internal const string DebugShortcut = "Debug shortcut: {0} + {1}";

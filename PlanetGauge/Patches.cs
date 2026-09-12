@@ -140,6 +140,7 @@ namespace PlanetGauge
     {
         private static bool[] judgementAppliedByDieAtDepth = new bool[4];
         private static int observedSwitchDepth;
+        private static int temporaryNoFailDepth;
 
         private struct SwitchState
         {
@@ -150,6 +151,10 @@ namespace PlanetGauge
             internal scrPlayer Player;
             internal int ObservationDepth;
             internal bool TrackAutomaticRecovery;
+            internal scrController TemporaryNoFailController;
+            internal bool RestoreTemporaryNoFail;
+            internal bool OriginalNoFail;
+            internal bool TemporaryNoFailStarted;
         }
 
         private static void Prefix(
@@ -200,7 +205,6 @@ namespace PlanetGauge
 
             // 원본 SwitchChosen 실행 후에도 판정 기준이 변하지 않도록 필요한 입력을 미리 확정한다.
             __state.Track = true;
-            __state.NoFailAtStart = controller.noFail;
             __state.Player = __instance.player;
             if (hitTick.HasValue)
             {
@@ -231,6 +235,21 @@ namespace PlanetGauge
                     marginScale);
             }
             __state.ObservationDepth = BeginObservation();
+
+            __state.NoFailAtStart = controller.noFail;
+            if (!controller.noFail
+                && GaugeRuntime.EventSettings.FailureProtection
+                && GaugeRuntime.Current > 0f)
+            {
+                // 원본 SwitchChosen 전체가 바닐라 무적모드와 같은 분기를 타게 한다.
+                // PG 차감은 원본 호출이 끝난 뒤 실제 noFail을 복원하고 처리한다.
+                __state.TemporaryNoFailController = controller;
+                __state.RestoreTemporaryNoFail = true;
+                __state.OriginalNoFail = controller.noFail;
+                __state.TemporaryNoFailStarted = true;
+                temporaryNoFailDepth++;
+                controller.noFail = true;
+            }
         }
 
         private static void Postfix(
@@ -238,6 +257,7 @@ namespace PlanetGauge
             scrPlanet __result,
             ref SwitchState __state)
         {
+            RestoreTemporaryNoFail(ref __state);
             bool judgementAppliedByDie = EndObservation(ref __state);
 
             if (__state.TrackAutomaticRecovery
@@ -304,8 +324,14 @@ namespace PlanetGauge
 
         private static Exception Finalizer(Exception __exception, ref SwitchState __state)
         {
+            RestoreTemporaryNoFail(ref __state);
             EndObservation(ref __state);
             return __exception;
+        }
+
+        internal static bool IsBorrowingNoFail
+        {
+            get { return temporaryNoFailDepth > 0; }
         }
 
         internal static void MarkJudgementAppliedByDie()
@@ -319,10 +345,31 @@ namespace PlanetGauge
         internal static void ResetSessionState()
         {
             observedSwitchDepth = 0;
+            temporaryNoFailDepth = 0;
             Array.Clear(
                 judgementAppliedByDieAtDepth,
                 0,
                 judgementAppliedByDieAtDepth.Length);
+        }
+
+        private static void RestoreTemporaryNoFail(ref SwitchState state)
+        {
+            if (state.RestoreTemporaryNoFail
+                && state.TemporaryNoFailController != null)
+            {
+                state.TemporaryNoFailController.noFail = state.OriginalNoFail;
+                state.RestoreTemporaryNoFail = false;
+            }
+
+            if (state.TemporaryNoFailStarted)
+            {
+                if (temporaryNoFailDepth > 0)
+                {
+                    temporaryNoFailDepth--;
+                }
+
+                state.TemporaryNoFailStarted = false;
+            }
         }
 
         private static int BeginObservation()

@@ -203,6 +203,17 @@ namespace PlanetGauge
                 nameof(HitMarginHelper.IsCounted),
                 new[] { typeof(HitMargin), typeof(HitMarginLimit?) });
             RequireMethod(
+                typeof(HitMarginHelper),
+                nameof(HitMarginHelper.IsShowXPerfect),
+                new[] { typeof(HitMarginPerfectTextPreset), typeof(bool) });
+            if (AccessTools.PropertyGetter(
+                    typeof(Persistence),
+                    nameof(Persistence.hitMarginPerfectText)) == null)
+            {
+                throw new MissingMemberException(
+                    "호환성에 필요한 게임 속성을 찾을 수 없습니다: Persistence.hitMarginPerfectText");
+            }
+            RequireMethod(
                 typeof(scrController),
                 nameof(scrController.OnLandOnPortal),
                 new[] { typeof(scrPlanet), typeof(Portal), typeof(string) });
@@ -538,7 +549,8 @@ namespace PlanetGauge
             {
                 __state = default(BridgeState);
 
-                if (temporaryMissRecoveryDepth <= 0
+                if ((temporaryMissRecoveryDepth <= 0
+                        && !SwitchChosenPatch.IsBorrowingNoFail)
                     || hitbox
                     || GaugeRuntime.IsAutoPlay(__instance)
                     || !GaugeRuntime.ShouldHandle(__instance))
@@ -552,8 +564,9 @@ namespace PlanetGauge
                     return;
                 }
 
-                // CheckPostHoldFail에 빌려준 noFail은 실제 실패 방지 설정보다 우선하면 안 된다.
-                // Die 패치가 FailMiss를 차감한 뒤, 게이지가 남았을 때만 다시 noFail 복구로 진입한다.
+                // CheckPostHoldFail 또는 SwitchChosen에 빌려준 noFail은 실제 무적모드보다
+                // 우선하면 안 된다. Die 패치가 PG를 차감한 뒤 생존한 경우에만
+                // 원본 noFail 복구 분기로 다시 진입한다.
                 __state.Controller = controller;
                 __state.RestoreTemporaryNoFail = true;
                 __state.OriginalNoFail = controller.noFail;
