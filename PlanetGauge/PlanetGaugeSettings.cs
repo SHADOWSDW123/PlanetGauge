@@ -72,6 +72,10 @@ namespace PlanetGauge
         public int MainGaugeColorR = 255;
         public int MainGaugeColorG = 255;
         public int MainGaugeColorB = 255;
+        public int MainGaugeValueColorR = 255;
+        public int MainGaugeValueColorG = 255;
+        public int MainGaugeValueColorB = 255;
+        public bool MainGaugeValueColorIndependent;
 
         public bool CustomGaugeSkinEnabled;
         public string HealthSkinImagePath = string.Empty;
@@ -393,6 +397,9 @@ namespace PlanetGauge
             MainGaugeShowDecimalValue = GUILayout.Toggle(
                 MainGaugeShowDecimalValue,
                 LocalizedStrings.ShowDecimalHealth);
+            MainGaugeValueColorIndependent = GUILayout.Toggle(
+                MainGaugeValueColorIndependent,
+                LocalizedStrings.IndependentGaugeValueColor);
             XPlanetGaugeMode = GUILayout.Toggle(
                 XPlanetGaugeMode,
                 LocalizedStrings.XPlanetGaugeMode);
@@ -411,6 +418,22 @@ namespace PlanetGauge
                 MainGaugeColorR = 255;
                 MainGaugeColorG = 255;
                 MainGaugeColorB = 255;
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(10f);
+            GUILayout.Label(LocalizedStrings.GaugeValueColor);
+            MainGaugeValueColorR = DrawColorSlider("R", MainGaugeValueColorR);
+            MainGaugeValueColorG = DrawColorSlider("G", MainGaugeValueColorG);
+            MainGaugeValueColorB = DrawColorSlider("B", MainGaugeValueColorB);
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(96f);
+            if (GUILayout.Button(LocalizedStrings.ResetGaugeValueColor, GUILayout.Width(220f)))
+            {
+                MainGaugeValueColorR = 255;
+                MainGaugeValueColorG = 255;
+                MainGaugeValueColorB = 255;
             }
             GUILayout.EndHorizontal();
 
@@ -456,6 +479,9 @@ namespace PlanetGauge
             MainGaugeColorR = Mathf.Clamp(MainGaugeColorR, 0, 255);
             MainGaugeColorG = Mathf.Clamp(MainGaugeColorG, 0, 255);
             MainGaugeColorB = Mathf.Clamp(MainGaugeColorB, 0, 255);
+            MainGaugeValueColorR = Mathf.Clamp(MainGaugeValueColorR, 0, 255);
+            MainGaugeValueColorG = Mathf.Clamp(MainGaugeValueColorG, 0, 255);
+            MainGaugeValueColorB = Mathf.Clamp(MainGaugeValueColorB, 0, 255);
             DebugKey1 = SanitizeKeyCode(DebugKey1, KeyCode.LeftShift);
             DebugKey2 = SanitizeKeyCode(DebugKey2, KeyCode.F3);
             if (DebugKey1 == DebugKey2)
@@ -612,6 +638,15 @@ namespace PlanetGauge
                 (byte)MainGaugeColorR,
                 (byte)MainGaugeColorG,
                 (byte)MainGaugeColorB,
+                255);
+        }
+
+        internal Color32 GetMainGaugeValueColor()
+        {
+            return new Color32(
+                (byte)MainGaugeValueColorR,
+                (byte)MainGaugeValueColorG,
+                (byte)MainGaugeValueColorB,
                 255);
         }
 

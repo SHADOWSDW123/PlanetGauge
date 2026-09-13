@@ -84,6 +84,8 @@ namespace PlanetGauge
         private CanvasGroup effectCanvasGroup;
 
         private Color32 lastUserGaugeColor;
+        private Color32 lastUserValueColor;
+        private bool lastValueColorIndependent;
         private int lastStyleRevision = -1;
         private int lastLocalizationRevision = -1;
         private bool hasLastStyle;
@@ -92,6 +94,9 @@ namespace PlanetGauge
         private Color currentGaugeColor;
         private Color transitionStartColor;
         private Color transitionTargetColor;
+        private Color currentValueColor;
+        private Color transitionStartValueColor;
+        private Color transitionTargetValueColor;
         private float transitionElapsed;
 
         internal void Update()
@@ -217,6 +222,9 @@ namespace PlanetGauge
             currentGaugeColor = Main.Settings.GetMainGaugeColor();
             transitionStartColor = currentGaugeColor;
             transitionTargetColor = currentGaugeColor;
+            currentValueColor = Main.Settings.GetMainGaugeValueColor();
+            transitionStartValueColor = currentValueColor;
+            transitionTargetValueColor = currentValueColor;
             transitionElapsed = ColorTransitionDuration;
         }
 
@@ -331,19 +339,29 @@ namespace PlanetGauge
             PlanetGaugeSettings settings = Main.Settings;
             PlanetGaugeEventSettings eventSettings = GaugeRuntime.EventSettings;
             Color32 userGaugeColor = settings.GetMainGaugeColor();
+            Color32 userValueColor = settings.GetMainGaugeValueColor();
             bool styleChanged = !hasLastStyle
                 || !lastUserGaugeColor.Equals(userGaugeColor)
+                || !lastUserValueColor.Equals(userValueColor)
+                || lastValueColorIndependent != settings.MainGaugeValueColorIndependent
                 || lastStyleRevision != GaugeRuntime.StyleRevision
                 || lastLocalizationRevision != LocalizedStrings.Revision;
             if (styleChanged)
             {
                 lastUserGaugeColor = userGaugeColor;
+                lastUserValueColor = userValueColor;
+                lastValueColorIndependent = settings.MainGaugeValueColorIndependent;
                 lastStyleRevision = GaugeRuntime.StyleRevision;
                 lastLocalizationRevision = LocalizedStrings.Revision;
                 hasLastStyle = true;
 
                 transitionStartColor = currentGaugeColor;
                 transitionTargetColor = ResolveGaugeColor(eventSettings, userGaugeColor);
+                transitionStartValueColor = currentValueColor;
+                transitionTargetValueColor = ResolveGaugeValueColor(
+                    eventSettings,
+                    userValueColor,
+                    settings.MainGaugeValueColorIndependent);
                 transitionElapsed = 0f;
 
                 string effects = BuildEffectText(eventSettings, out activeEffectCount);
@@ -361,12 +379,14 @@ namespace PlanetGauge
                 : transitionElapsed / ColorTransitionDuration;
             float eased = 1f - (1f - progress) * (1f - progress);
             currentGaugeColor = Color.Lerp(transitionStartColor, transitionTargetColor, eased);
+            currentValueColor = Color.Lerp(
+                transitionStartValueColor,
+                transitionTargetValueColor,
+                eased);
             gaugeGraphic.SetStyle(
                 BorderColor, DisabledColor, DepletedColor,
                 currentGaugeColor, currentGaugeColor, currentGaugeColor, 2f);
-            valueText.color = GaugeRuntime.IsBlindfolded
-                ? (Color)BlindfoldTextColor
-                : currentGaugeColor;
+            valueText.color = currentValueColor;
         }
 
         private void UpdateLayout(scrHitErrorMeter meter, RectTransform meterRect)
@@ -702,6 +722,21 @@ namespace PlanetGauge
             }
 
             return userGaugeColor;
+        }
+
+        private static Color32 ResolveGaugeValueColor(
+            PlanetGaugeEventSettings settings,
+            Color32 userValueColor,
+            bool independent)
+        {
+            if (independent)
+            {
+                return userValueColor;
+            }
+
+            return GaugeRuntime.IsBlindfolded
+                ? BlindfoldTextColor
+                : ResolveGaugeColor(settings, userValueColor);
         }
 
         private static string BuildEffectText(

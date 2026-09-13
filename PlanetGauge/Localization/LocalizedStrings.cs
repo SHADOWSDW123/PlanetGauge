@@ -115,10 +115,13 @@ namespace PlanetGauge
         internal static string ResetRatePosition { get { return IsKorean ? KoreanStrings.ResetRatePosition : EnglishStrings.ResetRatePosition; } }
         internal static string Advanced { get { return IsKorean ? KoreanStrings.Advanced : EnglishStrings.Advanced; } }
         internal static string ShowDecimalHealth { get { return IsKorean ? KoreanStrings.ShowDecimalHealth : EnglishStrings.ShowDecimalHealth; } }
+        internal static string IndependentGaugeValueColor { get { return IsKorean ? KoreanStrings.IndependentGaugeValueColor : EnglishStrings.IndependentGaugeValueColor; } }
         internal static string XPlanetGaugeMode { get { return IsKorean ? KoreanStrings.XPlanetGaugeMode : EnglishStrings.XPlanetGaugeMode; } }
         internal static string XPlanetGaugeModeRequirement { get { return IsKorean ? KoreanStrings.XPlanetGaugeModeRequirement : EnglishStrings.XPlanetGaugeModeRequirement; } }
         internal static string MainGaugeColor { get { return IsKorean ? KoreanStrings.MainGaugeColor : EnglishStrings.MainGaugeColor; } }
         internal static string ResetColor { get { return IsKorean ? KoreanStrings.ResetColor : EnglishStrings.ResetColor; } }
+        internal static string GaugeValueColor { get { return IsKorean ? KoreanStrings.GaugeValueColor : EnglishStrings.GaugeValueColor; } }
+        internal static string ResetGaugeValueColor { get { return IsKorean ? KoreanStrings.ResetGaugeValueColor : EnglishStrings.ResetGaugeValueColor; } }
         internal static string DebugShortcut { get { return IsKorean ? KoreanStrings.DebugShortcut : EnglishStrings.DebugShortcut; } }
         internal static string SetKey1 { get { return IsKorean ? KoreanStrings.SetKey1 : EnglishStrings.SetKey1; } }
         internal static string SetKey2 { get { return IsKorean ? KoreanStrings.SetKey2 : EnglishStrings.SetKey2; } }
