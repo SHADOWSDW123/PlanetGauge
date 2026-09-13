@@ -19,7 +19,6 @@ namespace PlanetGauge
         internal const float FailOverloadDelta = -6f;
 
         private static bool frozen;
-        private static bool nextDieAlreadyCharged;
         private static int failureRecoveryDepth;
         private static bool forcingDeath;
         private static bool blindfoldRevealed;
@@ -39,7 +38,6 @@ namespace PlanetGauge
         internal static bool IsForcingDeath { get { return forcingDeath; } }
         internal static bool IsFrozen { get { return frozen; } }
         internal static bool IsRuntimeFaulted { get { return runtimeFaulted; } }
-        internal static bool HasPendingDieCharge { get { return nextDieAlreadyCharged; } }
         internal static bool IsLevelCompleted { get { return levelCompleted; } }
         internal static bool IsXPlanetGaugeActive
         {
@@ -74,7 +72,6 @@ namespace PlanetGauge
         {
             Current = InitialGauge;
             frozen = false;
-            nextDieAlreadyCharged = false;
             failureRecoveryDepth = 0;
             forcingDeath = false;
             blindfoldRevealed = false;
@@ -325,21 +322,21 @@ namespace PlanetGauge
 
             if (frozen)
             {
-                return scrController.instance != null && !scrController.instance.noFail && Current <= 0f;
+                return scrController.instance != null && !Main.IsActualNoFail(scrController.instance) && Current <= 0f;
             }
 
             scrController controller = scrController.instance;
             if (IsFailureJudgement(judgement)
                 && !EventSettings.FailureProtection
                 && controller != null
-                && controller.noFail)
+                && Main.IsActualNoFail(controller))
             {
                 ApplyProtectedFailureGaugeDeath(judgement);
                 return false;
             }
 
             if (IsFailureJudgement(judgement) && !EventSettings.FailureProtection
-                && (controller == null || !controller.noFail))
+                && (controller == null || !Main.IsActualNoFail(controller)))
             {
                 RevealBlindfold();
                 return true;
@@ -377,7 +374,7 @@ namespace PlanetGauge
             {
                 Current = next;
             }
-            else if (controller != null && controller.noFail)
+            else if (controller != null && Main.IsActualNoFail(controller))
             {
                 Current = Mathf.Max(NoFailMinimumGauge, next);
                 frozen = true;
@@ -429,7 +426,7 @@ namespace PlanetGauge
                 return false;
             }
 
-            if (controller != null && controller.noFail)
+            if (controller != null && Main.IsActualNoFail(controller))
             {
                 Current = Mathf.Max(NoFailMinimumGauge, next);
                 frozen = true;
@@ -479,19 +476,11 @@ namespace PlanetGauge
             }
 
             scrController controller = scrController.instance;
-            return controller != null && controller.noFail
+            return controller != null && Main.IsActualNoFail(controller)
                 ? Mathf.Max(NoFailMinimumGauge, next)
                 : 0f;
         }
 
-        internal static void MarkNextDieAlreadyCharged() { nextDieAlreadyCharged = true; }
-        internal static bool ConsumeNextDieAlreadyCharged()
-        {
-            bool charged = nextDieAlreadyCharged;
-            nextDieAlreadyCharged = false;
-            return charged;
-        }
-        internal static void ClearPendingDieCharge() { nextDieAlreadyCharged = false; }
         internal static void RevealBlindfold()
         {
             if (EventSettings.BlindfoldEnabled && !blindfoldRevealed)
@@ -522,7 +511,6 @@ namespace PlanetGauge
         internal static void ForceDie(scrPlayer player)
         {
             if (player == null || forcingDeath) return;
-            ClearPendingDieCharge();
             forcingDeath = true;
             try
             {

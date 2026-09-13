@@ -132,24 +132,20 @@ namespace PlanetGauge
     }
 
     /// <summary>
-    /// 타일 전환 직전 판정을 계산해 게이지에 반영한다.
-    /// Prefix에서 원본 메서드가 바꿀 수 있는 값을 캡처하고 Postfix에서 최종 실패 여부를 결정한다.
+    /// 바닐라가 확정해 기록한 판정을 관찰해 게이지에 반영한다.
+    /// 실패 피해는 Die가 소유하며, 원본 종료 후 실제 noFail 상태에서 일반 판정만 적용한다.
     /// </summary>
     [HarmonyPatch(typeof(scrPlanet), nameof(scrPlanet.SwitchChosen), typeof(long?))]
     internal static class SwitchChosenPatch
     {
-        private static bool[] judgementAppliedByDieAtDepth = new bool[4];
-        private static int observedSwitchDepth;
         private static int temporaryNoFailDepth;
 
         private struct SwitchState
         {
             // Harmony의 __state는 같은 원본 호출의 Prefix/Postfix 사이에서만 전달된다.
             internal bool Track;
-            internal bool NoFailAtStart;
-            internal HitMargin Judgement;
             internal scrPlayer Player;
-            internal int ObservationDepth;
+            internal VanillaJudgementObservation.Token Observation;
             internal bool TrackAutomaticRecovery;
             internal scrController TemporaryNoFailController;
             internal bool RestoreTemporaryNoFail;
@@ -159,12 +155,12 @@ namespace PlanetGauge
 
         private static void Prefix(
             scrPlanet __instance,
-            long? hitTick,
             ref SwitchState __state)
         {
             __state = default(SwitchState);
 
             if (__instance == null
+                || __instance.player == null
                 || GaugeRuntime.IsRecoveringFailure
                 || !GaugeRuntime.ShouldHandle(__instance.player))
             {
@@ -200,43 +196,9 @@ namespace PlanetGauge
                 return;
             }
 
-            double marginScale = nextFloor == null ? 1d : nextFloor.marginScale;
-            float effectiveBpm = (float)((double)conductor.bpm * planetarySystem.speed);
-
-            // 원본 SwitchChosen 실행 후에도 판정 기준이 변하지 않도록 필요한 입력을 미리 확정한다.
             __state.Track = true;
             __state.Player = __instance.player;
-            if (hitTick.HasValue)
-            {
-                scrFloor judgementFloor = nextFloor == null
-                    ? currentFloor
-                    : nextFloor;
-                double targetSongPosition = AsyncInputUtils.GetSongPositionAt(
-                    conductor,
-                    judgementFloor.entryTime);
-                double hitSongPosition = (hitTick.Value - AsyncInputManager.offsetTick)
-                    / 10000000d;
-                __state.Judgement = scrMisc.GetHitMarginInSec(
-                    GCS.difficulty,
-                    hitSongPosition - targetSongPosition,
-                    effectiveBpm,
-                    conductor.song.pitch,
-                    marginScale);
-            }
-            else
-            {
-                __state.Judgement = scrMisc.GetHitMarginInDeg(
-                    GCS.difficulty,
-                    (float)__instance.cachedAngle,
-                    (float)__instance.targetExitAngle,
-                    planetarySystem.isCW,
-                    effectiveBpm,
-                    conductor.song.pitch,
-                    marginScale);
-            }
-            __state.ObservationDepth = BeginObservation();
-
-            __state.NoFailAtStart = controller.noFail;
+            __state.Observation = VanillaJudgementObservation.Begin(__instance.player.marginTracker);
             if (!controller.noFail
                 && GaugeRuntime.EventSettings.FailureProtection
                 && GaugeRuntime.Current > 0f)
@@ -258,7 +220,7 @@ namespace PlanetGauge
             ref SwitchState __state)
         {
             RestoreTemporaryNoFail(ref __state);
-            bool judgementAppliedByDie = EndObservation(ref __state);
+            HitMargin? judgement = VanillaJudgementObservation.End(ref __state.Observation);
 
             if (__state.TrackAutomaticRecovery
                 && __state.Player != null
@@ -280,43 +242,7 @@ namespace PlanetGauge
                 return;
             }
 
-            if (judgementAppliedByDie)
-            {
-                // SwitchChosen 원본 내부의 OnDamage가 연속 Multipress로 Die를 호출한 경우,
-                // PlayerDiePatch가 이미 같은 실패를 처리했으므로 Postfix에서 다시 차감하지 않는다.
-                GaugeRuntime.ClearPendingDieCharge();
-                return;
-            }
-
-            HitMargin judgement = __state.Judgement;
-            scrFailBar failBar = __state.Player.failBar;
-            bool invalidHit = !HitMarginHelper.IsCounted(
-                judgement,
-                GCS.hitMarginLimit);
-            bool overload = failBar != null
-                && failBar.DidFail(false)
-                && (!__state.NoFailAtStart || invalidHit);
-
-            if (overload)
-            {
-                judgement = HitMargin.FailOverload;
-            }
-
-            if (judgement == HitMargin.TooLate)
-            {
-                // TooLate는 같은 타일에 머무는 중간 판정이다. 뒤이어 확정되는 FailMiss가 직접 차감한다.
-                GaugeRuntime.ClearPendingDieCharge();
-                return;
-            }
-
-            if (judgement == HitMargin.FailMiss
-                || judgement == HitMargin.FailOverload)
-            {
-                // 이 판정 직후 원본 Die가 이어질 때 같은 실패를 두 번 차감하지 않게 한다.
-                GaugeRuntime.MarkNextDieAlreadyCharged();
-            }
-
-            if (GaugeRuntime.ApplyJudgement(judgement))
+            if (judgement.HasValue && GaugeRuntime.ApplyJudgement(judgement.Value))
             {
                 GaugeRuntime.ForceDie(__state.Player);
             }
@@ -325,7 +251,7 @@ namespace PlanetGauge
         private static Exception Finalizer(Exception __exception, ref SwitchState __state)
         {
             RestoreTemporaryNoFail(ref __state);
-            EndObservation(ref __state);
+            VanillaJudgementObservation.End(ref __state.Observation);
             return __exception;
         }
 
@@ -334,22 +260,11 @@ namespace PlanetGauge
             get { return temporaryNoFailDepth > 0; }
         }
 
-        internal static void MarkJudgementAppliedByDie()
-        {
-            if (observedSwitchDepth > 0)
-            {
-                judgementAppliedByDieAtDepth[observedSwitchDepth - 1] = true;
-            }
-        }
-
         internal static void ResetSessionState()
         {
-            observedSwitchDepth = 0;
             temporaryNoFailDepth = 0;
-            Array.Clear(
-                judgementAppliedByDieAtDepth,
-                0,
-                judgementAppliedByDieAtDepth.Length);
+            PlayerDiePatch.ResetSessionState();
+            VanillaJudgementObservation.Reset();
         }
 
         private static void RestoreTemporaryNoFail(ref SwitchState state)
@@ -372,38 +287,15 @@ namespace PlanetGauge
             }
         }
 
-        private static int BeginObservation()
+    }
+
+    [HarmonyPatch(typeof(scrMarginTracker), nameof(scrMarginTracker.AddHit), typeof(HitMargin))]
+    internal static class VanillaMarginRecordedPatch
+    {
+        private static void Postfix(scrMarginTracker __instance, HitMargin hit)
         {
-            if (observedSwitchDepth == judgementAppliedByDieAtDepth.Length)
-            {
-                Array.Resize(
-                    ref judgementAppliedByDieAtDepth,
-                    judgementAppliedByDieAtDepth.Length * 2);
-            }
-
-            judgementAppliedByDieAtDepth[observedSwitchDepth] = false;
-            observedSwitchDepth++;
-            return observedSwitchDepth;
-        }
-
-        private static bool EndObservation(ref SwitchState state)
-        {
-            if (state.ObservationDepth <= 0)
-            {
-                return false;
-            }
-
-            int index = state.ObservationDepth - 1;
-            bool applied = judgementAppliedByDieAtDepth[index];
-            judgementAppliedByDieAtDepth[index] = false;
-
-            if (observedSwitchDepth == state.ObservationDepth)
-            {
-                observedSwitchDepth--;
-            }
-
-            state.ObservationDepth = 0;
-            return applied;
+            if (Main.IsEnabled && !GaugeRuntime.IsRecoveringFailure)
+                VanillaJudgementObservation.Record(__instance, hit);
         }
     }
 
@@ -414,10 +306,17 @@ namespace PlanetGauge
     [HarmonyPatch(typeof(scrPlayer), nameof(scrPlayer.Die))]
     internal static class PlayerDiePatch
     {
+        private static int temporaryNoFailDepth;
+
+        internal static bool IsBorrowingNoFail { get { return temporaryNoFailDepth > 0; } }
+        internal static void ResetSessionState() { temporaryNoFailDepth = 0; }
+
         private struct DieState
         {
             internal bool RestoreNoFail;
             internal bool RecoveryStarted;
+            internal bool OriginalNoFail;
+            internal bool BorrowStarted;
             internal scrController Controller;
         }
 
@@ -431,65 +330,39 @@ namespace PlanetGauge
         {
             __state = default(DieState);
 
-            if (hitbox && GaugeRuntime.ShouldHandle(__instance))
-            {
-                // hitbox 사망은 게이지로 흡수하지 않으므로 실제 사망 요청 시 숫자만 공개한다.
-                GaugeRuntime.RevealBlindfold();
-            }
-
-            if (GaugeRuntime.IsForcingDeath
-                || hitbox
-                || !GaugeRuntime.ShouldHandle(__instance))
-            {
+            if (!GaugeRuntime.ShouldHandle(__instance)
+                || (GaugeRuntime.IsRecoveringFailure && !GaugeRuntime.IsForcingDeath && !hitbox))
                 return;
-            }
-
-            if (GaugeRuntime.IsAutoPlay(__instance))
-            {
-                GaugeRuntime.ClearPendingDieCharge();
-                return;
-            }
 
             scrController controller = scrController.instance;
-            if (controller == null)
-            {
-                return;
-            }
+            if (controller == null) return;
 
-            bool chargedByJudgement = GaugeRuntime.ConsumeNextDieAlreadyCharged();
-            bool shouldDie = chargedByJudgement
-                ? !controller.noFail && GaugeRuntime.Current <= 0f
-                : GaugeRuntime.ApplyJudgement(overload
-                    ? HitMargin.FailOverload
-                    : HitMargin.FailMiss);
-
-            if (!chargedByJudgement)
-            {
-                SwitchChosenPatch.MarkJudgementAppliedByDie();
-            }
-
-            // 실패 방지가 가장 높은 우선순위이므로 원본 noFail 분기를 그대로 실행한다.
-            if (controller.noFail || shouldDie)
-            {
-                return;
-            }
-
-            if (overload)
-            {
-                // 놓침은 아래 바닐라 복구의 Hit(false)가 FailMiss를 기록한다.
-                // 과부하는 Die의 noFail 분기가 타일을 진행시키지 않으므로 여기서 한 번 기록한다.
-                scrMarginTracker marginTracker = __instance.marginTracker;
-                if (marginTracker != null)
-                {
-                    marginTracker.AddHit(HitMargin.FailOverload);
-                }
-            }
-
-            // 게이지가 남아 있는 동안만 원본 실패 방지 동작을 빌린다.
+            // 하나의 Die 패치가 외부 noFail을 보존/복원하여 bridge 실행 순서 의존을 없앤다.
             __state.Controller = controller;
+            __state.OriginalNoFail = controller.noFail;
             __state.RestoreNoFail = true;
-            __state.RecoveryStarted = true;
+            if (Main.IsBorrowingNoFail) controller.noFail = false;
+
+            if (hitbox) GaugeRuntime.RevealBlindfold();
+            if (GaugeRuntime.IsForcingDeath || hitbox || GaugeRuntime.IsAutoPlay(__instance))
+                return;
+
+            // 실패 판정 표시와 fail-bar 잔여 상태는 차감하지 않는다. 실제 Die 요청만 소유한다.
+            bool shouldDie = GaugeRuntime.ApplyJudgement(overload
+                ? HitMargin.FailOverload
+                : HitMargin.FailMiss);
+            VanillaJudgementObservation.MarkFailureHandled();
+
+            if (shouldDie) return;
+
+            // 실제 무적과 PG 보호 모두 원본의 복구 Hit를 그대로 사용한다.
+            if (!controller.noFail)
+            {
+                temporaryNoFailDepth++;
+                __state.BorrowStarted = true;
+            }
             controller.noFail = true;
+            __state.RecoveryStarted = true;
             GaugeRuntime.BeginFailureRecovery();
         }
 
@@ -509,7 +382,7 @@ namespace PlanetGauge
             // 이 메서드는 Postfix와 Finalizer에서 모두 호출될 수 있으므로 반드시 멱등이어야 한다.
             if (state.RestoreNoFail && state.Controller != null)
             {
-                state.Controller.noFail = false;
+                state.Controller.noFail = state.OriginalNoFail;
                 state.RestoreNoFail = false;
             }
 
@@ -517,6 +390,12 @@ namespace PlanetGauge
             {
                 GaugeRuntime.EndFailureRecovery();
                 state.RecoveryStarted = false;
+            }
+
+            if (state.BorrowStarted)
+            {
+                if (temporaryNoFailDepth > 0) temporaryNoFailDepth--;
+                state.BorrowStarted = false;
             }
         }
     }

@@ -170,38 +170,8 @@ namespace PlanetGauge
                 typeof(scrPlanet),
                 nameof(scrPlanet.SwitchChosen),
                 new[] { typeof(long?) });
-            RequireMethod(
-                typeof(AsyncInputUtils),
-                nameof(AsyncInputUtils.GetSongPositionAt),
-                new[] { typeof(scrConductor), typeof(double) });
-            RequireMethod(
-                typeof(scrMisc),
-                nameof(scrMisc.GetHitMarginInSec),
-                new[]
-                {
-                    typeof(Difficulty),
-                    typeof(double),
-                    typeof(float),
-                    typeof(float),
-                    typeof(double)
-                });
-            RequireMethod(
-                typeof(scrMisc),
-                nameof(scrMisc.GetHitMarginInDeg),
-                new[]
-                {
-                    typeof(Difficulty),
-                    typeof(float),
-                    typeof(float),
-                    typeof(bool),
-                    typeof(float),
-                    typeof(float),
-                    typeof(double)
-                });
-            RequireMethod(
-                typeof(HitMarginHelper),
-                nameof(HitMarginHelper.IsCounted),
-                new[] { typeof(HitMargin), typeof(HitMarginLimit?) });
+            RequireMethod(typeof(scrMarginTracker), nameof(scrMarginTracker.AddHit), new[] { typeof(HitMargin) });
+            RequireMethod(typeof(scrPlayer), "CheckPostHoldFail", new[] { typeof(long?) });
             RequireMethod(
                 typeof(HitMarginHelper),
                 nameof(HitMarginHelper.IsShowXPerfect),
@@ -234,9 +204,6 @@ namespace PlanetGauge
             RequireField(typeof(scrController), nameof(scrController.noFail));
             RequireField(typeof(scrController), nameof(scrController.noFailInfiniteMargin));
             RequireField(typeof(scrPlayer), nameof(scrPlayer.failBar));
-            RequireField(
-                typeof(AsyncInputManager),
-                nameof(AsyncInputManager.offsetTick));
 
             PlanetGaugeLevelEventRegistry.ValidateRequiredGameApi();
 
@@ -433,7 +400,7 @@ namespace PlanetGauge
         /// 놓침 뒤 바닐라의 후처리가 멈추지 않도록 CheckPostHoldFail 실행 중에만 noFail을 대여한다.
         /// 중첩 호출은 <see cref="temporaryMissRecoveryDepth"/>로 추적한다.
         /// </summary>
-        [HarmonyPatch]
+        [HarmonyPatch(typeof(scrPlayer), "CheckPostHoldFail", typeof(long?))]
         private static class CheckPostHoldFailRecoveryPatch
         {
             private struct RecoveryState
@@ -441,29 +408,6 @@ namespace PlanetGauge
                 internal scrController Controller;
                 internal bool RestoreNoFail;
                 internal bool OriginalNoFail;
-            }
-
-            private static MethodBase TargetMethod()
-            {
-                return FindCheckPostHoldFailMethod();
-            }
-
-            [HarmonyPrepare]
-            private static bool Prepare()
-            {
-                if (FindCheckPostHoldFailMethod() != null)
-                {
-                    return true;
-                }
-
-                if (Logger != null)
-                {
-                    Logger.Log(
-                        "[경고] 이 게임 버전에는 scrPlayer.CheckPostHoldFail 메서드가 없습니다. "
-                        + "모드는 계속 실행하지만 놓침 각도 복구 보정은 비활성화합니다.");
-                }
-
-                return false;
             }
 
             [HarmonyPrefix]
@@ -527,100 +471,19 @@ namespace PlanetGauge
             }
         }
 
-        /// <summary>
-        /// 위 복구 구간에서 호출된 Die가 실제 noFail 설정으로 오인되지 않도록 임시 플래그를 잠시 해제한다.
-        /// </summary>
-        [HarmonyPatch(typeof(scrPlayer), nameof(scrPlayer.Die))]
-        private static class TemporaryNoFailDieBridgePatch
+        internal static bool IsBorrowingNoFail
         {
-            private struct BridgeState
+            get
             {
-                internal scrController Controller;
-                internal bool RestoreTemporaryNoFail;
-                internal bool OriginalNoFail;
-            }
-
-            [HarmonyPrefix]
-            [HarmonyPriority(Priority.First)]
-            private static void Prefix(
-                scrPlayer __instance,
-                bool hitbox,
-                ref BridgeState __state)
-            {
-                __state = default(BridgeState);
-
-                if ((temporaryMissRecoveryDepth <= 0
-                        && !SwitchChosenPatch.IsBorrowingNoFail)
-                    || hitbox
-                    || GaugeRuntime.IsAutoPlay(__instance)
-                    || !GaugeRuntime.ShouldHandle(__instance))
-                {
-                    return;
-                }
-
-                scrController controller = scrController.instance;
-                if (controller == null || !controller.noFail)
-                {
-                    return;
-                }
-
-                // CheckPostHoldFail 또는 SwitchChosen에 빌려준 noFail은 실제 무적모드보다
-                // 우선하면 안 된다. Die 패치가 PG를 차감한 뒤 생존한 경우에만
-                // 원본 noFail 복구 분기로 다시 진입한다.
-                __state.Controller = controller;
-                __state.RestoreTemporaryNoFail = true;
-                __state.OriginalNoFail = controller.noFail;
-                controller.noFail = false;
-            }
-
-            [HarmonyPostfix]
-            [HarmonyPriority(Priority.First)]
-            private static void Postfix(ref BridgeState __state)
-            {
-                RestoreTemporaryNoFail(ref __state);
-            }
-
-            [HarmonyFinalizer]
-            [HarmonyPriority(Priority.First)]
-            private static Exception Finalizer(Exception __exception, ref BridgeState __state)
-            {
-                RestoreTemporaryNoFail(ref __state);
-                return __exception;
-            }
-
-            private static void RestoreTemporaryNoFail(ref BridgeState state)
-            {
-                if (state.RestoreTemporaryNoFail && state.Controller != null)
-                {
-                    state.Controller.noFail = state.OriginalNoFail;
-                    state.RestoreTemporaryNoFail = false;
-                }
+                return temporaryMissRecoveryDepth > 0
+                    || SwitchChosenPatch.IsBorrowingNoFail
+                    || PlayerDiePatch.IsBorrowingNoFail;
             }
         }
 
-        private static MethodInfo FindCheckPostHoldFailMethod()
+        internal static bool IsActualNoFail(scrController controller)
         {
-            MethodInfo[] methods = typeof(scrPlayer).GetMethods(
-                BindingFlags.Instance
-                | BindingFlags.Static
-                | BindingFlags.Public
-                | BindingFlags.NonPublic);
-
-            for (int index = 0; index < methods.Length; index++)
-            {
-                MethodInfo method = methods[index];
-                ParameterInfo[] parameters = method.GetParameters();
-                if (string.Equals(method.Name, "CheckPostHoldFail", StringComparison.Ordinal)
-                    && !method.IsStatic
-                    && method.ReturnType == typeof(void)
-                    && parameters.Length == 1
-                    && parameters[0].ParameterType == typeof(long?))
-                {
-                    return method;
-                }
-            }
-
-            return null;
+            return controller != null && controller.noFail && !IsBorrowingNoFail;
         }
 
         internal static void LogException(string message, Exception exception)

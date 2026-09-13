@@ -146,7 +146,6 @@ namespace PlanetGauge
                 LocalizedStrings.DebugRuntimeLine,
                 GaugeRuntime.IsFrozen,
                 GaugeRuntime.FailureRecoveryDepth,
-                GaugeRuntime.HasPendingDieCharge,
                 GaugeRuntime.IsForcingDeath));
             builder.AppendLine(LocalizedStrings.Format(
                 LocalizedStrings.DebugActiveLine,

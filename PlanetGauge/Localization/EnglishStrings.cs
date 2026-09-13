@@ -137,7 +137,7 @@ namespace PlanetGauge
         internal const string DebugFailureProtectionLine = "FailureProtection: {0}";
         internal const string DebugRecoveryCapLine = "RecoveryCap: {0} @ {1}  AutoTileRecovery: {2}";
         internal const string DebugPlaybackLine = "ActualAutoPlay: {0}  Paused: {1}";
-        internal const string DebugRuntimeLine = "Frozen: {0}  RecoveryDepth: {1}  PendingDie: {2}  ForcingDeath: {3}";
+        internal const string DebugRuntimeLine = "Frozen: {0}  RecoveryDepth: {1}  ForcingDeath: {2}";
         internal const string DebugActiveLine = "Active: {0}";
         internal const string DebugHudHiddenLine = "HUD TargetHidden: Bar={0} Value={1} Attribute={2} Rate={3} Force={4}";
         internal const string DebugHudAlphaLine = "HUD Alpha: Bar={0} Value={1} Attribute={2} Rate={3} Force={4}";
