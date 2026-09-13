@@ -45,7 +45,7 @@ namespace PlanetGauge
         internal const string ResetRatePosition = "증감률 위치 초기화";
         internal const string Advanced = "고급";
         internal const string ShowDecimalHealth = "소수점 체력 표시";
-        internal const string IndependentGaugeValueColor = "체력 텍스트 색상을 SetPlanetGauge 속성에서 독립";
+        internal const string IndependentGaugeValueColor = "체력 텍스트 색상 변형 끄기";
         internal const string XPlanetGaugeMode = "X-PlanetGauge 모드";
         internal const string XPlanetGaugeModeRequirement = "+-정확에서 체력을 0.1 깎습니다.\n얼불춤 설정에서 X-Perfect 판정 표시가 켜져 있을 때만 적용됩니다. 꺼져 있으면 일반 PlanetGauge 모드로 진행합니다.";
         internal const string MainGaugeColor = "게이지 색상";
