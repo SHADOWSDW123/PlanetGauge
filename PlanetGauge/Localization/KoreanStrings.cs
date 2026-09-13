@@ -47,7 +47,7 @@ namespace PlanetGauge
         internal const string ShowDecimalHealth = "소수점 체력 표시";
         internal const string IndependentGaugeValueColor = "체력 텍스트 색상을 SetPlanetGauge 속성에서 독립";
         internal const string XPlanetGaugeMode = "X-PlanetGauge 모드";
-        internal const string XPlanetGaugeModeRequirement = "+-Perfect(+-정확)에서 체력을 -0.1 깎습니다.\n얼불춤 설정에서 X-Perfect 판정 표시가 켜져 있을 때만 적용됩니다. 꺼져 있으면 일반 PlanetGauge 모드로 진행합니다.";
+        internal const string XPlanetGaugeModeRequirement = "+-정확에서 체력을 0.1 깎습니다.\n얼불춤 설정에서 X-Perfect 판정 표시가 켜져 있을 때만 적용됩니다. 꺼져 있으면 일반 PlanetGauge 모드로 진행합니다.";
         internal const string MainGaugeColor = "게이지 색상";
         internal const string ResetColor = "색상 초기화(#FFFFFF)";
         internal const string GaugeValueColor = "게이지 텍스트 색상";
@@ -67,10 +67,10 @@ namespace PlanetGauge
         internal const string IncreaseDisabled = "회복 차단됨";
         internal const string RateReduced = "증감률 감소됨";
         internal const string RateAmplified = "증감률 증폭됨";
-        internal const string Increase = "증가";
-        internal const string Decrease = "감소";
+        internal const string Increase = "증가율";
+        internal const string Decrease = "감소율";
         internal const string NoFailDisabled = "무적모드 해제됨";
-        internal const string IncreaseLimited = "최대체력 조정됨";
+        internal const string IncreaseLimited = "회복상한 조정됨";
         internal const string ReducedEffect = "{0} 감소됨";
         internal const string AmplifiedEffect = "{0} 증폭됨";
         internal const string FrozenEffect = "{0} 정지";
@@ -98,7 +98,7 @@ namespace PlanetGauge
         internal const string PngIhdrMissing = "PNG IHDR 청크(이미지 기본 정보)를 찾을 수 없습니다.";
         internal const string PngDimensionsInvalid = "PNG 크기가 유효하지 않습니다.";
 
-        internal const string MultiplierReuseNote = "O/X 비활성화 시 마지막으로 설정한 변경값을 사용합니다.";
+        internal const string MultiplierReuseNote = "설정 비활성화 시 마지막 변경값을 사용합니다.";
         internal const string RecoveryAmountNote = "음수로 설정할 시 체력을 깎습니다.\n최대 체력을 넘는 회복은 상쇄됩니다.";
         internal const string GaugeEventName = "PlanetGauge 설정";
         internal const string SkinEventName = "PlanetGauge 스킨";
@@ -110,7 +110,7 @@ namespace PlanetGauge
         internal const string AmplifyIncrease = "증가율 변경";
         internal const string AmplifyBoth ="증가·감소율 변경";
         internal const string Blindfold = "체력 표시 차단";
-        internal const string ForceRecovery = "체력 강제 회복";
+        internal const string ForceRecovery = "체력 회복";
         internal const string HideGaugeHud = "게이지 HUD 숨기기";
         internal const string AttributeModeLabel = "속성 설정";
         internal const string AttributeEnabledLabel = "선택 속성 켜기";
