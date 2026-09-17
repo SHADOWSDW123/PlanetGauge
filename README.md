@@ -26,7 +26,7 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 - 빠름/느림(EPerfect/LPerfect) - -0.8 
 - 빠름!/느림!(Early / Late) - -1.5 
 - 매우 빠름(Too Early) - -3 
-- 과부하(Overload | Fail Trigger) - -8 
+- 과부하(Overload | Fail Trigger) - -6
 - 놓침 (Miss | Fail Trigger) - -6
   
 해당 수치는 변동될 수 있습니다.
