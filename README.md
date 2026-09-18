@@ -28,6 +28,7 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 - 매우 빠름(Too Early) - -3 
 - 과부하(Overload | Fail Trigger) - -6
 - 놓침 (Miss | Fail Trigger) - -6
+- 정확(초정확이 아닌 정확) - -0.1 | X-PlanetGauge 활성화 시에만 적용
   
 해당 수치는 변동될 수 있습니다.
 
@@ -50,7 +51,7 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 > - 체력 표시 차단: Blindfolded 
 > - 실패방지 해제: No-Fail Disabled (*PlanetGauge 모드의 실패방지만 해제됩니다.)
 > - 체력 상한 설정: Increase Limited
-> 
+> - X-PlanetGauge(모드 설정 속성)
 >
 > - 체력 강제 회복: N/A(속성 기재 없음)
 > - 게이지 HUD 숨기기: N/A(속성 기재 없음)
