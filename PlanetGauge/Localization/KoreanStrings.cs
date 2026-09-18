@@ -47,7 +47,7 @@ namespace PlanetGauge
         internal const string ShowDecimalHealth = "소수점 체력 표시";
         internal const string IndependentGaugeValueColor = "체력 텍스트 색상 변형 끄기";
         internal const string XPlanetGaugeMode = "X-PlanetGauge 모드";
-        internal const string XPlanetGaugeModeRequirement = "+-정확에서 체력을 0.1 깎습니다.\n얼불춤 설정에서 X-Perfect 판정 표시가 켜져 있을 때만 적용됩니다. 꺼져 있으면 일반 PlanetGauge 모드로 진행합니다.";
+        internal const string XPlanetGaugeModeRequirement = "+-정확에서 체력을 0.1 깎습니다.\n모드 설정으로 켠 X-PlanetGauge는 SetPlanetGauge 이벤트에서 꺼도 유지됩니다.";
         internal const string MainGaugeColor = "게이지 색상";
         internal const string ResetColor = "색상 초기화(#FFFFFF)";
         internal const string GaugeValueColor = "게이지 텍스트 색상";
@@ -75,6 +75,7 @@ namespace PlanetGauge
         internal const string AmplifiedEffect = "{0} 증폭됨";
         internal const string FrozenEffect = "{0} 정지";
         internal const string GaugeFrozen = "게이지 정지";
+        internal const string XPlanetGaugeActive = "X-PlanetGauge";
         //PG 기계적 에딧
         internal const string GaugeEnabled = "PlanetGauge 켜짐";
         internal const string GaugeDisabled = "PlanetGauge 꺼짐";

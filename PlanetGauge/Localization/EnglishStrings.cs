@@ -47,7 +47,7 @@ namespace PlanetGauge
         internal const string ShowDecimalHealth = "Show decimal health (e.g. 73.4)";
         internal const string IndependentGaugeValueColor = "Keep gauge value text color independent of SetPlanetGauge attributes";
         internal const string XPlanetGaugeMode = "X-PlanetGauge mode";
-        internal const string XPlanetGaugeModeRequirement = "Perfect± (± accuracy) reduces health by 0.1.\nActive only when ADOFAI's X-Perfect judgment text display is enabled. Otherwise, standard PlanetGauge mode is used.";
+        internal const string XPlanetGaugeModeRequirement = "Perfect± (± accuracy) reduces health by 0.1.\nThis mod setting stays active even when a SetPlanetGauge event disables X-PlanetGauge.";
         internal const string MainGaugeColor = "Main gauge color (RGB)";
         internal const string ResetColor = "Reset color (#FFFFFF)";
         internal const string GaugeValueColor = "Gauge value text color (RGB)";
@@ -75,6 +75,7 @@ namespace PlanetGauge
         internal const string AmplifiedEffect = "{0} Amplified";
         internal const string FrozenEffect = "{0} Frozen";
         internal const string GaugeFrozen = "Gauge Frozen";
+        internal const string XPlanetGaugeActive = "X-PlanetGauge";
 
         internal const string GaugeEnabled = "PlanetGauge enabled";
         internal const string GaugeDisabled = "PlanetGauge disabled";

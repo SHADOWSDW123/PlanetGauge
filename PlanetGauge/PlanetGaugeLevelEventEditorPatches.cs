@@ -320,6 +320,12 @@ namespace PlanetGauge
                     localized = LocalizedStrings.HideGaugeHud;
                     return true;
                 }
+
+                if (key.EndsWith(".XPlanetGauge", StringComparison.Ordinal))
+                {
+                    localized = LocalizedStrings.XPlanetGaugeMode;
+                    return true;
+                }
             }
 
             localized = null;

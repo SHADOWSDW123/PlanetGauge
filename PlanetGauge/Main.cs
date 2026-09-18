@@ -173,17 +173,6 @@ namespace PlanetGauge
             RequireMethod(typeof(scrMarginTracker), nameof(scrMarginTracker.AddHit), new[] { typeof(HitMargin) });
             RequireMethod(typeof(scrPlayer), "CheckPostHoldFail", new[] { typeof(long?) });
             RequireMethod(
-                typeof(HitMarginHelper),
-                nameof(HitMarginHelper.IsShowXPerfect),
-                new[] { typeof(HitMarginPerfectTextPreset), typeof(bool) });
-            if (AccessTools.PropertyGetter(
-                    typeof(Persistence),
-                    nameof(Persistence.hitMarginPerfectText)) == null)
-            {
-                throw new MissingMemberException(
-                    "호환성에 필요한 게임 속성을 찾을 수 없습니다: Persistence.hitMarginPerfectText");
-            }
-            RequireMethod(
                 typeof(scrController),
                 nameof(scrController.OnLandOnPortal),
                 new[] { typeof(scrPlanet), typeof(Portal), typeof(string) });

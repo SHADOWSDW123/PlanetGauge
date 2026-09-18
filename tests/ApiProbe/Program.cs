@@ -25,7 +25,8 @@ internal static class Program
                 .GetMethod("ValidateRequiredGameApi", BindingFlags.Static | BindingFlags.NonPublic)
                 .Invoke(null, null);
             VerifyGaugeValueColor(assembly);
-            Console.WriteLine("PASS: required API and gauge value color settings/priority checks.");
+            VerifyXPlanetGaugePriority(assembly);
+            Console.WriteLine("PASS: required API, gauge value color, and X-PlanetGauge priority checks.");
             return 0;
         }
         catch (Exception e)
@@ -55,7 +56,7 @@ internal static class Program
         object blockedRecovery = constructor.Invoke(new[]
         {
             (object)true, disabledChannel, disabledChannel,
-            100f, 100f, 100f, false, true, false, 100f, false
+            100f, 100f, 100f, false, true, false, 100f, false, false
         });
         MethodInfo resolver = assembly.GetType("PlanetGauge.MainGaugeHud", true)
             .GetMethod("ResolveGaugeValueColor", all);
@@ -73,5 +74,59 @@ internal static class Program
         byte actualB = (byte)type.GetField("b").GetValue(color);
         if (actualR != r || actualG != g || actualB != b)
             throw new InvalidOperationException(name + " failed: " + actualR + "," + actualG + "," + actualB);
+    }
+
+    private static void VerifyXPlanetGaugePriority(Assembly assembly)
+    {
+        const BindingFlags all = BindingFlags.Instance | BindingFlags.Static
+            | BindingFlags.Public | BindingFlags.NonPublic;
+        Type mainType = assembly.GetType("PlanetGauge.Main", true);
+        Type settingsType = assembly.GetType("PlanetGauge.PlanetGaugeSettings", true);
+        Type runtimeType = assembly.GetType("PlanetGauge.GaugeRuntime", true);
+        Type commandType = assembly.GetType("PlanetGauge.PlanetGaugeEventCommand", true);
+        Type modeType = assembly.GetType("PlanetGauge.PlanetGaugeAttributeMode", true);
+        object settings = Activator.CreateInstance(settingsType);
+        PropertyInfo mainSettings = mainType.GetProperty("Settings", all);
+        object previousSettings = mainSettings.GetValue(null, null);
+        PropertyInfo eventSettings = runtimeType.GetProperty("EventSettings", all);
+        object previousEventSettings = eventSettings.GetValue(null, null);
+        try
+        {
+            mainSettings.SetValue(null, settings, null);
+            runtimeType.GetMethod("Reset", all).Invoke(null, null);
+            PropertyInfo active = runtimeType.GetProperty("IsXPlanetGaugeActive", all);
+            if ((bool)active.GetValue(null, null)) throw new InvalidOperationException("X-PG must start off");
+
+            object command = Activator.CreateInstance(commandType);
+            commandType.GetField("ApplyAttributeMode", all).SetValue(command, true);
+            commandType.GetField("AttributeMode", all).SetValue(command, Enum.Parse(modeType, "XPlanetGauge"));
+            commandType.GetField("AttributeEnabled", all).SetValue(command, true);
+            MethodInfo apply = runtimeType.GetMethod("ApplyEventSettings", all);
+            apply.Invoke(null, new[] { command, (object)-1 });
+            if (!(bool)active.GetValue(null, null)) throw new InvalidOperationException("X-PG event ON failed");
+
+            object blockRecovery = Activator.CreateInstance(commandType);
+            commandType.GetField("ApplyAttributeMode", all).SetValue(blockRecovery, true);
+            commandType.GetField("AttributeMode", all).SetValue(blockRecovery, Enum.Parse(modeType, "BlockRecovery"));
+            commandType.GetField("AttributeEnabled", all).SetValue(blockRecovery, true);
+            apply.Invoke(null, new[] { blockRecovery, (object)-1 });
+
+            commandType.GetField("AttributeEnabled", all).SetValue(command, false);
+            apply.Invoke(null, new[] { command, (object)-1 });
+            if ((bool)active.GetValue(null, null)) throw new InvalidOperationException("X-PG event OFF failed");
+            object afterXOff = eventSettings.GetValue(null, null);
+            if (!(bool)afterXOff.GetType().GetProperty("RecoveryBlocked", all).GetValue(afterXOff, null))
+                throw new InvalidOperationException("X-PG event OFF changed another attribute");
+
+            settingsType.GetField("XPlanetGaugeMode", all).SetValue(settings, true);
+            if (!(bool)active.GetValue(null, null)) throw new InvalidOperationException("UMM X-PG ON failed");
+            apply.Invoke(null, new[] { command, (object)-1 });
+            if (!(bool)active.GetValue(null, null)) throw new InvalidOperationException("event OFF overrode UMM X-PG");
+        }
+        finally
+        {
+            eventSettings.SetValue(null, previousEventSettings, null);
+            mainSettings.SetValue(null, previousSettings, null);
+        }
     }
 }

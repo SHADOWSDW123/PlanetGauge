@@ -43,11 +43,8 @@ namespace PlanetGauge
         {
             get
             {
-                return Main.Settings != null
-                    && Main.Settings.XPlanetGaugeMode
-                    && HitMarginHelper.IsShowXPerfect(
-                        Persistence.hitMarginPerfectText,
-                        false);
+                return (Main.Settings != null && Main.Settings.XPlanetGaugeMode)
+                    || EventSettings.XPlanetGaugeEnabled;
             }
         }
         internal static bool IsBlindfolded
@@ -161,6 +158,7 @@ namespace PlanetGauge
             float configuredDecrease = current.ConfiguredDecreasePercent;
             float configuredBoth = current.ConfiguredBothPercent;
             bool blindfoldEnabled = current.BlindfoldEnabled;
+            bool xPlanetGaugeEnabled = current.XPlanetGaugeEnabled;
 
             if (command.ApplyMultiplier)
             {
@@ -181,6 +179,7 @@ namespace PlanetGauge
                     recoveryRate = PlanetGaugeRateChannel.Disabled;
                     damageRate = PlanetGaugeRateChannel.Disabled;
                     blindfoldEnabled = false;
+                    xPlanetGaugeEnabled = false;
                     GaugeHudVisibilityTransitions.RevealAll();
                 }
 
@@ -212,6 +211,9 @@ namespace PlanetGauge
                     case PlanetGaugeAttributeMode.HideGaugeHud:
                         GaugeHudVisibilityTransitions.Apply(command);
                         break;
+                    case PlanetGaugeAttributeMode.XPlanetGauge:
+                        xPlanetGaugeEnabled = command.AttributeEnabled;
+                        break;
                 }
             }
 
@@ -226,7 +228,8 @@ namespace PlanetGauge
                 recoveryBlocked, recoveryRate, damageRate,
                 configuredIncrease, configuredDecrease, configuredBoth,
                 blindfoldEnabled,
-                failureProtection, recoveryCapEnabled, recoveryCapPercent, autoTileRecovery);
+                failureProtection, recoveryCapEnabled, recoveryCapPercent, autoTileRecovery,
+                xPlanetGaugeEnabled);
             EventSettings = nextSettings;
             if (HasVisualStyleChanged(current, nextSettings))
             {
@@ -591,6 +594,7 @@ namespace PlanetGauge
             PlanetGaugeEventSettings next)
         {
             return previous.RecoveryBlocked != next.RecoveryBlocked
+                || previous.XPlanetGaugeEnabled != next.XPlanetGaugeEnabled
                 || previous.BlindfoldEnabled != next.BlindfoldEnabled
                 || previous.FailureProtection != next.FailureProtection
                 || previous.RecoveryCapEnabled != next.RecoveryCapEnabled

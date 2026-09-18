@@ -683,6 +683,7 @@ namespace PlanetGauge
             property.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyBoth.ToString()));
             property.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.Blindfold.ToString()));
             property.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.HideGaugeHud.ToString()));
+            property.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.XPlanetGauge.ToString()));
         }
 
         private static void AddHudHideShowCondition(ADOFAI.PropertyInfo property)
