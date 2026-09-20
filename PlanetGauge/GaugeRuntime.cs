@@ -222,13 +222,11 @@ namespace PlanetGauge
             float recoveryCapPercent = command.ApplyRecoveryCap
                 ? PlanetGaugeValueRules.SanitizeRecoveryCap(command.RecoveryCapPercent)
                 : current.RecoveryCapPercent;
-            bool autoTileRecovery = command.ApplyAutoTileRecovery ? command.AutoTileRecovery : current.AutoTileRecovery;
-
             PlanetGaugeEventSettings nextSettings = new PlanetGaugeEventSettings(
                 recoveryBlocked, recoveryRate, damageRate,
                 configuredIncrease, configuredDecrease, configuredBoth,
                 blindfoldEnabled,
-                failureProtection, recoveryCapEnabled, recoveryCapPercent, autoTileRecovery,
+                failureProtection, recoveryCapEnabled, recoveryCapPercent,
                 xPlanetGaugeEnabled);
             EventSettings = nextSettings;
             if (HasVisualStyleChanged(current, nextSettings))

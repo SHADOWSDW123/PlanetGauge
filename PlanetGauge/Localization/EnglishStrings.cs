@@ -130,7 +130,6 @@ namespace PlanetGauge
         internal const string RecoveryCapEnabledLabel = "Enable recovery cap";
         internal const string RecoveryCapLabel = "Recovery cap";
         internal const string ForceRecoveryCapLabel = "Force health cap";
-        internal const string AutoTileRecoveryLabel = "Autoplay tile recovery";
         internal const string TargetTagLabel = "Target tag";
         internal const string SkinEnabledLabel = "Enabled";
         internal const string GaugeTypeLabel = "Gauge type";
@@ -139,7 +138,7 @@ namespace PlanetGauge
         internal const string DebugRatesLine = "Recovery: {0}  Damage: {1}";
         internal const string DebugAttributesLine = "BlockRecovery: {0}  Blindfold: {1}  Revealed: {2}";
         internal const string DebugFailureProtectionLine = "FailureProtection: {0}";
-        internal const string DebugRecoveryCapLine = "RecoveryCap: {0} @ {1}  AutoTileRecovery: {2}";
+        internal const string DebugRecoveryCapLine = "RecoveryCap: {0} @ {1}";
         internal const string DebugPlaybackLine = "ActualAutoPlay: {0}  Paused: {1}";
         internal const string DebugRuntimeLine = "Frozen: {0}  RecoveryDepth: {1}  ForcingDeath: {2}";
         internal const string DebugActiveLine = "Active: {0}";
@@ -157,7 +156,6 @@ namespace PlanetGauge
         internal const string DebugActiveBlindfold = "Blindfold";
         internal const string DebugActiveNoFailDisabled = "NoFailDisabled";
         internal const string DebugActiveRecoveryCap = "RecoveryCap";
-        internal const string DebugActiveAutoTileRecovery = "AutoTileRecovery";
         internal const string DebugActiveHideGaugeHud = "HideGaugeHud";
         internal const string DefaultSkinDescription = "Default";
         internal const string CustomSkinDescription = "Custom {0} Health={1}x{2} Bounds={3}{4}";

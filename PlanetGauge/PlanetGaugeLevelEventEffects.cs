@@ -44,9 +44,6 @@ namespace PlanetGauge
             bool disableOtherAttributes = levelEvent.Get<bool>(
                 PlanetGaugeLevelEventRegistry.DisableOtherAttributesKey,
                 false);
-            bool autoTileRecovery = levelEvent.Get<bool>(
-                PlanetGaugeLevelEventRegistry.AutoTileRecoveryKey,
-                false);
             bool hideGaugeBar = levelEvent.Get<bool>(
                 PlanetGaugeLevelEventRegistry.HideGaugeBarKey,
                 true);
@@ -90,10 +87,6 @@ namespace PlanetGauge
                     PlanetGaugeLevelEventRegistry.RecoveryCapEnabledKey)
                     && recoveryCapEnabled
                     && forceRecoveryCap,
-                ApplyAutoTileRecovery = IsPropertyEnabled(
-                    levelEvent,
-                    PlanetGaugeLevelEventRegistry.AutoTileRecoveryKey),
-                AutoTileRecovery = autoTileRecovery,
                 HideGaugeBar = hideGaugeBar,
                 HideGaugeValue = hideGaugeValue,
                 HideAttributeText = hideAttributeText,

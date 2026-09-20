@@ -136,8 +136,7 @@ namespace PlanetGauge
             builder.AppendLine(LocalizedStrings.Format(
                 LocalizedStrings.DebugRecoveryCapLine,
                 settings.RecoveryCapEnabled,
-                Format(settings.RecoveryCapPercent),
-                settings.AutoTileRecovery));
+                Format(settings.RecoveryCapPercent)));
             builder.AppendLine(LocalizedStrings.Format(
                 LocalizedStrings.DebugPlaybackLine,
                 GaugeRuntime.IsAutoPlay(),
@@ -210,7 +209,6 @@ namespace PlanetGauge
             if (settings.BlindfoldEnabled) AppendActive(builder, LocalizedStrings.DebugActiveBlindfold);
             if (!settings.FailureProtection) AppendActive(builder, LocalizedStrings.DebugActiveNoFailDisabled);
             if (settings.RecoveryCapEnabled) AppendActive(builder, LocalizedStrings.DebugActiveRecoveryCap);
-            if (settings.AutoTileRecovery) AppendActive(builder, LocalizedStrings.DebugActiveAutoTileRecovery);
             if (GaugeHudVisibilityTransitions.GaugeBarHidden
                 || GaugeHudVisibilityTransitions.GaugeValueHidden
                 || GaugeHudVisibilityTransitions.AttributeTextHidden

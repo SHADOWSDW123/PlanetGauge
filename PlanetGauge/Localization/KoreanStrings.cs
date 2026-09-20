@@ -129,7 +129,6 @@ namespace PlanetGauge
         internal const string RecoveryCapEnabledLabel = "회복 상한 설정";
         internal const string RecoveryCapLabel = "회복 상한";
         internal const string ForceRecoveryCapLabel = "체력 상한 강제 제한";
-        internal const string AutoTileRecoveryLabel = "자동 플레이 타일 체력 회복";
         internal const string TargetTagLabel = "목표 태그";
         internal const string SkinEnabledLabel = "기능 가동";
         internal const string GaugeTypeLabel = "게이지 타입";
@@ -155,7 +154,6 @@ namespace PlanetGauge
         internal const string DebugActiveBlindfold = EnglishStrings.DebugActiveBlindfold;
         internal const string DebugActiveNoFailDisabled = EnglishStrings.DebugActiveNoFailDisabled;
         internal const string DebugActiveRecoveryCap = EnglishStrings.DebugActiveRecoveryCap;
-        internal const string DebugActiveAutoTileRecovery = EnglishStrings.DebugActiveAutoTileRecovery;
         internal const string DebugActiveHideGaugeHud = EnglishStrings.DebugActiveHideGaugeHud;
         internal const string DefaultSkinDescription = EnglishStrings.DefaultSkinDescription;
         internal const string CustomSkinDescription = EnglishStrings.CustomSkinDescription;

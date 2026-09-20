@@ -102,8 +102,16 @@ internal static class Program
             planet.Result = new scrPlanet();
             planet.Body = () => player.marginTracker.AddHit(HitMargin.Auto);
             planet.SwitchChosen(null);
-            Expect(GaugeRuntime.Charges.Count == 1 && GaugeRuntime.Charges[0] == HitMargin.Auto, "auto recovery once");
+            Expect(GaugeRuntime.Charges.Count == 1 && GaugeRuntime.Charges[0] == HitMargin.Auto,
+                "actual autoplay always recovers");
             GaugeRuntime.Auto = false;
+
+            GaugeRuntime.Charges.Clear();
+            planet.currfloor.nextfloor.auto = true;
+            planet.SwitchChosen(null);
+            Expect(GaugeRuntime.Charges.Count == 1 && GaugeRuntime.Charges[0] == HitMargin.Auto,
+                "auto tile always recovers");
+            planet.currfloor.nextfloor.auto = false;
 
             var outer = VanillaJudgementObservation.Begin(player.marginTracker);
             VanillaJudgementObservation.Record(player.marginTracker, HitMargin.VeryEarly);

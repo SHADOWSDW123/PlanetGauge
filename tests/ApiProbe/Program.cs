@@ -26,7 +26,8 @@ internal static class Program
                 .Invoke(null, null);
             VerifyGaugeValueColor(assembly);
             VerifyXPlanetGaugePriority(assembly);
-            Console.WriteLine("PASS: required API, gauge value color, and X-PlanetGauge priority checks.");
+            VerifyAutoTileRecoverySettingRemoved(assembly);
+            Console.WriteLine("PASS: required API, gauge value color, X-PlanetGauge priority, and fixed auto-recovery checks.");
             return 0;
         }
         catch (Exception e)
@@ -56,7 +57,7 @@ internal static class Program
         object blockedRecovery = constructor.Invoke(new[]
         {
             (object)true, disabledChannel, disabledChannel,
-            100f, 100f, 100f, false, true, false, 100f, false, false
+            100f, 100f, 100f, false, true, false, 100f, false
         });
         MethodInfo resolver = assembly.GetType("PlanetGauge.MainGaugeHud", true)
             .GetMethod("ResolveGaugeValueColor", all);
@@ -110,6 +111,10 @@ internal static class Program
             commandType.GetField("AttributeMode", all).SetValue(blockRecovery, Enum.Parse(modeType, "BlockRecovery"));
             commandType.GetField("AttributeEnabled", all).SetValue(blockRecovery, true);
             apply.Invoke(null, new[] { blockRecovery, (object)-1 });
+            float blockedPositiveDelta = (float)runtimeType.GetMethod("TransformDelta", all)
+                .Invoke(null, new object[] { 0.1f });
+            if (blockedPositiveDelta != 0f)
+                throw new InvalidOperationException("BlockRecovery did not suppress automatic recovery delta");
 
             commandType.GetField("AttributeEnabled", all).SetValue(command, false);
             apply.Invoke(null, new[] { command, (object)-1 });
@@ -127,6 +132,24 @@ internal static class Program
         {
             eventSettings.SetValue(null, previousEventSettings, null);
             mainSettings.SetValue(null, previousSettings, null);
+        }
+    }
+
+    private static void VerifyAutoTileRecoverySettingRemoved(Assembly assembly)
+    {
+        const BindingFlags all = BindingFlags.Instance | BindingFlags.Static
+            | BindingFlags.Public | BindingFlags.NonPublic;
+        Type eventSettingsType = assembly.GetType("PlanetGauge.PlanetGaugeEventSettings", true);
+        Type commandType = assembly.GetType("PlanetGauge.PlanetGaugeEventCommand", true);
+        Type registryType = assembly.GetType("PlanetGauge.PlanetGaugeLevelEventRegistry", true);
+        Type runtimeType = assembly.GetType("PlanetGauge.GaugeRuntime", true);
+        if (eventSettingsType.GetProperty("AutoTileRecovery", all) != null
+            || commandType.GetField("ApplyAutoTileRecovery", all) != null
+            || commandType.GetField("AutoTileRecovery", all) != null
+            || registryType.GetField("AutoTileRecoveryKey", all) != null
+            || runtimeType.GetMethod("ApplyAutomaticRecovery", all) == null)
+        {
+            throw new InvalidOperationException("fixed auto-recovery contract is inconsistent");
         }
     }
 }

@@ -119,6 +119,8 @@ namespace PlanetGauge
     [HarmonyPatch]
     internal static class PlanetGaugeLevelEventEncodePatch
     {
+        private const string RemovedAutoTileRecoveryKey = "autoTileRecovery";
+
         private static MethodBase TargetMethod()
         {
             return AccessTools.Method(typeof(LevelEvent), nameof(LevelEvent.Encode), new[] { typeof(bool) });
@@ -171,6 +173,8 @@ namespace PlanetGauge
             {
                 // 정의되지 않은 enum의 ToString()은 숫자를 반환하므로 사람이 읽을 수 있는 계약명으로 저장한다.
                 __result["eventType"] = PlanetGaugeLevelEventRegistry.EventName;
+                // 0.3.5 이하 레벨을 다시 저장할 때 제거된 속성을 JSON에도 남기지 않는다.
+                __result.Remove(RemovedAutoTileRecoveryKey);
             }
             else if (__instance.eventType == PlanetGaugeSkinLevelEventRegistry.EventType)
             {

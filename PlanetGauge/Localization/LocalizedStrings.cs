@@ -196,7 +196,6 @@ namespace PlanetGauge
         internal static string RecoveryCapEnabledLabel { get { return IsKorean ? KoreanStrings.RecoveryCapEnabledLabel : EnglishStrings.RecoveryCapEnabledLabel; } }
         internal static string RecoveryCapLabel { get { return IsKorean ? KoreanStrings.RecoveryCapLabel : EnglishStrings.RecoveryCapLabel; } }
         internal static string ForceRecoveryCapLabel { get { return IsKorean ? KoreanStrings.ForceRecoveryCapLabel : EnglishStrings.ForceRecoveryCapLabel; } }
-        internal static string AutoTileRecoveryLabel { get { return IsKorean ? KoreanStrings.AutoTileRecoveryLabel : EnglishStrings.AutoTileRecoveryLabel; } }
         internal static string TargetTagLabel { get { return IsKorean ? KoreanStrings.TargetTagLabel : EnglishStrings.TargetTagLabel; } }
         internal static string SkinEnabledLabel { get { return IsKorean ? KoreanStrings.SkinEnabledLabel : EnglishStrings.SkinEnabledLabel; } }
         internal static string GaugeTypeLabel { get { return IsKorean ? KoreanStrings.GaugeTypeLabel : EnglishStrings.GaugeTypeLabel; } }
@@ -222,7 +221,6 @@ namespace PlanetGauge
         internal static string DebugActiveBlindfold { get { return IsKorean ? KoreanStrings.DebugActiveBlindfold : EnglishStrings.DebugActiveBlindfold; } }
         internal static string DebugActiveNoFailDisabled { get { return IsKorean ? KoreanStrings.DebugActiveNoFailDisabled : EnglishStrings.DebugActiveNoFailDisabled; } }
         internal static string DebugActiveRecoveryCap { get { return IsKorean ? KoreanStrings.DebugActiveRecoveryCap : EnglishStrings.DebugActiveRecoveryCap; } }
-        internal static string DebugActiveAutoTileRecovery { get { return IsKorean ? KoreanStrings.DebugActiveAutoTileRecovery : EnglishStrings.DebugActiveAutoTileRecovery; } }
         internal static string DebugActiveHideGaugeHud { get { return IsKorean ? KoreanStrings.DebugActiveHideGaugeHud : EnglishStrings.DebugActiveHideGaugeHud; } }
         internal static string DefaultSkinDescription { get { return IsKorean ? KoreanStrings.DefaultSkinDescription : EnglishStrings.DefaultSkinDescription; } }
         internal static string CustomSkinDescription { get { return IsKorean ? KoreanStrings.CustomSkinDescription : EnglishStrings.CustomSkinDescription; } }

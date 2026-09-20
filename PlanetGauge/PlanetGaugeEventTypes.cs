@@ -66,7 +66,6 @@ namespace PlanetGauge
             true,
             false,
             100f,
-            false,
             false);
 
         internal PlanetGaugeEventSettings(
@@ -80,7 +79,6 @@ namespace PlanetGauge
             bool failureProtection,
             bool recoveryCapEnabled,
             float recoveryCapPercent,
-            bool autoTileRecovery,
             bool xPlanetGaugeEnabled)
         {
             RecoveryBlocked = recoveryBlocked;
@@ -93,7 +91,6 @@ namespace PlanetGauge
             FailureProtection = failureProtection;
             RecoveryCapEnabled = recoveryCapEnabled;
             RecoveryCapPercent = recoveryCapPercent;
-            AutoTileRecovery = autoTileRecovery;
             XPlanetGaugeEnabled = xPlanetGaugeEnabled;
         }
 
@@ -111,7 +108,6 @@ namespace PlanetGauge
         internal bool RecoveryCapEnabled { get; }
 
         internal float RecoveryCapPercent { get; }
-        internal bool AutoTileRecovery { get; }
         internal bool XPlanetGaugeEnabled { get; }
     }
 
@@ -134,8 +130,6 @@ namespace PlanetGauge
         internal bool RecoveryCapEnabled;
         internal float RecoveryCapPercent;
         internal bool ForceRecoveryCap;
-        internal bool ApplyAutoTileRecovery;
-        internal bool AutoTileRecovery;
         internal bool HideGaugeBar;
         internal bool HideGaugeValue;
         internal bool HideAttributeText;

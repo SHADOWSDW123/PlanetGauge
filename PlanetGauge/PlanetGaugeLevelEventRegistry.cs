@@ -25,7 +25,6 @@ namespace PlanetGauge
         internal const string RecoveryCapEnabledKey = "recoveryCapEnabled";
         internal const string RecoveryCapPercentKey = "recoveryCapPercent";
         internal const string ForceRecoveryCapKey = "forceRecoveryCap";
-        internal const string AutoTileRecoveryKey = "autoTileRecovery";
         internal const string HideGaugeBarKey = "hideGaugeBar";
         internal const string HideGaugeValueKey = "hideGaugeValue";
         internal const string HideAttributeTextKey = "hideAttributeText";
@@ -101,7 +100,6 @@ namespace PlanetGauge
             SetPropertyLabel(RecoveryCapEnabledKey, LocalizedStrings.RecoveryCapEnabledLabel);
             SetPropertyLabel(RecoveryCapPercentKey, LocalizedStrings.RecoveryCapLabel);
             SetPropertyLabel(ForceRecoveryCapKey, LocalizedStrings.ForceRecoveryCapLabel);
-            SetPropertyLabel(AutoTileRecoveryKey, LocalizedStrings.AutoTileRecoveryLabel);
         }
 
         private static void SetPropertyLabel(string propertyName, string label)
@@ -662,15 +660,6 @@ namespace PlanetGauge
                 LocalizedStrings.ForceRecoveryCapLabel);
             forceCap.showIfVals.Add(Tuple.Create(RecoveryCapEnabledKey, "true"));
             AddProperty(info, forceCap, 17);
-
-            ADOFAI.PropertyInfo autoTileRecovery = CreateProperty(
-                info,
-                AutoTileRecoveryKey,
-                "Bool",
-                false,
-                LocalizedStrings.AutoTileRecoveryLabel);
-            MakeOptional(autoTileRecovery, false);
-            AddProperty(info, autoTileRecovery, 18);
 
             return info;
         }

@@ -60,7 +60,7 @@ namespace PlanetGauge
     public static class RuntimeHost { public static void ResetDebugVisibility() { } }
     public static class GaugeRuntime
     {
-        public class Settings { public bool FailureProtection = true, AutoTileRecovery = true; }
+        public class Settings { public bool FailureProtection = true; }
         public static Settings EventSettings = new Settings();
         public static float Current = 100;
         public static int RecoveryDepth;

@@ -182,11 +182,9 @@ namespace PlanetGauge
 
             scrFloor nextFloor = currentFloor.nextfloor;
             bool autoFloor = nextFloor != null && nextFloor.auto;
-            bool actualAutoPlay = GaugeRuntime.IsAutoPlay(__instance.player);
-            if (actualAutoPlay || (autoFloor && !RDC.useOldAuto))
+            if (GaugeRuntime.IsAutoPlay(__instance.player) || autoFloor)
             {
-                __state.TrackAutomaticRecovery = actualAutoPlay
-                    || GaugeRuntime.EventSettings.AutoTileRecovery;
+                __state.TrackAutomaticRecovery = true;
                 __state.Player = __instance.player;
                 return;
             }
@@ -228,8 +226,8 @@ namespace PlanetGauge
                 && __result != __instance
                 && GaugeRuntime.ShouldHandle(__state.Player))
             {
-                // 자동 플레이는 성공적으로 다음 타일로 진행한 경우에만 회복한다.
-                // 판정/사망 가로채기와는 연결하지 않아 원본 자동 플레이 흐름을 보존한다.
+                // 별도 이벤트 토글 없이 자동 플레이와 Auto 타일은 항상 회복한다.
+                // BlockRecovery 및 회복 배율·상한은 일반 양수 변화량과 동일하게 적용된다.
                 GaugeRuntime.ApplyAutomaticRecovery();
                 return;
             }
