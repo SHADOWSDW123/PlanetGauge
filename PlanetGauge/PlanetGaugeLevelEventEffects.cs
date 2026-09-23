@@ -18,7 +18,8 @@ namespace PlanetGauge
             PlanetGaugeAttributeMode mode = levelEvent.Get<PlanetGaugeAttributeMode>(
                 PlanetGaugeLevelEventRegistry.AttributeModeKey,
                 PlanetGaugeAttributeMode.Normal);
-            if (!Enum.IsDefined(typeof(PlanetGaugeAttributeMode), mode))
+            bool attributeModeSupported = Enum.IsDefined(typeof(PlanetGaugeAttributeMode), mode);
+            if (!attributeModeSupported)
             {
                 mode = PlanetGaugeAttributeMode.Normal;
             }
@@ -62,7 +63,7 @@ namespace PlanetGauge
 
             command = new PlanetGaugeEventCommand
             {
-                ApplyAttributeMode = IsPropertyEnabled(
+                ApplyAttributeMode = attributeModeSupported && IsPropertyEnabled(
                     levelEvent,
                     PlanetGaugeLevelEventRegistry.AttributeModeKey),
                 AttributeMode = mode,

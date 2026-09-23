@@ -2,6 +2,7 @@ namespace PlanetGauge
 {
     internal static class KoreanStrings // 손번역 작업을 위해 영어 원문과 동일한 초기값을 유지한다.
     {
+        internal const string MainVersionNotice = "본 버전은 정식 버전을 위한 임시 빌드입니다. 본 버전인 V0.3.6에서는 알파 버전용인 X-PlanetGauge가 제거되어 있습니다. 자세한 내용은 레포지토리를 확인해 주세요.";
         internal const string MainGaugeSize = "메인 체력바 크기";
         internal const string Scale = "크기";
         internal const string Width = "너비";
@@ -46,8 +47,6 @@ namespace PlanetGauge
         internal const string Advanced = "고급";
         internal const string ShowDecimalHealth = "소수점 체력 표시";
         internal const string IndependentGaugeValueColor = "체력 텍스트 색상 변형 끄기";
-        internal const string XPlanetGaugeMode = "X-PlanetGauge 모드";
-        internal const string XPlanetGaugeModeRequirement = "+-정확에서 체력을 0.1 깎습니다.\n모드 설정으로 켠 X-PlanetGauge는 SetPlanetGauge 이벤트에서 꺼도 유지됩니다.";
         internal const string MainGaugeColor = "게이지 색상";
         internal const string ResetColor = "색상 초기화(#FFFFFF)";
         internal const string GaugeValueColor = "게이지 텍스트 색상";
@@ -75,7 +74,6 @@ namespace PlanetGauge
         internal const string AmplifiedEffect = "{0} 증폭됨";
         internal const string FrozenEffect = "{0} 정지";
         internal const string GaugeFrozen = "게이지 정지";
-        internal const string XPlanetGaugeActive = "X-PlanetGauge";
         //PG 기계적 에딧
         internal const string GaugeEnabled = "PlanetGauge 켜짐";
         internal const string GaugeDisabled = "PlanetGauge 꺼짐";

@@ -135,7 +135,7 @@ namespace PlanetGauge
     /// 바닐라가 확정해 기록한 판정을 관찰해 게이지에 반영한다.
     /// 실패 피해는 Die가 소유하며, 원본 종료 후 실제 noFail 상태에서 일반 판정만 적용한다.
     /// </summary>
-    [HarmonyPatch(typeof(scrPlanet), nameof(scrPlanet.SwitchChosen), typeof(long?))]
+    [HarmonyPatch(typeof(scrPlanet), nameof(scrPlanet.SwitchChosen))]
     internal static class SwitchChosenPatch
     {
         private static int temporaryNoFailDepth;

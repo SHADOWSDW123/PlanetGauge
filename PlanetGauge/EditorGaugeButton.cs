@@ -24,9 +24,6 @@ namespace PlanetGauge
         private static readonly Color32 StandardLowColor = new Color32(225, 51, 51, 255);
         private static readonly Color32 StandardMiddleColor = new Color32(248, 173, 0, 255);
         private static readonly Color32 StandardHighColor = new Color32(57, 146, 255, 255);
-        private static readonly Color32 XPlanetGaugeLowColor = new Color32(122, 16, 16, 255);
-        private static readonly Color32 XPlanetGaugeMiddleColor = new Color32(217, 43, 43, 255);
-        private static readonly Color32 XPlanetGaugeHighColor = new Color32(255, 107, 107, 255);
 
         private static scnEditor owner;
         private static GameObject buttonObject;
@@ -121,14 +118,13 @@ namespace PlanetGauge
                 : GaugeRuntime.MaximumGauge <= 0f
                 ? 0f
                 : GaugeRuntime.Current / GaugeRuntime.MaximumGauge;
-            bool xPlanetGaugeActive = GaugeRuntime.IsXPlanetGaugeActive;
             gaugeGraphic.SetStyle(
                 BorderColor,
                 DisabledColor,
                 DepletedColor,
-                xPlanetGaugeActive ? XPlanetGaugeLowColor : StandardLowColor,
-                xPlanetGaugeActive ? XPlanetGaugeMiddleColor : StandardMiddleColor,
-                xPlanetGaugeActive ? XPlanetGaugeHighColor : StandardHighColor,
+                StandardLowColor,
+                StandardMiddleColor,
+                StandardHighColor,
                 2f);
             gaugeGraphic.SetBlindfoldOpacity(blindfoldAlpha);
             gaugeGraphic.SetState(Main.EditorGaugeEnabled, normalizedValue);

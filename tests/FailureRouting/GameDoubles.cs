@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
-public enum HitMargin { TooEarly, VeryEarly, EarlyPerfect, PerfectMinus, XPerfect, PerfectPlus,
+public enum HitMargin { TooEarly, VeryEarly, EarlyPerfect, Perfect,
     LatePerfect, VeryLate, TooLate, Multipress, FailMiss, FailOverload, Auto, OverPress, Midspin }
 public class scrMarginTracker
 {
@@ -20,7 +20,7 @@ public class scrPlanet
     public Action Body;
     public scrPlanet Result;
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public scrPlanet SwitchChosen(long? tick) { Body?.Invoke(); return Result ?? this; }
+    public scrPlanet SwitchChosen() { Body?.Invoke(); return Result ?? this; }
 }
 public class scrPlayer
 {

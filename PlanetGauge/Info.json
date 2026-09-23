@@ -2,7 +2,8 @@
   "Id": "PlanetGauge",
   "DisplayName": "PlanetGauge",
   "Author": "SHADOW_SDW",
-  "Version": "0.3.6",
+  "Version": "0.3.6M",
+  "HomePage": "https://github.com/SHADOWSDW123/PlanetGauge",
   "AssemblyName": "PlanetGauge.dll",
   "EntryMethod": "PlanetGauge.Main.Load"
 }

@@ -25,9 +25,9 @@ internal static class Program
                 .GetMethod("ValidateRequiredGameApi", BindingFlags.Static | BindingFlags.NonPublic)
                 .Invoke(null, null);
             VerifyGaugeValueColor(assembly);
-            VerifyXPlanetGaugePriority(assembly);
+            VerifyMainVersionJudgement(assembly);
             VerifyAutoTileRecoverySettingRemoved(assembly);
-            Console.WriteLine("PASS: required API, gauge value color, X-PlanetGauge priority, and fixed auto-recovery checks.");
+            Console.WriteLine("PASS: required API, gauge value color, 3.3.1 Perfect judgement, and fixed auto-recovery checks.");
             return 0;
         }
         catch (Exception e)
@@ -57,7 +57,7 @@ internal static class Program
         object blockedRecovery = constructor.Invoke(new[]
         {
             (object)true, disabledChannel, disabledChannel,
-            100f, 100f, 100f, false, true, false, 100f, false
+            100f, 100f, 100f, false, true, false, 100f
         });
         MethodInfo resolver = assembly.GetType("PlanetGauge.MainGaugeHud", true)
             .GetMethod("ResolveGaugeValueColor", all);
@@ -77,62 +77,20 @@ internal static class Program
             throw new InvalidOperationException(name + " failed: " + actualR + "," + actualG + "," + actualB);
     }
 
-    private static void VerifyXPlanetGaugePriority(Assembly assembly)
+    private static void VerifyMainVersionJudgement(Assembly assembly)
     {
         const BindingFlags all = BindingFlags.Instance | BindingFlags.Static
             | BindingFlags.Public | BindingFlags.NonPublic;
-        Type mainType = assembly.GetType("PlanetGauge.Main", true);
-        Type settingsType = assembly.GetType("PlanetGauge.PlanetGaugeSettings", true);
         Type runtimeType = assembly.GetType("PlanetGauge.GaugeRuntime", true);
-        Type commandType = assembly.GetType("PlanetGauge.PlanetGaugeEventCommand", true);
         Type modeType = assembly.GetType("PlanetGauge.PlanetGaugeAttributeMode", true);
-        object settings = Activator.CreateInstance(settingsType);
-        PropertyInfo mainSettings = mainType.GetProperty("Settings", all);
-        object previousSettings = mainSettings.GetValue(null, null);
-        PropertyInfo eventSettings = runtimeType.GetProperty("EventSettings", all);
-        object previousEventSettings = eventSettings.GetValue(null, null);
-        try
-        {
-            mainSettings.SetValue(null, settings, null);
-            runtimeType.GetMethod("Reset", all).Invoke(null, null);
-            PropertyInfo active = runtimeType.GetProperty("IsXPlanetGaugeActive", all);
-            if ((bool)active.GetValue(null, null)) throw new InvalidOperationException("X-PG must start off");
-
-            object command = Activator.CreateInstance(commandType);
-            commandType.GetField("ApplyAttributeMode", all).SetValue(command, true);
-            commandType.GetField("AttributeMode", all).SetValue(command, Enum.Parse(modeType, "XPlanetGauge"));
-            commandType.GetField("AttributeEnabled", all).SetValue(command, true);
-            MethodInfo apply = runtimeType.GetMethod("ApplyEventSettings", all);
-            apply.Invoke(null, new[] { command, (object)-1 });
-            if (!(bool)active.GetValue(null, null)) throw new InvalidOperationException("X-PG event ON failed");
-
-            object blockRecovery = Activator.CreateInstance(commandType);
-            commandType.GetField("ApplyAttributeMode", all).SetValue(blockRecovery, true);
-            commandType.GetField("AttributeMode", all).SetValue(blockRecovery, Enum.Parse(modeType, "BlockRecovery"));
-            commandType.GetField("AttributeEnabled", all).SetValue(blockRecovery, true);
-            apply.Invoke(null, new[] { blockRecovery, (object)-1 });
-            float blockedPositiveDelta = (float)runtimeType.GetMethod("TransformDelta", all)
-                .Invoke(null, new object[] { 0.1f });
-            if (blockedPositiveDelta != 0f)
-                throw new InvalidOperationException("BlockRecovery did not suppress automatic recovery delta");
-
-            commandType.GetField("AttributeEnabled", all).SetValue(command, false);
-            apply.Invoke(null, new[] { command, (object)-1 });
-            if ((bool)active.GetValue(null, null)) throw new InvalidOperationException("X-PG event OFF failed");
-            object afterXOff = eventSettings.GetValue(null, null);
-            if (!(bool)afterXOff.GetType().GetProperty("RecoveryBlocked", all).GetValue(afterXOff, null))
-                throw new InvalidOperationException("X-PG event OFF changed another attribute");
-
-            settingsType.GetField("XPlanetGaugeMode", all).SetValue(settings, true);
-            if (!(bool)active.GetValue(null, null)) throw new InvalidOperationException("UMM X-PG ON failed");
-            apply.Invoke(null, new[] { command, (object)-1 });
-            if (!(bool)active.GetValue(null, null)) throw new InvalidOperationException("event OFF overrode UMM X-PG");
-        }
-        finally
-        {
-            eventSettings.SetValue(null, previousEventSettings, null);
-            mainSettings.SetValue(null, previousSettings, null);
-        }
+        if (Enum.IsDefined(modeType, "XPlanetGauge"))
+            throw new InvalidOperationException("X-PlanetGauge remains in the event menu");
+        Type hitMargin = Type.GetType("HitMargin, Assembly-CSharp", true);
+        object perfect = Enum.Parse(hitMargin, "Perfect");
+        object[] arguments = { perfect, 0f };
+        bool handled = (bool)runtimeType.GetMethod("TryGetDelta", all).Invoke(null, arguments);
+        if (!handled || (float)arguments[1] != 0.1f)
+            throw new InvalidOperationException("3.3.1 Perfect judgement mapping failed");
     }
 
     private static void VerifyAutoTileRecoverySettingRemoved(Assembly assembly)

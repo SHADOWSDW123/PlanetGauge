@@ -189,7 +189,7 @@ namespace PlanetGauge
             AppendTotal(builder, "TooEarly", HitMargin.TooEarly);
             AppendTotal(builder, "VeryEarly", HitMargin.VeryEarly);
             AppendTotal(builder, "EarlyPerfect", HitMargin.EarlyPerfect);
-            AppendTotal(builder, "Perfect", HitMargin.XPerfect);
+            AppendTotal(builder, "Perfect", HitMargin.Perfect);
             AppendTotal(builder, "LatePerfect", HitMargin.LatePerfect);
             AppendTotal(builder, "VeryLate", HitMargin.VeryLate);
             AppendTotal(builder, "FailMiss", HitMargin.FailMiss);

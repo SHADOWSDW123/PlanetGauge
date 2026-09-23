@@ -62,9 +62,7 @@ namespace PlanetGauge
                 case HitMargin.TooEarly:
                 case HitMargin.VeryEarly:
                 case HitMargin.EarlyPerfect:
-                case HitMargin.PerfectMinus:
-                case HitMargin.XPerfect:
-                case HitMargin.PerfectPlus:
+                case HitMargin.Perfect:
                 case HitMargin.LatePerfect:
                 case HitMargin.VeryLate:
                     return true;

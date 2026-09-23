@@ -22,8 +22,7 @@ namespace PlanetGauge
         AmplifyBoth = 4,
         Blindfold = 5,
         ForceRecovery = 6,
-        HideGaugeHud = 7,
-        XPlanetGauge = 8
+        HideGaugeHud = 7
     }
 
     internal enum PlanetGaugeRateSource
@@ -65,8 +64,7 @@ namespace PlanetGauge
             false,
             true,
             false,
-            100f,
-            false);
+            100f);
 
         internal PlanetGaugeEventSettings(
             bool recoveryBlocked,
@@ -78,8 +76,7 @@ namespace PlanetGauge
             bool blindfoldEnabled,
             bool failureProtection,
             bool recoveryCapEnabled,
-            float recoveryCapPercent,
-            bool xPlanetGaugeEnabled)
+            float recoveryCapPercent)
         {
             RecoveryBlocked = recoveryBlocked;
             RecoveryRate = recoveryRate;
@@ -91,7 +88,6 @@ namespace PlanetGauge
             FailureProtection = failureProtection;
             RecoveryCapEnabled = recoveryCapEnabled;
             RecoveryCapPercent = recoveryCapPercent;
-            XPlanetGaugeEnabled = xPlanetGaugeEnabled;
         }
 
         internal bool RecoveryBlocked { get; }
@@ -108,7 +104,6 @@ namespace PlanetGauge
         internal bool RecoveryCapEnabled { get; }
 
         internal float RecoveryCapPercent { get; }
-        internal bool XPlanetGaugeEnabled { get; }
     }
 
     /// <summary>

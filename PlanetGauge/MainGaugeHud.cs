@@ -87,7 +87,6 @@ namespace PlanetGauge
         private Color32 lastUserValueColor;
         private bool lastValueColorIndependent;
         private int lastStyleRevision = -1;
-        private bool lastXPlanetGaugeActive;
         private int lastLocalizationRevision = -1;
         private bool hasLastStyle;
         private int activeEffectCount;
@@ -342,7 +341,6 @@ namespace PlanetGauge
             Color32 userGaugeColor = settings.GetMainGaugeColor();
             Color32 userValueColor = settings.GetMainGaugeValueColor();
             bool styleChanged = !hasLastStyle
-                || lastXPlanetGaugeActive != GaugeRuntime.IsXPlanetGaugeActive
                 || !lastUserGaugeColor.Equals(userGaugeColor)
                 || !lastUserValueColor.Equals(userValueColor)
                 || lastValueColorIndependent != settings.MainGaugeValueColorIndependent
@@ -354,7 +352,6 @@ namespace PlanetGauge
                 lastUserValueColor = userValueColor;
                 lastValueColorIndependent = settings.MainGaugeValueColorIndependent;
                 lastStyleRevision = GaugeRuntime.StyleRevision;
-                lastXPlanetGaugeActive = GaugeRuntime.IsXPlanetGaugeActive;
                 lastLocalizationRevision = LocalizedStrings.Revision;
                 hasLastStyle = true;
 
@@ -748,11 +745,6 @@ namespace PlanetGauge
         {
             string result = string.Empty;
             effectCount = 0;
-
-            if (GaugeRuntime.IsXPlanetGaugeActive)
-            {
-                AppendEffect(ref result, ref effectCount, BlockRecoveryColor, LocalizedStrings.XPlanetGaugeActive);
-            }
 
             if (settings.BlindfoldEnabled)
             {

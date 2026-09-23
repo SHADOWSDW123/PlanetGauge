@@ -31,6 +31,7 @@ namespace PlanetGauge
 
         private string[] skinFillDirectionLabels;
         private int skinFillDirectionLabelsRevision = -1;
+        private GUIStyle mainVersionNoticeStyle;
 
         private string frameOffsetXInput;
         private string frameOffsetYInput;
@@ -86,7 +87,6 @@ namespace PlanetGauge
         public PlanetGaugeLanguage Language;
         public bool LanguageInitialized;
         public bool TranslateAttributeDisplayToKorean;
-        public bool XPlanetGaugeMode;
 
         public override void Save(UnityModManager.ModEntry modEntry)
         {
@@ -96,6 +96,15 @@ namespace PlanetGauge
         internal void DrawGui()
         {
             // UMM의 OnGUI에서 매 프레임 호출되는 즉시 모드(IMGUI) 설정 화면이다.
+            if (mainVersionNoticeStyle == null)
+            {
+                mainVersionNoticeStyle = new GUIStyle(GUI.skin.box)
+                {
+                    wordWrap = true
+                };
+            }
+            GUILayout.Label(LocalizedStrings.MainVersionNotice, mainVersionNoticeStyle);
+            GUILayout.Space(14f);
             DrawLanguageSelector();
             GUILayout.Space(14f);
 
@@ -400,10 +409,6 @@ namespace PlanetGauge
             MainGaugeValueColorIndependent = GUILayout.Toggle(
                 MainGaugeValueColorIndependent,
                 LocalizedStrings.IndependentGaugeValueColor);
-            XPlanetGaugeMode = GUILayout.Toggle(
-                XPlanetGaugeMode,
-                LocalizedStrings.XPlanetGaugeMode);
-            GUILayout.Label(LocalizedStrings.XPlanetGaugeModeRequirement);
 
             GUILayout.Space(10f);
             GUILayout.Label(LocalizedStrings.MainGaugeColor);

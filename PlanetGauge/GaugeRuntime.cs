@@ -9,7 +9,6 @@ namespace PlanetGauge
         internal const float MaximumGauge = 100f;
         internal const float NoFailMinimumGauge = 0f;
         internal const float PerfectDelta = 0.1f;
-        internal const float XPlanetGaugePerfectDelta = -0.1f;
         internal const float EarlyPerfectDelta = -0.8f;
         internal const float LatePerfectDelta = -0.8f;
         internal const float VeryEarlyDelta = -1.5f;
@@ -39,14 +38,6 @@ namespace PlanetGauge
         internal static bool IsFrozen { get { return frozen; } }
         internal static bool IsRuntimeFaulted { get { return runtimeFaulted; } }
         internal static bool IsLevelCompleted { get { return levelCompleted; } }
-        internal static bool IsXPlanetGaugeActive
-        {
-            get
-            {
-                return (Main.Settings != null && Main.Settings.XPlanetGaugeMode)
-                    || EventSettings.XPlanetGaugeEnabled;
-            }
-        }
         internal static bool IsBlindfolded
         {
             get { return EventSettings.BlindfoldEnabled && !blindfoldRevealed; }
@@ -158,7 +149,6 @@ namespace PlanetGauge
             float configuredDecrease = current.ConfiguredDecreasePercent;
             float configuredBoth = current.ConfiguredBothPercent;
             bool blindfoldEnabled = current.BlindfoldEnabled;
-            bool xPlanetGaugeEnabled = current.XPlanetGaugeEnabled;
 
             if (command.ApplyMultiplier)
             {
@@ -179,7 +169,6 @@ namespace PlanetGauge
                     recoveryRate = PlanetGaugeRateChannel.Disabled;
                     damageRate = PlanetGaugeRateChannel.Disabled;
                     blindfoldEnabled = false;
-                    xPlanetGaugeEnabled = false;
                     GaugeHudVisibilityTransitions.RevealAll();
                 }
 
@@ -211,9 +200,6 @@ namespace PlanetGauge
                     case PlanetGaugeAttributeMode.HideGaugeHud:
                         GaugeHudVisibilityTransitions.Apply(command);
                         break;
-                    case PlanetGaugeAttributeMode.XPlanetGauge:
-                        xPlanetGaugeEnabled = command.AttributeEnabled;
-                        break;
                 }
             }
 
@@ -226,8 +212,7 @@ namespace PlanetGauge
                 recoveryBlocked, recoveryRate, damageRate,
                 configuredIncrease, configuredDecrease, configuredBoth,
                 blindfoldEnabled,
-                failureProtection, recoveryCapEnabled, recoveryCapPercent,
-                xPlanetGaugeEnabled);
+                failureProtection, recoveryCapEnabled, recoveryCapPercent);
             EventSettings = nextSettings;
             if (HasVisualStyleChanged(current, nextSettings))
             {
@@ -534,13 +519,7 @@ namespace PlanetGauge
         {
             switch (judgement)
             {
-                case HitMargin.PerfectMinus:
-                case HitMargin.PerfectPlus:
-                    delta = IsXPlanetGaugeActive
-                        ? XPlanetGaugePerfectDelta
-                        : PerfectDelta;
-                    return true;
-                case HitMargin.XPerfect: delta = PerfectDelta; return true;
+                case HitMargin.Perfect: delta = PerfectDelta; return true;
                 case HitMargin.EarlyPerfect: delta = EarlyPerfectDelta; return true;
                 case HitMargin.LatePerfect: delta = LatePerfectDelta; return true;
                 case HitMargin.VeryEarly: delta = VeryEarlyDelta; return true;
@@ -570,10 +549,7 @@ namespace PlanetGauge
                 case HitMargin.TooEarly: return 0;
                 case HitMargin.VeryEarly: return 1;
                 case HitMargin.EarlyPerfect: return 2;
-                case HitMargin.PerfectMinus:
-                case HitMargin.XPerfect:
-                case HitMargin.PerfectPlus:
-                    return 3;
+                case HitMargin.Perfect: return 3;
                 case HitMargin.LatePerfect: return 4;
                 case HitMargin.VeryLate: return 5;
                 case HitMargin.FailMiss: return 6;
@@ -592,7 +568,6 @@ namespace PlanetGauge
             PlanetGaugeEventSettings next)
         {
             return previous.RecoveryBlocked != next.RecoveryBlocked
-                || previous.XPlanetGaugeEnabled != next.XPlanetGaugeEnabled
                 || previous.BlindfoldEnabled != next.BlindfoldEnabled
                 || previous.FailureProtection != next.FailureProtection
                 || previous.RecoveryCapEnabled != next.RecoveryCapEnabled

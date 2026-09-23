@@ -3,7 +3,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net48</TargetFramework>
     <LangVersion>7.3</LangVersion>
-    <GameManagedDir Condition="'$(GameManagedDir)' == ''">E:\SteamLibrary\steamapps\common\A Dance of Fire and Ice\A Dance of Fire and Ice_Data\Managed</GameManagedDir>
+    <GameManagedDir Condition="'$(GameManagedDir)' == ''">G:\SteamLibrary\steamapps\common\A Dance of Fire and Ice\A Dance of Fire and Ice_Data\Managed</GameManagedDir>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../PlanetGauge/Patches.cs" Link="Patches.cs" />

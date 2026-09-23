@@ -169,9 +169,9 @@ namespace PlanetGauge
             RequireMethod(
                 typeof(scrPlanet),
                 nameof(scrPlanet.SwitchChosen),
-                new[] { typeof(long?) });
+                Type.EmptyTypes);
             RequireMethod(typeof(scrMarginTracker), nameof(scrMarginTracker.AddHit), new[] { typeof(HitMargin) });
-            RequireMethod(typeof(scrPlayer), "CheckPostHoldFail", new[] { typeof(long?) });
+            RequireMethod(typeof(scrPlayer), "CheckPostHoldFail", new[] { typeof(ulong?) });
             RequireMethod(
                 typeof(scrController),
                 nameof(scrController.OnLandOnPortal),
@@ -389,7 +389,7 @@ namespace PlanetGauge
         /// 놓침 뒤 바닐라의 후처리가 멈추지 않도록 CheckPostHoldFail 실행 중에만 noFail을 대여한다.
         /// 중첩 호출은 <see cref="temporaryMissRecoveryDepth"/>로 추적한다.
         /// </summary>
-        [HarmonyPatch(typeof(scrPlayer), "CheckPostHoldFail", typeof(long?))]
+        [HarmonyPatch(typeof(scrPlayer), "CheckPostHoldFail", typeof(ulong?))]
         private static class CheckPostHoldFailRecoveryPatch
         {
             private struct RecoveryState
