@@ -2,6 +2,8 @@
 <img width="620" height="260" alt="image" src="https://github.com/user-attachments/assets/ef2181dc-0b11-4374-8472-58c33b02229f" />
 
 ADOFAI에 체력 시스템을 추가합니다.
+**주의사항 - 현 버전은 얼불춤 V3.4.0 이상의 버전(2026-09-24 기준 alpha 브랜치)에서만 작동합니다.** 
+이전 버전에서의 구동은 V0.3.6M(X-PlanetGauge 기능 제거) 브랜치를 이용해 주십시오.
 # SHOWCASE
 
 MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
