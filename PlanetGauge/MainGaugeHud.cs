@@ -338,7 +338,7 @@ namespace PlanetGauge
         private void UpdateStyle()
         {
             PlanetGaugeSettings settings = Main.Settings;
-            PlanetGaugeEventSettings eventSettings = GaugeRuntime.EventSettings;
+            PlanetGaugeEventSettings eventSettings = GaugeRuntime.EffectiveEventSettings;
             Color32 userGaugeColor = settings.GetMainGaugeColor();
             Color32 userValueColor = settings.GetMainGaugeValueColor();
             bool styleChanged = !hasLastStyle

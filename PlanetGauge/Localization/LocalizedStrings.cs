@@ -77,6 +77,9 @@ namespace PlanetGauge
         internal static string Width { get { return IsKorean ? KoreanStrings.Width : EnglishStrings.Width; } }
         internal static string ResetSize { get { return IsKorean ? KoreanStrings.ResetSize : EnglishStrings.ResetSize; } }
         internal static string CustomGaugeSkin { get { return IsKorean ? KoreanStrings.CustomGaugeSkin : EnglishStrings.CustomGaugeSkin; } }
+        internal static string SettingsVisibility { get { return IsKorean ? KoreanStrings.SettingsVisibility : EnglishStrings.SettingsVisibility; } }
+        internal static string GaugePositionCategory { get { return IsKorean ? KoreanStrings.GaugePositionCategory : EnglishStrings.GaugePositionCategory; } }
+        internal static string ColorCategory { get { return IsKorean ? KoreanStrings.ColorCategory : EnglishStrings.ColorCategory; } }
         internal static string HealthPng { get { return IsKorean ? KoreanStrings.HealthPng : EnglishStrings.HealthPng; } }
         internal static string SelectHealthPng { get { return IsKorean ? KoreanStrings.SelectHealthPng : EnglishStrings.SelectHealthPng; } }
         internal static string ClearHealthPng { get { return IsKorean ? KoreanStrings.ClearHealthPng : EnglishStrings.ClearHealthPng; } }
@@ -117,13 +120,34 @@ namespace PlanetGauge
         internal static string ShowDecimalHealth { get { return IsKorean ? KoreanStrings.ShowDecimalHealth : EnglishStrings.ShowDecimalHealth; } }
         internal static string IndependentGaugeValueColor { get { return IsKorean ? KoreanStrings.IndependentGaugeValueColor : EnglishStrings.IndependentGaugeValueColor; } }
         internal static string XPlanetGaugeMode { get { return IsKorean ? KoreanStrings.XPlanetGaugeMode : EnglishStrings.XPlanetGaugeMode; } }
+        internal static string PlanetGaugeSettingsCategory { get { return IsKorean ? KoreanStrings.PlanetGaugeSettingsCategory : EnglishStrings.PlanetGaugeSettingsCategory; } }
         internal static string XPlanetGaugeModeRequirement { get { return IsKorean ? KoreanStrings.XPlanetGaugeModeRequirement : EnglishStrings.XPlanetGaugeModeRequirement; } }
+        internal static string SightreadMode { get { return IsKorean ? KoreanStrings.SightreadMode : EnglishStrings.SightreadMode; } }
+        internal static string SightreadMode1Description { get { return IsKorean ? KoreanStrings.SightreadMode1Description : EnglishStrings.SightreadMode1Description; } }
+        internal static string SightreadMode2Description { get { return IsKorean ? KoreanStrings.SightreadMode2Description : EnglishStrings.SightreadMode2Description; } }
+        internal static string SightreadMode3Description { get { return IsKorean ? KoreanStrings.SightreadMode3Description : EnglishStrings.SightreadMode3Description; } }
+        internal static string SightreadEventOverrideNote { get { return IsKorean ? KoreanStrings.SightreadEventOverrideNote : EnglishStrings.SightreadEventOverrideNote; } }
+        internal static string SightreadShortcut { get { return IsKorean ? KoreanStrings.SightreadShortcut : EnglishStrings.SightreadShortcut; } }
+        internal static string EditCommonKeys { get { return IsKorean ? KoreanStrings.EditCommonKeys : EnglishStrings.EditCommonKeys; } }
+        internal static string CommonPressKey { get { return IsKorean ? KoreanStrings.CommonPressKey : EnglishStrings.CommonPressKey; } }
+        internal static string EditSightreadKeys { get { return IsKorean ? KoreanStrings.EditSightreadKeys : EnglishStrings.EditSightreadKeys; } }
+        internal static string SightreadSetKey { get { return IsKorean ? KoreanStrings.SightreadSetKey : EnglishStrings.SightreadSetKey; } }
+        internal static string SightreadPressKey { get { return IsKorean ? KoreanStrings.SightreadPressKey : EnglishStrings.SightreadPressKey; } }
+        internal static string SightreadKeysMustDiffer { get { return IsKorean ? KoreanStrings.SightreadKeysMustDiffer : EnglishStrings.SightreadKeysMustDiffer; } }
+        internal static string ShortcutKeysMustDiffer { get { return IsKorean ? KoreanStrings.ShortcutKeysMustDiffer : EnglishStrings.ShortcutKeysMustDiffer; } }
+        internal static string XPlanetGaugeShortcut { get { return IsKorean ? KoreanStrings.XPlanetGaugeShortcut : EnglishStrings.XPlanetGaugeShortcut; } }
+        internal static string EditXPlanetGaugeKey { get { return IsKorean ? KoreanStrings.EditXPlanetGaugeKey : EnglishStrings.EditXPlanetGaugeKey; } }
+        internal static string XPlanetGaugeSetKey { get { return IsKorean ? KoreanStrings.XPlanetGaugeSetKey : EnglishStrings.XPlanetGaugeSetKey; } }
+        internal static string XPlanetGaugePressKey { get { return IsKorean ? KoreanStrings.XPlanetGaugePressKey : EnglishStrings.XPlanetGaugePressKey; } }
         internal static string XPlanetGaugeActive { get { return IsAttributeDisplayKorean ? KoreanStrings.XPlanetGaugeActive : EnglishStrings.XPlanetGaugeActive; } }
         internal static string MainGaugeColor { get { return IsKorean ? KoreanStrings.MainGaugeColor : EnglishStrings.MainGaugeColor; } }
         internal static string ResetColor { get { return IsKorean ? KoreanStrings.ResetColor : EnglishStrings.ResetColor; } }
         internal static string GaugeValueColor { get { return IsKorean ? KoreanStrings.GaugeValueColor : EnglishStrings.GaugeValueColor; } }
         internal static string ResetGaugeValueColor { get { return IsKorean ? KoreanStrings.ResetGaugeValueColor : EnglishStrings.ResetGaugeValueColor; } }
         internal static string DebugShortcut { get { return IsKorean ? KoreanStrings.DebugShortcut : EnglishStrings.DebugShortcut; } }
+        internal static string EditDebugKeys { get { return IsKorean ? KoreanStrings.EditDebugKeys : EnglishStrings.EditDebugKeys; } }
+        internal static string DebugSetKey { get { return IsKorean ? KoreanStrings.DebugSetKey : EnglishStrings.DebugSetKey; } }
+        internal static string DebugPressKey { get { return IsKorean ? KoreanStrings.DebugPressKey : EnglishStrings.DebugPressKey; } }
         internal static string SetKey1 { get { return IsKorean ? KoreanStrings.SetKey1 : EnglishStrings.SetKey1; } }
         internal static string SetKey2 { get { return IsKorean ? KoreanStrings.SetKey2 : EnglishStrings.SetKey2; } }
         internal static string PressKey1 { get { return IsKorean ? KoreanStrings.PressKey1 : EnglishStrings.PressKey1; } }

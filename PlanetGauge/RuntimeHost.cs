@@ -14,6 +14,8 @@ namespace PlanetGauge
         private MainGaugeHud mainGaugeHud;
         private GaugeDebugHud debugHud;
         private bool debugShortcutWasHeld;
+        private bool xShortcutWasHeld;
+        private readonly bool[] sightreadShortcutWasHeld = new bool[3];
 
         internal static void Create()
         {
@@ -82,16 +84,27 @@ namespace PlanetGauge
             else
             {
                 EditorGaugeButton.Destroy();
+                Main.SetSightreadGameplayLock(false);
             }
 
-            KeyCode debugKey1 = Main.Settings.DebugKey1;
-            KeyCode debugKey2 = Main.Settings.DebugKey2;
-            bool debugShortcutIsHeld = GetDebugKey(debugKey1) && GetDebugKey(debugKey2);
+            bool modifiersHeld = !Main.Settings.IsCapturingShortcut
+                && GetDebugKey(Main.Settings.SightreadKey1)
+                && GetDebugKey(Main.Settings.SightreadKey2);
+            bool debugShortcutIsHeld = modifiersHeld && GetDebugKey(Main.Settings.DebugKey2);
             if (debugShortcutIsHeld && !debugShortcutWasHeld)
             {
                 debugHud.Toggle();
             }
             debugShortcutWasHeld = debugShortcutIsHeld;
+
+            bool canToggleMode = !Main.IsSightreadSelectionLocked;
+            CheckSightreadShortcut(0, Main.Settings.SightreadKey3, modifiersHeld, canToggleMode);
+            CheckSightreadShortcut(1, Main.Settings.SightreadKey4, modifiersHeld, canToggleMode);
+            CheckSightreadShortcut(2, Main.Settings.SightreadKey5, modifiersHeld, canToggleMode);
+            bool xShortcutIsHeld = modifiersHeld && GetDebugKey(Main.Settings.XPlanetGaugeKey);
+            if (xShortcutIsHeld && !xShortcutWasHeld && canToggleMode)
+                Main.ToggleXPlanetGaugeMode();
+            xShortcutWasHeld = xShortcutIsHeld;
 
             debugHud.Update();
         }
@@ -102,6 +115,14 @@ namespace PlanetGauge
             return key == KeyCode.LeftShift
                 ? Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)
                 : Input.GetKey(key);
+        }
+
+        private void CheckSightreadShortcut(int index, KeyCode key, bool modifiersHeld, bool canToggle)
+        {
+            bool held = modifiersHeld && GetDebugKey(key);
+            if (held && !sightreadShortcutWasHeld[index] && canToggle)
+                Main.ToggleSightreadMode(index + 1);
+            sightreadShortcutWasHeld[index] = held;
         }
 
         private void LateUpdate()

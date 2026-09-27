@@ -34,6 +34,26 @@ namespace PlanetGauge
 
         internal static float Current { get; private set; } = InitialGauge;
         internal static PlanetGaugeEventSettings EventSettings { get; private set; } = PlanetGaugeEventSettings.Default;
+        internal static PlanetGaugeEventSettings EffectiveEventSettings
+        {
+            get
+            {
+                PlanetGaugeEventSettings current = EventSettings;
+                int mode = Main.SightreadMode;
+                if (mode == 0) return current;
+                return new PlanetGaugeEventSettings(
+                    current.RecoveryBlocked,
+                    new PlanetGaugeRateChannel(true, mode == 3 ? 300f : 200f, PlanetGaugeRateSource.Increase),
+                    mode >= 2
+                        ? new PlanetGaugeRateChannel(true, 50f, PlanetGaugeRateSource.Decrease)
+                        : PlanetGaugeRateChannel.Disabled,
+                    current.ConfiguredIncreasePercent, current.ConfiguredDecreasePercent,
+                    current.ConfiguredBothPercent, current.BlindfoldEnabled,
+                    current.FailureProtection, current.RecoveryCapEnabled,
+                    current.RecoveryCapPercent, current.XPlanetGaugeEnabled);
+            }
+        }
+        internal static void NotifySightreadChanged() { styleRevision++; }
         internal static bool IsRecoveringFailure { get { return failureRecoveryDepth > 0; } }
         internal static bool IsForcingDeath { get { return forcingDeath; } }
         internal static bool IsFrozen { get { return frozen; } }
@@ -554,7 +574,7 @@ namespace PlanetGauge
 
         private static float TransformDelta(float delta)
         {
-            PlanetGaugeEventSettings settings = EventSettings;
+            PlanetGaugeEventSettings settings = EffectiveEventSettings;
             if (delta > 0f)
             {
                 if (settings.RecoveryBlocked) return 0f;

@@ -27,7 +27,12 @@ internal static class Program
             VerifyGaugeValueColor(assembly);
             VerifyXPlanetGaugePriority(assembly);
             VerifyAutoTileRecoverySettingRemoved(assembly);
-            Console.WriteLine("PASS: required API, gauge value color, X-PlanetGauge priority, and fixed auto-recovery checks.");
+            VerifySightreadRates(assembly);
+            VerifySightreadSelectionLock(assembly);
+            VerifySightreadKeyLabels(assembly);
+            VerifyShortcutResetGroups(assembly);
+            VerifyXPlanetGaugeShortcutToggle(assembly);
+            Console.WriteLine("PASS: required API, gauge value color, X-PlanetGauge priority, fixed auto-recovery, sightread rates, selection lock, key labels, and X shortcut toggle.");
             return 0;
         }
         catch (Exception e)
@@ -150,6 +155,181 @@ internal static class Program
             || runtimeType.GetMethod("ApplyAutomaticRecovery", all) == null)
         {
             throw new InvalidOperationException("fixed auto-recovery contract is inconsistent");
+        }
+    }
+
+    private static void VerifySightreadRates(Assembly assembly)
+    {
+        const BindingFlags all = BindingFlags.Instance | BindingFlags.Static
+            | BindingFlags.Public | BindingFlags.NonPublic;
+        Type mainType = assembly.GetType("PlanetGauge.Main", true);
+        Type runtimeType = assembly.GetType("PlanetGauge.GaugeRuntime", true);
+        Type settingsType = assembly.GetType("PlanetGauge.PlanetGaugeEventSettings", true);
+        Type channelType = assembly.GetType("PlanetGauge.PlanetGaugeRateChannel", true);
+        Type sourceType = assembly.GetType("PlanetGauge.PlanetGaugeRateSource", true);
+        PropertyInfo eventSettings = runtimeType.GetProperty("EventSettings", all);
+        PropertyInfo mode = mainType.GetProperty("SightreadMode", all);
+        PropertyInfo lastMode = mainType.GetProperty("LastSightreadMode", all);
+        object previousSettings = eventSettings.GetValue(null, null);
+        int previousMode = (int)mode.GetValue(null, null);
+        MethodInfo setMode = mainType.GetMethod("SetSightreadMode", all);
+        MethodInfo toggleMode = mainType.GetMethod("ToggleSightreadMode", all);
+        MethodInfo transform = runtimeType.GetMethod("TransformDelta", all);
+        try
+        {
+            object recovery = Activator.CreateInstance(channelType, all, null,
+                new[] { (object)true, 400f, Enum.Parse(sourceType, "Increase") }, null);
+            object damage = Activator.CreateInstance(channelType, all, null,
+                new[] { (object)true, 20f, Enum.Parse(sourceType, "Decrease") }, null);
+            object levelRates = Activator.CreateInstance(settingsType, all, null,
+                new[] { (object)false, recovery, damage, 400f, 20f, 100f,
+                    false, true, false, 100f, false }, null);
+            eventSettings.SetValue(null, levelRates, null);
+            float[] positive = { 0.4f, 0.2f, 0.2f, 0.3f };
+            float[] negative = { -0.2f, -1f, -0.5f, -0.5f };
+            for (int i = 0; i <= 3; i++)
+            {
+                setMode.Invoke(null, new object[] { i });
+                float actualPositive = (float)transform.Invoke(null, new object[] { 0.1f });
+                float actualNegative = (float)transform.Invoke(null, new object[] { -1f });
+                if (Math.Abs(actualPositive - positive[i]) > 0.00001f
+                    || Math.Abs(actualNegative - negative[i]) > 0.00001f)
+                    throw new InvalidOperationException("SR-" + i + " rate precedence failed");
+            }
+            toggleMode.Invoke(null, new object[] { 3 });
+            if ((int)mode.GetValue(null, null) != 0)
+                throw new InvalidOperationException("Repeated SR shortcut must turn the mode off");
+            if ((int)lastMode.GetValue(null, null) != 3)
+                throw new InvalidOperationException("Turning SR off must remember the last mode");
+            setMode.Invoke(null, new object[] { 1 });
+            setMode.Invoke(null, new object[] { 2 });
+            if ((int)mode.GetValue(null, null) != 2)
+                throw new InvalidOperationException("Sightread modes must be exclusive");
+            setMode.Invoke(null, new object[] { 0 });
+            setMode.Invoke(null, new object[] { (int)lastMode.GetValue(null, null) });
+            if ((int)mode.GetValue(null, null) != 2)
+                throw new InvalidOperationException("SR toggle must restore the last selected mode");
+        }
+        finally
+        {
+            setMode.Invoke(null, new object[] { previousMode });
+            eventSettings.SetValue(null, previousSettings, null);
+        }
+    }
+
+    private static void VerifySightreadKeyLabels(Assembly assembly)
+    {
+        const BindingFlags all = BindingFlags.Static | BindingFlags.NonPublic;
+        MethodInfo format = assembly.GetType("PlanetGauge.PlanetGaugeSettings", true)
+            .GetMethod("FormatSightreadKey", all);
+        Type keyCodeType = format.GetParameters()[0].ParameterType;
+        for (int i = 1; i <= 3; i++)
+        {
+            object key = Enum.Parse(keyCodeType, "Alpha" + i);
+            string label = (string)format.Invoke(null, new[] { key });
+            if (label != i.ToString())
+                throw new InvalidOperationException("Alpha key label must use its digit");
+        }
+    }
+
+    private static void VerifyShortcutResetGroups(Assembly assembly)
+    {
+        const BindingFlags all = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+        Type settingsType = assembly.GetType("PlanetGauge.PlanetGaugeSettings", true);
+        object settings = Activator.CreateInstance(settingsType);
+        FieldInfo[] keys = new FieldInfo[5];
+        for (int i = 0; i < keys.Length; i++)
+            keys[i] = settingsType.GetField("SightreadKey" + (i + 1), all);
+        Type keyType = keys[0].FieldType;
+        keys[0].SetValue(settings, Enum.Parse(keyType, "F4"));
+        keys[1].SetValue(settings, Enum.Parse(keyType, "F5"));
+        keys[2].SetValue(settings, Enum.Parse(keyType, "F6"));
+        settingsType.GetMethod("ResetCommonKeys", all).Invoke(settings, null);
+        if (keys[0].GetValue(settings).ToString() != "LeftShift"
+            || keys[1].GetValue(settings).ToString() != "P"
+            || keys[2].GetValue(settings).ToString() != "F6")
+            throw new InvalidOperationException("Shared key reset changed SR action keys");
+
+        keys[0].SetValue(settings, Enum.Parse(keyType, "F4"));
+        keys[2].SetValue(settings, Enum.Parse(keyType, "F7"));
+        settingsType.GetMethod("ResetSightreadActionKeys", all).Invoke(settings, null);
+        if (keys[0].GetValue(settings).ToString() != "F4"
+            || keys[2].GetValue(settings).ToString() != "Alpha1")
+            throw new InvalidOperationException("SR action reset changed shared keys");
+
+        keys[0].SetValue(settings, Enum.Parse(keyType, "F4"));
+        keys[2].SetValue(settings, Enum.Parse(keyType, "LeftShift"));
+        settingsType.GetMethod("ResetCommonKeys", all).Invoke(settings, null);
+        if (keys[0].GetValue(settings).ToString() != "LeftShift"
+            || keys[2].GetValue(settings).ToString() == "LeftShift")
+            throw new InvalidOperationException("Shared key reset left a shortcut conflict");
+    }
+
+    private static void VerifySightreadSelectionLock(Assembly assembly)
+    {
+        const BindingFlags all = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+        Type mainType = assembly.GetType("PlanetGauge.Main", true);
+        PropertyInfo mode = mainType.GetProperty("SightreadMode", all);
+        PropertyInfo locked = mainType.GetProperty("IsSightreadSelectionLocked", all);
+        MethodInfo setMode = mainType.GetMethod("SetSightreadMode", all);
+        MethodInfo setLock = mainType.GetMethod("SetSightreadGameplayLock", all);
+        int previousMode = (int)mode.GetValue(null, null);
+        bool previousLock = (bool)locked.GetValue(null, null);
+        try
+        {
+            setLock.Invoke(null, new object[] { false });
+            setMode.Invoke(null, new object[] { 1 });
+            setLock.Invoke(null, new object[] { true });
+            setMode.Invoke(null, new object[] { 2 });
+            if ((int)mode.GetValue(null, null) != 1)
+                throw new InvalidOperationException("Gameplay changed sightread mode");
+            setLock.Invoke(null, new object[] { false });
+            setMode.Invoke(null, new object[] { 2 });
+            if ((int)mode.GetValue(null, null) != 2)
+                throw new InvalidOperationException("Editor could not change sightread mode");
+        }
+        finally
+        {
+            setLock.Invoke(null, new object[] { false });
+            setMode.Invoke(null, new object[] { previousMode });
+            setLock.Invoke(null, new object[] { previousLock });
+        }
+    }
+
+    private static void VerifyXPlanetGaugeShortcutToggle(Assembly assembly)
+    {
+        const BindingFlags all = BindingFlags.Static | BindingFlags.Instance
+            | BindingFlags.Public | BindingFlags.NonPublic;
+        Type mainType = assembly.GetType("PlanetGauge.Main", true);
+        Type settingsType = assembly.GetType("PlanetGauge.PlanetGaugeSettings", true);
+        PropertyInfo mainSettings = mainType.GetProperty("Settings", all);
+        PropertyInfo locked = mainType.GetProperty("IsSightreadSelectionLocked", all);
+        MethodInfo setLock = mainType.GetMethod("SetSightreadGameplayLock", all);
+        MethodInfo toggleX = mainType.GetMethod("ToggleXPlanetGaugeMode", all);
+        object previousSettings = mainSettings.GetValue(null, null);
+        bool previousLock = (bool)locked.GetValue(null, null);
+        object settings = Activator.CreateInstance(settingsType);
+        FieldInfo xMode = settingsType.GetField("XPlanetGaugeMode", all);
+        try
+        {
+            mainSettings.SetValue(null, settings, null);
+            setLock.Invoke(null, new object[] { false });
+            toggleX.Invoke(null, null);
+            if (!(bool)xMode.GetValue(settings))
+                throw new InvalidOperationException("X shortcut did not enable the mode");
+            setLock.Invoke(null, new object[] { true });
+            toggleX.Invoke(null, null);
+            if (!(bool)xMode.GetValue(settings))
+                throw new InvalidOperationException("X shortcut changed the mode during gameplay");
+            setLock.Invoke(null, new object[] { false });
+            toggleX.Invoke(null, null);
+            if ((bool)xMode.GetValue(settings))
+                throw new InvalidOperationException("X shortcut did not disable the mode");
+        }
+        finally
+        {
+            setLock.Invoke(null, new object[] { previousLock });
+            mainSettings.SetValue(null, previousSettings, null);
         }
     }
 }

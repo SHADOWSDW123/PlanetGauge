@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -27,6 +28,7 @@ namespace PlanetGauge
         private static readonly Color32 XPlanetGaugeLowColor = new Color32(122, 16, 16, 255);
         private static readonly Color32 XPlanetGaugeMiddleColor = new Color32(217, 43, 43, 255);
         private static readonly Color32 XPlanetGaugeHighColor = new Color32(255, 107, 107, 255);
+        private static readonly Color32 SightreadColor = new Color32(69, 214, 107, 255);
 
         private static scnEditor owner;
         private static GameObject buttonObject;
@@ -34,6 +36,7 @@ namespace PlanetGauge
         private static GaugeBarGraphic gaugeGraphic;
         private static RectTransform buttonRect; 
         private static RectTransform shieldRect;
+        private static TextMeshProUGUI sightreadText;
         private static readonly Vector3[] ShieldWorldCorners = new Vector3[4];
 
         internal static void Ensure(scnEditor editor)
@@ -85,6 +88,22 @@ namespace PlanetGauge
 
             gaugeGraphic = buttonObject.GetComponent<GaugeBarGraphic>();
             button.targetGraphic = gaugeGraphic;
+            GameObject sightreadObject = new GameObject(
+                "SightreadLabel", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            sightreadObject.transform.SetParent(buttonObject.transform, false);
+            RectTransform sightreadRect = sightreadObject.GetComponent<RectTransform>();
+            sightreadRect.anchorMin = new Vector2(0.5f, 0.5f);
+            sightreadRect.anchorMax = new Vector2(0.5f, 0.5f);
+            sightreadRect.pivot = new Vector2(0.5f, 0f);
+            sightreadRect.anchoredPosition = new Vector2(0f, BarHeight * 0.5f + 3f);
+            sightreadRect.sizeDelta = new Vector2(BarWidth, 22f);
+            sightreadText = sightreadObject.GetComponent<TextMeshProUGUI>();
+            sightreadText.alignment = TextAlignmentOptions.Center;
+            sightreadText.fontSize = 16f;
+            sightreadText.fontStyle = FontStyles.Bold;
+            sightreadText.color = SightreadColor;
+            sightreadText.raycastTarget = false;
+            if (TMP_Settings.defaultFontAsset != null) sightreadText.font = TMP_Settings.defaultFontAsset;
             Sync();
         }
 
@@ -132,6 +151,16 @@ namespace PlanetGauge
                 2f);
             gaugeGraphic.SetBlindfoldOpacity(blindfoldAlpha);
             gaugeGraphic.SetState(Main.EditorGaugeEnabled, normalizedValue);
+            if (sightreadText != null)
+            {
+                int mode = Main.SightreadMode;
+                sightreadText.enabled = mode != 0;
+                if (mode != 0)
+                {
+                    string label = "SR-" + mode;
+                    if (sightreadText.text != label) sightreadText.text = label;
+                }
+            }
         }
 
         internal static void Destroy()
@@ -148,6 +177,7 @@ namespace PlanetGauge
             gaugeGraphic = null;
             buttonRect = null;
             shieldRect = null;
+            sightreadText = null;
         }
 
         private static void Toggle()

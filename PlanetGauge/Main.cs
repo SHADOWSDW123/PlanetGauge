@@ -16,10 +16,16 @@ namespace PlanetGauge
         private static Harmony harmony;
         private static bool registeredWithGame;
         private static int temporaryMissRecoveryDepth;
+        private static bool sightreadGameplayLocked;
+        private static UnityModManager.ModEntry currentModEntry;
 
         public static bool IsEnabled { get; private set; }
 
         public static bool EditorGaugeEnabled { get; private set; }
+        internal static int SightreadMode { get; private set; }
+        internal static int LastSightreadMode { get; private set; } = 1;
+        internal static bool IsSightreadSelectionLocked { get { return sightreadGameplayLocked; } }
+        internal static void SetSightreadGameplayLock(bool locked) { sightreadGameplayLocked = locked; }
 
         internal static PlanetGaugeSettings Settings { get; private set; }
 
@@ -31,9 +37,13 @@ namespace PlanetGauge
         {
             // Load는 등록만 수행한다. 게임 코드를 바꾸는 패치는 사용자가 모드를 켤 때 적용한다.
             Logger = modEntry.Logger;
+            currentModEntry = modEntry;
             ModDirectory = modEntry.Path;
             Settings = UnityModManager.ModSettings.Load<PlanetGaugeSettings>(modEntry)
                 ?? new PlanetGaugeSettings();
+            SightreadMode = 0;
+            LastSightreadMode = 1;
+            sightreadGameplayLocked = false;
             Settings.InitializeLanguageFromGameIfNeeded();
             Settings.Sanitize();
             modEntry.OnToggle = OnToggle;
@@ -130,6 +140,7 @@ namespace PlanetGauge
             {
                 IsEnabled = false;
                 EditorGaugeEnabled = false;
+                sightreadGameplayLocked = false;
                 ResetSessionState();
                 RuntimeHost.DestroyHost();
                 GaugeSkinManager.Dispose();
@@ -245,6 +256,7 @@ namespace PlanetGauge
 
             IsEnabled = false;
             EditorGaugeEnabled = false;
+            sightreadGameplayLocked = false;
             ResetSessionState();
             RuntimeHost.DestroyHost();
             GaugeSkinManager.Dispose();
@@ -267,6 +279,7 @@ namespace PlanetGauge
 
         internal static void BeginEditorSession()
         {
+            sightreadGameplayLocked = false;
             EditorGaugeEnabled = false;
             ResetSessionState();
         }
@@ -275,6 +288,34 @@ namespace PlanetGauge
         {
             EditorGaugeEnabled = enabled;
             ResetSessionState();
+        }
+
+        internal static void ToggleSightreadMode(int mode)
+        {
+            if (mode < 1 || mode > 3) return;
+            SetSightreadMode(SightreadMode == mode ? 0 : mode);
+        }
+
+        internal static void SetSightreadMode(int mode)
+        {
+            if (mode < 0 || mode > 3 || SightreadMode == mode || sightreadGameplayLocked) return;
+            SightreadMode = mode;
+            if (mode != 0) LastSightreadMode = mode;
+            GaugeRuntime.NotifySightreadChanged();
+        }
+
+        internal static void ToggleXPlanetGaugeMode()
+        {
+            if (sightreadGameplayLocked || Settings == null) return;
+            Settings.XPlanetGaugeMode = !Settings.XPlanetGaugeMode;
+            try
+            {
+                if (currentModEntry != null) Settings.Save(currentModEntry);
+            }
+            catch (Exception exception)
+            {
+                LogException("X-PlanetGauge 단축키 설정 저장에 실패했습니다.", exception);
+            }
         }
 
         internal static void ResetSessionState()

@@ -7,12 +7,21 @@ namespace PlanetGauge
     [HarmonyPatch(typeof(scnEditor), nameof(scnEditor.Play))]
     internal static class EditorPlayPatch
     {
-        private static void Prefix()
+        private static void Prefix(ref bool __state)
         {
+            __state = Main.IsEnabled;
+            if (__state) Main.SetSightreadGameplayLock(true);
             if (Main.IsEnabled && Main.EditorGaugeEnabled)
             {
                 Main.ResetSessionState();
             }
+        }
+
+        private static Exception Finalizer(Exception __exception, ref bool __state)
+        {
+            if (__state && __exception != null)
+                Main.SetSightreadGameplayLock(false);
+            return __exception;
         }
     }
 
@@ -79,6 +88,7 @@ namespace PlanetGauge
     {
         private static void Postfix()
         {
+            Main.SetSightreadGameplayLock(false);
             if (Main.IsEnabled && Main.EditorGaugeEnabled)
             {
                 Main.ResetSessionState();
