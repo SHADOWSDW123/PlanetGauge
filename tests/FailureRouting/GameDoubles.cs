@@ -55,6 +55,7 @@ namespace PlanetGauge
     {
         public static bool IsEnabled = true, EditorGaugeEnabled = true;
         public static bool IsBorrowingNoFail => SwitchChosenPatch.IsBorrowingNoFail || PlayerDiePatch.IsBorrowingNoFail;
+        public static void SetSightreadGameplayLock(bool locked) { }
         public static void ResetSessionState() => SwitchChosenPatch.ResetSessionState();
     }
     public static class RuntimeHost { public static void ResetDebugVisibility() { } }

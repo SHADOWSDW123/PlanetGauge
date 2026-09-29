@@ -1033,13 +1033,13 @@ namespace PlanetGauge
                 return true;
             }
 
-            if (meter.straightMeter != null && meter.straightMeter.activeSelf)
+            if (meter.straightMeter != null && meter.straightMeter.gameObject.activeSelf)
             {
-                meterRect = meter.straightMeter.GetComponent<RectTransform>();
+                meterRect = meter.straightMeter.rectTransform;
             }
-            else if (meter.curvedMeter != null && meter.curvedMeter.activeSelf)
+            else if (meter.curvedMeter != null && meter.curvedMeter.gameObject.activeSelf)
             {
-                meterRect = meter.curvedMeter.GetComponent<RectTransform>();
+                meterRect = meter.curvedMeter.rectTransform;
             }
 
             if (meterRect == null && meter.wrapperRectTransform != null)
