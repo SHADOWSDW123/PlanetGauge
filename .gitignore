@@ -2,5 +2,6 @@
 **/bin/
 **/obj/
 **/dist/
+/tests/
 *.user
 *.suo
