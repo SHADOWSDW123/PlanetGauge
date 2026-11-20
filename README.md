@@ -102,6 +102,9 @@ MOD SHOWCASE - https://youtu.be/jrgMGzteOiA
 - 맵에 체력시스템을 편하게 추가하고 싶으신 분들
 
 ---
-### 생성형 인공지능 사용 고지
+### 기타
+생성형 인공지능 사용 고지
 코드 생성 및 이에 기반하는 HUD(코드) - AI 대폭 사용
 Assets 폴더 내의 모든 에셋(그림) - AI 미사용
+
+PlanetGauge 기본 폰트 - 이사만루 볼드체(esamanru (저작권자:㈜공게임즈)
