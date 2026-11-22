@@ -143,6 +143,29 @@ namespace PlanetGauge
         internal static string CustomFontAsset { get { return IsKorean ? KoreanStrings.CustomFontAsset : EnglishStrings.CustomFontAsset; } }
         internal static string FontFileInvalidExtension { get { return IsKorean ? KoreanStrings.FontFileInvalidExtension : EnglishStrings.FontFileInvalidExtension; } }
         internal static string FontAssetCreationFailed { get { return IsKorean ? KoreanStrings.FontAssetCreationFailed : EnglishStrings.FontAssetCreationFailed; } }
+        internal static string MapSettingsTransferCategory { get { return IsKorean ? KoreanStrings.MapSettingsTransferCategory : EnglishStrings.MapSettingsTransferCategory; } }
+        internal static string MapSettingsTransferNotice { get { return IsKorean ? KoreanStrings.MapSettingsTransferNotice : EnglishStrings.MapSettingsTransferNotice; } }
+        internal static string ExportMapSettingsButton { get { return IsKorean ? KoreanStrings.ExportMapSettingsButton : EnglishStrings.ExportMapSettingsButton; } }
+        internal static string ImportMapSettingsButton { get { return IsKorean ? KoreanStrings.ImportMapSettingsButton : EnglishStrings.ImportMapSettingsButton; } }
+        internal static string ExportMapSettingsDialog { get { return IsKorean ? KoreanStrings.ExportMapSettingsDialog : EnglishStrings.ExportMapSettingsDialog; } }
+        internal static string ImportMapSettingsDialog { get { return IsKorean ? KoreanStrings.ImportMapSettingsDialog : EnglishStrings.ImportMapSettingsDialog; } }
+        internal static string PlggFileFilter { get { return IsKorean ? KoreanStrings.PlggFileFilter : EnglishStrings.PlggFileFilter; } }
+        internal static string MapSettingsTransferModDisabled { get { return IsKorean ? KoreanStrings.MapSettingsTransferModDisabled : EnglishStrings.MapSettingsTransferModDisabled; } }
+        internal static string MapSettingsTransferEditorOnly { get { return IsKorean ? KoreanStrings.MapSettingsTransferEditorOnly : EnglishStrings.MapSettingsTransferEditorOnly; } }
+        internal static string MapSettingsTransferPlayModeBlocked { get { return IsKorean ? KoreanStrings.MapSettingsTransferPlayModeBlocked : EnglishStrings.MapSettingsTransferPlayModeBlocked; } }
+        internal static string MapSettingsExportNoEvents { get { return IsKorean ? KoreanStrings.MapSettingsExportNoEvents : EnglishStrings.MapSettingsExportNoEvents; } }
+        internal static string MapSettingsExportSucceeded { get { return IsKorean ? KoreanStrings.MapSettingsExportSucceeded : EnglishStrings.MapSettingsExportSucceeded; } }
+        internal static string MapSettingsExportFailed { get { return IsKorean ? KoreanStrings.MapSettingsExportFailed : EnglishStrings.MapSettingsExportFailed; } }
+        internal static string MapSettingsImportSucceeded { get { return IsKorean ? KoreanStrings.MapSettingsImportSucceeded : EnglishStrings.MapSettingsImportSucceeded; } }
+        internal static string MapSettingsImportFailed { get { return IsKorean ? KoreanStrings.MapSettingsImportFailed : EnglishStrings.MapSettingsImportFailed; } }
+        internal static string MapSettingsImportFileNotFound { get { return IsKorean ? KoreanStrings.MapSettingsImportFileNotFound : EnglishStrings.MapSettingsImportFileNotFound; } }
+        internal static string MapSettingsImportInvalidExtension { get { return IsKorean ? KoreanStrings.MapSettingsImportInvalidExtension : EnglishStrings.MapSettingsImportInvalidExtension; } }
+        internal static string MapSettingsImportInvalidFormat { get { return IsKorean ? KoreanStrings.MapSettingsImportInvalidFormat : EnglishStrings.MapSettingsImportInvalidFormat; } }
+        internal static string MapSettingsImportVersionTooNew { get { return IsKorean ? KoreanStrings.MapSettingsImportVersionTooNew : EnglishStrings.MapSettingsImportVersionTooNew; } }
+        internal static string MapSettingsImportVersionInvalid { get { return IsKorean ? KoreanStrings.MapSettingsImportVersionInvalid : EnglishStrings.MapSettingsImportVersionInvalid; } }
+        internal static string MapSettingsImportTileCountInsufficient { get { return IsKorean ? KoreanStrings.MapSettingsImportTileCountInsufficient : EnglishStrings.MapSettingsImportTileCountInsufficient; } }
+        internal static string MapSettingsImportNoEvents { get { return IsKorean ? KoreanStrings.MapSettingsImportNoEvents : EnglishStrings.MapSettingsImportNoEvents; } }
+        internal static string MapSettingsImportMapMismatchWarning { get { return IsKorean ? KoreanStrings.MapSettingsImportMapMismatchWarning : EnglishStrings.MapSettingsImportMapMismatchWarning; } }
         internal static string XPlanetGaugeMode { get { return IsKorean ? KoreanStrings.XPlanetGaugeMode : EnglishStrings.XPlanetGaugeMode; } }
         internal static string PlanetGaugeSettingsCategory { get { return IsKorean ? KoreanStrings.PlanetGaugeSettingsCategory : EnglishStrings.PlanetGaugeSettingsCategory; } }
         internal static string XPlanetGaugeModeRequirement { get { return IsKorean ? KoreanStrings.XPlanetGaugeModeRequirement : EnglishStrings.XPlanetGaugeModeRequirement; } }

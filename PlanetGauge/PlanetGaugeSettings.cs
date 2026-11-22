@@ -109,6 +109,7 @@ namespace PlanetGauge
         public string CustomFontFilePath = string.Empty;
 
         public bool CustomGaugeSkinEnabled;
+        public bool MapSettingsTransferVisible = true;
         public bool CustomSkinSettingsVisible = true;
         public bool GaugePositionSettingsVisible = true;
         public bool AdvancedSettingsVisible = true;
@@ -152,6 +153,9 @@ namespace PlanetGauge
                 GUILayout.Label(LocalizedStrings.XPlanetGaugeModeRequirement);
             DrawSightreadSettings();
             GUILayout.Space(14f);
+
+            DrawMapSettingsTransferSection();
+            GUILayout.Space(10f);
 
             CustomSkinSettingsVisible = DrawCategoryVisibilityHeader(
                 LocalizedStrings.CustomGaugeSkin, CustomSkinSettingsVisible);
@@ -1011,6 +1015,60 @@ namespace PlanetGauge
             return visible;
         }
 
+        private void DrawMapSettingsTransferSection()
+        {
+            MapSettingsTransferVisible = DrawCategoryVisibilityHeader(
+                LocalizedStrings.MapSettingsTransferCategory,
+                MapSettingsTransferVisible);
+            if (!MapSettingsTransferVisible)
+            {
+                return;
+            }
+
+            GUILayout.Label(LocalizedStrings.MapSettingsTransferNotice);
+
+            MapSettingsAvailabilityReason availability;
+            bool canOperate = PlanetGaugeMapSettingsTransfer.CanOperateInEditor(out availability);
+            if (!canOperate)
+            {
+                string hint = PlanetGaugeMapSettingsTransfer.GetAvailabilityHint(availability);
+                if (!string.IsNullOrWhiteSpace(hint))
+                {
+                    GUILayout.Label(hint);
+                }
+            }
+
+            bool previousGuiEnabled = GUI.enabled;
+            GUI.enabled = previousGuiEnabled && canOperate;
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(LocalizedStrings.ExportMapSettingsButton, GUILayout.Width(200f)))
+            {
+                PlanetGaugeMapSettingsTransfer.ExportCurrentMap();
+            }
+
+            if (GUILayout.Button(LocalizedStrings.ImportMapSettingsButton, GUILayout.Width(200f)))
+            {
+                PlanetGaugeMapSettingsTransfer.ImportIntoCurrentMap();
+            }
+            GUILayout.EndHorizontal();
+            GUI.enabled = previousGuiEnabled;
+
+            if (!string.IsNullOrWhiteSpace(PlanetGaugeMapSettingsTransfer.LastMessage))
+            {
+                GUILayout.Label(PlanetGaugeMapSettingsTransfer.LastMessage);
+            }
+
+            if (!string.IsNullOrWhiteSpace(PlanetGaugeMapSettingsTransfer.LastWarning))
+            {
+                Color previousColor = GUI.contentColor;
+                GUI.contentColor = new Color(1f, 0.72f, 0.2f, 1f);
+                GUILayout.Label(LocalizedStrings.Format(
+                    LocalizedStrings.Warning,
+                    PlanetGaugeMapSettingsTransfer.LastWarning));
+                GUI.contentColor = previousColor;
+            }
+        }
+
         private string GetSightreadShortcutLabel()
         {
             return LocalizedStrings.Format(LocalizedStrings.SightreadShortcut,
@@ -1036,8 +1094,7 @@ namespace PlanetGauge
         private void DrawCommonShortcut()
         {
             commonKeySettingsExpanded = GUILayout.Toggle(
-                commonKeySettingsExpanded, LocalizedStrings.EditCommonKeys,
-                GUILayout.Width(165f));
+                commonKeySettingsExpanded, LocalizedStrings.EditCommonKeys);
             if (!commonKeySettingsExpanded)
             {
                 if (sightreadKeyCaptureSlot <= 2)
@@ -1069,8 +1126,7 @@ namespace PlanetGauge
         private void DrawDebugShortcut()
         {
             debugKeySettingsExpanded = GUILayout.Toggle(
-                debugKeySettingsExpanded, LocalizedStrings.EditDebugKeys,
-                GUILayout.Width(165f));
+                debugKeySettingsExpanded, LocalizedStrings.EditDebugKeys);
             if (!debugKeySettingsExpanded)
             {
                 debugKeyCaptureSlot = 0;
@@ -1170,8 +1226,7 @@ namespace PlanetGauge
         private void DrawSightreadShortcut()
         {
             sightreadKeySettingsExpanded = GUILayout.Toggle(
-                sightreadKeySettingsExpanded, LocalizedStrings.EditSightreadKeys,
-                GUILayout.Width(165f));
+                sightreadKeySettingsExpanded, LocalizedStrings.EditSightreadKeys);
             if (!sightreadKeySettingsExpanded)
             {
                 if (sightreadKeyCaptureSlot >= 3)
@@ -1246,8 +1301,7 @@ namespace PlanetGauge
         private void DrawXPlanetGaugeShortcut()
         {
             xKeySettingsExpanded = GUILayout.Toggle(
-                xKeySettingsExpanded, LocalizedStrings.EditXPlanetGaugeKey,
-                GUILayout.Width(165f));
+                xKeySettingsExpanded, LocalizedStrings.EditXPlanetGaugeKey);
             if (!xKeySettingsExpanded)
             {
                 xKeyCaptureActive = false;
