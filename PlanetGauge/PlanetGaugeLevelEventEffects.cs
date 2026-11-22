@@ -59,6 +59,9 @@ namespace PlanetGauge
             bool hideForceRecoveryVisuals = levelEvent.Get<bool>(
                 PlanetGaugeLevelEventRegistry.HideForceRecoveryVisualsKey,
                 true);
+            bool disableHudHideAnimation = levelEvent.Get<bool>(
+                PlanetGaugeLevelEventRegistry.DisableHudHideAnimationKey,
+                false);
 
             command = new PlanetGaugeEventCommand
             {
@@ -91,7 +94,8 @@ namespace PlanetGauge
                 HideGaugeValue = hideGaugeValue,
                 HideAttributeText = hideAttributeText,
                 HideRateToken = hideRateToken,
-                HideForceRecoveryVisuals = hideForceRecoveryVisuals
+                HideForceRecoveryVisuals = hideForceRecoveryVisuals,
+                DisableHudHideAnimation = disableHudHideAnimation
             };
         }
 

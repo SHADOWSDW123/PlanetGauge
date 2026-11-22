@@ -119,6 +119,30 @@ namespace PlanetGauge
         internal static string Advanced { get { return IsKorean ? KoreanStrings.Advanced : EnglishStrings.Advanced; } }
         internal static string ShowDecimalHealth { get { return IsKorean ? KoreanStrings.ShowDecimalHealth : EnglishStrings.ShowDecimalHealth; } }
         internal static string IndependentGaugeValueColor { get { return IsKorean ? KoreanStrings.IndependentGaugeValueColor : EnglishStrings.IndependentGaugeValueColor; } }
+        internal static string DisableHudHideAnimation { get { return IsKorean ? KoreanStrings.DisableHudHideAnimation : EnglishStrings.DisableHudHideAnimation; } }
+        internal static string DisableResultsHudAnimation { get { return IsKorean ? KoreanStrings.DisableResultsHudAnimation : EnglishStrings.DisableResultsHudAnimation; } }
+        internal static string FontSettingsCategory { get { return IsKorean ? KoreanStrings.FontSettingsCategory : EnglishStrings.FontSettingsCategory; } }
+        internal static string CurrentFontFile { get { return IsKorean ? KoreanStrings.CurrentFontFile : EnglishStrings.CurrentFontFile; } }
+        internal static string CurrentFontDefaultName { get { return IsKorean ? KoreanStrings.CurrentFontDefaultName : EnglishStrings.CurrentFontDefaultName; } }
+        internal static string CurrentFontAdofaiName { get { return IsKorean ? KoreanStrings.CurrentFontAdofaiName : EnglishStrings.CurrentFontAdofaiName; } }
+        internal static string FontModeDefault { get { return IsKorean ? KoreanStrings.FontModeDefault : EnglishStrings.FontModeDefault; } }
+        internal static string FontModeAdofai { get { return IsKorean ? KoreanStrings.FontModeAdofai : EnglishStrings.FontModeAdofai; } }
+        internal static string FontModeCustom { get { return IsKorean ? KoreanStrings.FontModeCustom : EnglishStrings.FontModeCustom; } }
+        internal static string SelectFontFile { get { return IsKorean ? KoreanStrings.SelectFontFile : EnglishStrings.SelectFontFile; } }
+        internal static string ClearFontFile { get { return IsKorean ? KoreanStrings.ClearFontFile : EnglishStrings.ClearFontFile; } }
+        internal static string SelectFontFileDialog { get { return IsKorean ? KoreanStrings.SelectFontFileDialog : EnglishStrings.SelectFontFileDialog; } }
+        internal static string FontFileFilter { get { return IsKorean ? KoreanStrings.FontFileFilter : EnglishStrings.FontFileFilter; } }
+        internal static string CustomFontScale { get { return IsKorean ? KoreanStrings.CustomFontScale : EnglishStrings.CustomFontScale; } }
+        internal static string ResetCustomFontScale { get { return IsKorean ? KoreanStrings.ResetCustomFontScale : EnglishStrings.ResetCustomFontScale; } }
+        internal static string SelectFontFileFirst { get { return IsKorean ? KoreanStrings.SelectFontFileFirst : EnglishStrings.SelectFontFileFirst; } }
+        internal static string FontLoadsWhenEnabled { get { return IsKorean ? KoreanStrings.FontLoadsWhenEnabled : EnglishStrings.FontLoadsWhenEnabled; } }
+        internal static string UsingBundledDefaultFont { get { return IsKorean ? KoreanStrings.UsingBundledDefaultFont : EnglishStrings.UsingBundledDefaultFont; } }
+        internal static string UsingAdofaiFont { get { return IsKorean ? KoreanStrings.UsingAdofaiFont : EnglishStrings.UsingAdofaiFont; } }
+        internal static string CustomFontApplied { get { return IsKorean ? KoreanStrings.CustomFontApplied : EnglishStrings.CustomFontApplied; } }
+        internal static string FontApplyFailed { get { return IsKorean ? KoreanStrings.FontApplyFailed : EnglishStrings.FontApplyFailed; } }
+        internal static string CustomFontAsset { get { return IsKorean ? KoreanStrings.CustomFontAsset : EnglishStrings.CustomFontAsset; } }
+        internal static string FontFileInvalidExtension { get { return IsKorean ? KoreanStrings.FontFileInvalidExtension : EnglishStrings.FontFileInvalidExtension; } }
+        internal static string FontAssetCreationFailed { get { return IsKorean ? KoreanStrings.FontAssetCreationFailed : EnglishStrings.FontAssetCreationFailed; } }
         internal static string XPlanetGaugeMode { get { return IsKorean ? KoreanStrings.XPlanetGaugeMode : EnglishStrings.XPlanetGaugeMode; } }
         internal static string PlanetGaugeSettingsCategory { get { return IsKorean ? KoreanStrings.PlanetGaugeSettingsCategory : EnglishStrings.PlanetGaugeSettingsCategory; } }
         internal static string XPlanetGaugeModeRequirement { get { return IsKorean ? KoreanStrings.XPlanetGaugeModeRequirement : EnglishStrings.XPlanetGaugeModeRequirement; } }
@@ -212,6 +236,7 @@ namespace PlanetGauge
         internal static string HideAttributeTextLabel { get { return IsKorean ? KoreanStrings.HideAttributeTextLabel : EnglishStrings.HideAttributeTextLabel; } }
         internal static string HideRateTokenLabel { get { return IsKorean ? KoreanStrings.HideRateTokenLabel : EnglishStrings.HideRateTokenLabel; } }
         internal static string HideForceRecoveryVisualsLabel { get { return IsKorean ? KoreanStrings.HideForceRecoveryVisualsLabel : EnglishStrings.HideForceRecoveryVisualsLabel; } }
+        internal static string DisableHudHideAnimationLabel { get { return IsKorean ? KoreanStrings.DisableHudHideAnimationLabel : EnglishStrings.DisableHudHideAnimationLabel; } }
         internal static string MultiplierPercentLabel { get { return IsKorean ? KoreanStrings.MultiplierPercentLabel : EnglishStrings.MultiplierPercentLabel; } }
         internal static string RecoveryAmountLabel { get { return IsKorean ? KoreanStrings.RecoveryAmountLabel : EnglishStrings.RecoveryAmountLabel; } }
         internal static string WarningOffsetLabel { get { return IsKorean ? KoreanStrings.WarningOffsetLabel : EnglishStrings.WarningOffsetLabel; } }

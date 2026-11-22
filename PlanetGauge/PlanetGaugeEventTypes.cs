@@ -135,6 +135,7 @@ namespace PlanetGauge
         internal bool HideAttributeText;
         internal bool HideRateToken;
         internal bool HideForceRecoveryVisuals;
+        internal bool DisableHudHideAnimation;
     }
 
     internal static class PlanetGaugeValueRules

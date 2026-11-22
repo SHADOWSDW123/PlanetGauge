@@ -40,6 +40,7 @@ namespace PlanetGauge
 
             EnsureCreated();
             SetActive(true);
+            GaugeHudFontManager.ApplyFont(text);
             refreshRemaining -= Time.unscaledDeltaTime;
             if (refreshRemaining > 0f || text == null)
             {
@@ -99,7 +100,7 @@ namespace PlanetGauge
             text.textWrappingMode = TextWrappingModes.NoWrap;
             text.overflowMode = TextOverflowModes.Overflow;
             text.raycastTarget = false;
-            if (TMP_Settings.defaultFontAsset != null) text.font = TMP_Settings.defaultFontAsset;
+            GaugeHudFontManager.ApplyFont(text);
 
             Outline outline = textObject.GetComponent<Outline>();
             outline.effectColor = new Color(0f, 0f, 0f, 0.95f);

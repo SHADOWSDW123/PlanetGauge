@@ -37,6 +37,8 @@ namespace PlanetGauge
 
         private string[] skinFillDirectionLabels;
         private int skinFillDirectionLabelsRevision = -1;
+        private string[] fontModeLabels;
+        private int fontModeLabelsRevision = -1;
 
         private string frameOffsetXInput;
         private string frameOffsetYInput;
@@ -48,6 +50,7 @@ namespace PlanetGauge
         private string attributeTextOffsetYInput;
         private string rateTokenOffsetXInput;
         private string rateTokenOffsetYInput;
+        private string customFontScaleInput;
         private int debugKeyCaptureSlot;
         private string debugKeyCaptureMessage;
         private bool debugKeySettingsExpanded;
@@ -98,6 +101,12 @@ namespace PlanetGauge
         public int MainGaugeValueColorG = 255;
         public int MainGaugeValueColorB = 255;
         public bool MainGaugeValueColorIndependent;
+        public bool DisableHudHideAnimation;
+        public bool DisableResultsHudAnimation;
+        public float CustomFontScalePercent = GaugeHudFontManager.DefaultCustomFontScalePercent;
+        public PlanetGaugeFontMode FontMode = PlanetGaugeFontMode.Default;
+        public bool CustomFontSettingsVisible = true;
+        public string CustomFontFilePath = string.Empty;
 
         public bool CustomGaugeSkinEnabled;
         public bool CustomSkinSettingsVisible = true;
@@ -256,6 +265,75 @@ namespace PlanetGauge
                 }
             }
 
+            GUILayout.Space(10f);
+            CustomFontSettingsVisible = DrawCategoryVisibilityHeader(
+                LocalizedStrings.FontSettingsCategory, CustomFontSettingsVisible);
+            if (CustomFontSettingsVisible)
+            {
+                GUILayout.Label(LocalizedStrings.Format(
+                    LocalizedStrings.CurrentFontFile,
+                    GetCurrentFontDisplayName()));
+
+                RefreshFontModeLabels();
+                PlanetGaugeFontMode nextFontMode = (PlanetGaugeFontMode)GUILayout.SelectionGrid(
+                    (int)FontMode,
+                    fontModeLabels,
+                    3,
+                    GUILayout.Width(360f));
+                if (nextFontMode != FontMode)
+                {
+                    FontMode = nextFontMode;
+                    GaugeHudFontManager.ApplyMode(this, true);
+                }
+
+                if (FontMode == PlanetGaugeFontMode.Custom)
+                {
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button(LocalizedStrings.SelectFontFile, GUILayout.Width(180f)))
+                    {
+                        string selectedFontPath = GaugeHudFontManager.PickFont(
+                            CustomFontFilePath,
+                            LocalizedStrings.SelectFontFileDialog);
+                        if (!string.IsNullOrWhiteSpace(selectedFontPath)
+                            && (!string.Equals(
+                                CustomFontFilePath,
+                                selectedFontPath,
+                                StringComparison.OrdinalIgnoreCase)
+                                || !GaugeHudFontManager.IsCustomFontLoaded))
+                        {
+                            CustomFontFilePath = selectedFontPath;
+                            GaugeHudFontManager.ApplyMode(this, true);
+                        }
+                    }
+                    if (GUILayout.Button(LocalizedStrings.ClearFontFile, GUILayout.Width(160f)))
+                    {
+                        CustomFontFilePath = string.Empty;
+                        GaugeHudFontManager.ApplyMode(this, true);
+                    }
+                    GUILayout.EndHorizontal();
+
+                    CustomFontScalePercent = DrawCustomFontScaleSlider(
+                        LocalizedStrings.CustomFontScale,
+                        CustomFontScalePercent,
+                        ref customFontScaleInput,
+                        "PlanetGauge.CustomFontScale");
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Space(96f);
+                    if (GUILayout.Button(LocalizedStrings.ResetCustomFontScale, GUILayout.Width(190f)))
+                    {
+                        CustomFontScalePercent = GaugeHudFontManager.DefaultCustomFontScalePercent;
+                        customFontScaleInput = null;
+                    }
+                    GUILayout.EndHorizontal();
+                }
+
+                if (!string.IsNullOrWhiteSpace(GaugeHudFontManager.LastMessage))
+                {
+                    GUILayout.Label(GaugeHudFontManager.LastMessage);
+                }
+            }
+
+            GUILayout.Space(10f);
             GaugePositionSettingsVisible = DrawCategoryVisibilityHeader(
                 LocalizedStrings.GaugePositionCategory, GaugePositionSettingsVisible);
             if (GaugePositionSettingsVisible)
@@ -463,6 +541,12 @@ namespace PlanetGauge
                 MainGaugeValueColorIndependent = GUILayout.Toggle(
                     MainGaugeValueColorIndependent,
                     LocalizedStrings.IndependentGaugeValueColor);
+                DisableHudHideAnimation = GUILayout.Toggle(
+                    DisableHudHideAnimation,
+                    LocalizedStrings.DisableHudHideAnimation);
+                DisableResultsHudAnimation = GUILayout.Toggle(
+                    DisableResultsHudAnimation,
+                    LocalizedStrings.DisableResultsHudAnimation);
             }
             else
             {
@@ -547,6 +631,8 @@ namespace PlanetGauge
                 DefaultRateTokenSizePercent,
                 25f,
                 500f);
+            CustomFontScalePercent = GaugeHudFontManager.SanitizeCustomFontScalePercent(
+                CustomFontScalePercent);
             MainGaugeColorR = Mathf.Clamp(MainGaugeColorR, 0, 255);
             MainGaugeColorG = Mathf.Clamp(MainGaugeColorG, 0, 255);
             MainGaugeColorB = Mathf.Clamp(MainGaugeColorB, 0, 255);
@@ -579,6 +665,11 @@ namespace PlanetGauge
                 XPlanetGaugeKey = FindAvailableActionKey(KeyCode.X, DebugKey2);
             HealthSkinImagePath = HealthSkinImagePath ?? string.Empty;
             FrameSkinImagePath = FrameSkinImagePath ?? string.Empty;
+            CustomFontFilePath = CustomFontFilePath ?? string.Empty;
+            if (!Enum.IsDefined(typeof(PlanetGaugeFontMode), FontMode))
+            {
+                FontMode = PlanetGaugeFontMode.Default;
+            }
             if (!Enum.IsDefined(typeof(GaugeSkinFillDirection), SkinFillDirection))
             {
                 SkinFillDirection = GaugeSkinFillDirection.Horizontal;
@@ -715,6 +806,37 @@ namespace PlanetGauge
             skinFillDirectionLabelsRevision = LocalizedStrings.Revision;
         }
 
+        private void RefreshFontModeLabels()
+        {
+            if (fontModeLabels != null
+                && fontModeLabelsRevision == LocalizedStrings.Revision)
+            {
+                return;
+            }
+
+            fontModeLabels = new[]
+            {
+                LocalizedStrings.FontModeDefault,
+                LocalizedStrings.FontModeAdofai,
+                LocalizedStrings.FontModeCustom
+            };
+            fontModeLabelsRevision = LocalizedStrings.Revision;
+        }
+
+        private string GetCurrentFontDisplayName()
+        {
+            switch (GaugeHudFontManager.ResolveEffectiveFontMode(this))
+            {
+                case PlanetGaugeFontMode.Adofai:
+                    return LocalizedStrings.CurrentFontAdofaiName;
+                case PlanetGaugeFontMode.Custom:
+                    return GetDisplayFontName(CustomFontFilePath);
+                case PlanetGaugeFontMode.Default:
+                default:
+                    return LocalizedStrings.CurrentFontDefaultName;
+            }
+        }
+
         internal Color32 GetMainGaugeColor()
         {
             // Sanitize 이후 호출된다는 전제에서 int 설정값을 손실 없이 byte로 변환한다.
@@ -807,6 +929,63 @@ namespace PlanetGauge
                 out parsed))
             {
                 return SanitizePositionFloat(parsed, value);
+            }
+
+            return value;
+        }
+
+        private static float DrawCustomFontScaleSlider(
+            string label,
+            float value,
+            ref string input,
+            string controlName)
+        {
+            bool focused = string.Equals(
+                GUI.GetNameOfFocusedControl(),
+                controlName,
+                StringComparison.Ordinal);
+            if (input == null || !focused)
+            {
+                input = value.ToString("0.#", CultureInfo.InvariantCulture);
+            }
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(label, GUILayout.Width(110f));
+
+            bool previousChanged = GUI.changed;
+            GUI.changed = false;
+            float sliderValue = Mathf.Clamp(
+                value,
+                GaugeHudFontManager.MinCustomFontScalePercent,
+                GaugeHudFontManager.MaxCustomFontScalePercent);
+            float sliderResult = GUILayout.HorizontalSlider(
+                sliderValue,
+                GaugeHudFontManager.MinCustomFontScalePercent,
+                GaugeHudFontManager.MaxCustomFontScalePercent,
+                GUILayout.Width(240f));
+            bool sliderChanged = GUI.changed;
+            GUI.changed = previousChanged || sliderChanged;
+            if (sliderChanged)
+            {
+                value = Mathf.Round(sliderResult * 10f) / 10f;
+                input = value.ToString("0.#", CultureInfo.InvariantCulture);
+            }
+
+            GUI.SetNextControlName(controlName);
+            input = GUILayout.TextField(input, GUILayout.Width(64f));
+            GUILayout.Label(
+                "% (scale: " + (value / 100f).ToString("0.000", CultureInfo.InvariantCulture) + ")",
+                GUILayout.Width(120f));
+            GUILayout.EndHorizontal();
+
+            float parsed;
+            if (float.TryParse(
+                input,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out parsed))
+            {
+                return GaugeHudFontManager.SanitizeCustomFontScalePercent(parsed);
             }
 
             return value;
@@ -1280,6 +1459,28 @@ namespace PlanetGauge
             GUILayout.Label(rounded.ToString(), GUILayout.Width(56f));
             GUILayout.EndHorizontal();
             return rounded;
+        }
+
+        private static string GetDisplayFontName(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return LocalizedStrings.None;
+            }
+
+            try
+            {
+                string nameWithoutExtension = Path.GetFileNameWithoutExtension(path);
+                if (!string.IsNullOrWhiteSpace(nameWithoutExtension))
+                {
+                    return nameWithoutExtension;
+                }
+            }
+            catch
+            {
+            }
+
+            return GetDisplayFileName(path);
         }
 
         private static string GetDisplayFileName(string path)

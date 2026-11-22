@@ -253,9 +253,9 @@ namespace PlanetGauge
             valueText.overflowMode = TextOverflowModes.Overflow;
             valueText.raycastTarget = false;
 
-            if (TMP_Settings.defaultFontAsset != null)
+            if (rootObject != null)
             {
-                valueText.font = TMP_Settings.defaultFontAsset;
+            GaugeHudFontManager.ApplyFont(valueText);
             }
 
             valueOutline = textObject.GetComponent<Outline>();
@@ -290,9 +290,9 @@ namespace PlanetGauge
             effectText.raycastTarget = false;
             effectText.enabled = false;
 
-            if (TMP_Settings.defaultFontAsset != null)
+            if (rootObject != null)
             {
-                effectText.font = TMP_Settings.defaultFontAsset;
+            GaugeHudFontManager.ApplyFont(effectText);
             }
 
             effectOutline = textObject.GetComponent<Outline>();
@@ -324,9 +324,9 @@ namespace PlanetGauge
             rateText.textWrappingMode = TextWrappingModes.NoWrap;
             rateText.overflowMode = TextOverflowModes.Overflow;
             rateText.raycastTarget = false;
-            if (TMP_Settings.defaultFontAsset != null)
+            if (rootObject != null)
             {
-                rateText.font = TMP_Settings.defaultFontAsset;
+            GaugeHudFontManager.ApplyFont(rateText);
             }
 
             rateOutline = textObject.GetComponent<Outline>();
@@ -338,6 +338,10 @@ namespace PlanetGauge
         private void UpdateStyle()
         {
             PlanetGaugeSettings settings = Main.Settings;
+            GaugeHudFontManager.ApplyFont(valueText);
+            GaugeHudFontManager.ApplyFont(rateText);
+            GaugeHudFontManager.ApplyFont(effectText);
+
             PlanetGaugeEventSettings eventSettings = GaugeRuntime.EffectiveEventSettings;
             Color32 userGaugeColor = settings.GetMainGaugeColor();
             Color32 userValueColor = settings.GetMainGaugeValueColor();

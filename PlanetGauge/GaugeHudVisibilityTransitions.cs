@@ -46,43 +46,79 @@ namespace PlanetGauge
                 || unscaledDeltaTime < 0f
                 ? 0f
                 : unscaledDeltaTime;
-            gaugeBar.Tick(deltaTime);
-            gaugeValue.Tick(deltaTime);
-            attributeText.Tick(deltaTime);
-            rateToken.Tick(deltaTime);
-            forceRecoveryVisuals.Tick(deltaTime);
-            resultsHud.Tick(deltaTime);
+            if (IsHudHideAnimationDisabledBySettings())
+            {
+                gaugeBar.SnapToTarget();
+                gaugeValue.SnapToTarget();
+                attributeText.SnapToTarget();
+                rateToken.SnapToTarget();
+                forceRecoveryVisuals.SnapToTarget();
+            }
+            else
+            {
+                gaugeBar.Tick(deltaTime);
+                gaugeValue.Tick(deltaTime);
+                attributeText.Tick(deltaTime);
+                rateToken.Tick(deltaTime);
+                forceRecoveryVisuals.Tick(deltaTime);
+            }
+
+            if (IsResultsHudAnimationDisabledBySettings())
+            {
+                resultsHud.SnapToTarget();
+            }
+            else
+            {
+                resultsHud.Tick(deltaTime);
+            }
         }
 
         internal static void RevealAll()
         {
-            gaugeBar.SetHidden(false);
-            gaugeValue.SetHidden(false);
-            attributeText.SetHidden(false);
-            rateToken.SetHidden(false);
-            forceRecoveryVisuals.SetHidden(false);
+            RevealAll(IsHudHideAnimationDisabledBySettings());
+        }
+
+        private static void RevealAll(bool instant)
+        {
+            gaugeBar.SetHidden(false, instant);
+            gaugeValue.SetHidden(false, instant);
+            attributeText.SetHidden(false, instant);
+            rateToken.SetHidden(false, instant);
+            forceRecoveryVisuals.SetHidden(false, instant);
         }
 
         internal static void Apply(PlanetGaugeEventCommand command)
         {
+            bool instant = IsHudHideAnimationDisabledBySettings()
+                || command.DisableHudHideAnimation;
             if (!command.AttributeEnabled)
             {
-                RevealAll();
+                RevealAll(instant);
                 return;
             }
 
             // 각 Bool은 선택 여부가 아니라 해당 범위의 목표 숨김 상태다.
             // false도 명시적인 표시 명령으로 적용해야 이전 이벤트의 숨김이 남지 않는다.
-            gaugeBar.SetHidden(command.HideGaugeBar);
-            gaugeValue.SetHidden(command.HideGaugeValue);
-            attributeText.SetHidden(command.HideAttributeText);
-            rateToken.SetHidden(command.HideRateToken);
-            forceRecoveryVisuals.SetHidden(command.HideForceRecoveryVisuals);
+            gaugeBar.SetHidden(command.HideGaugeBar, instant);
+            gaugeValue.SetHidden(command.HideGaugeValue, instant);
+            attributeText.SetHidden(command.HideAttributeText, instant);
+            rateToken.SetHidden(command.HideRateToken, instant);
+            forceRecoveryVisuals.SetHidden(command.HideForceRecoveryVisuals, instant);
         }
 
         internal static void SetResultsHudOpacity(float opacity)
         {
-            resultsHud.SetTargetAlpha(opacity);
+            resultsHud.SetTargetAlpha(opacity, IsResultsHudAnimationDisabledBySettings());
+        }
+
+        private static bool IsHudHideAnimationDisabledBySettings()
+        {
+            return Main.Settings != null && Main.Settings.DisableHudHideAnimation;
+        }
+
+        private static bool IsResultsHudAnimationDisabledBySettings()
+        {
+            return Main.Settings != null && Main.Settings.DisableResultsHudAnimation;
         }
 
         private struct FadeChannel
@@ -112,14 +148,20 @@ namespace PlanetGauge
                 }
             }
 
-            internal void SetHidden(bool hidden)
+            internal void SetHidden(bool hidden, bool instant)
             {
-                SetTargetAlpha(hidden ? 0f : 1f);
+                SetTargetAlpha(hidden ? 0f : 1f, instant);
             }
 
-            internal void SetTargetAlpha(float alpha)
+            internal void SetTargetAlpha(float alpha, bool instant)
             {
                 float nextTarget = Mathf.Clamp01(alpha);
+                if (instant)
+                {
+                    SnapTo(nextTarget);
+                    return;
+                }
+
                 if (Mathf.Approximately(targetAlpha, nextTarget)
                     && (transitioning || Mathf.Approximately(Alpha, nextTarget)))
                 {
@@ -139,6 +181,26 @@ namespace PlanetGauge
                 {
                     Alpha = targetAlpha;
                 }
+            }
+
+            internal void SnapToTarget()
+            {
+                if (!transitioning && Mathf.Approximately(Alpha, targetAlpha))
+                {
+                    return;
+                }
+
+                SnapTo(targetAlpha);
+            }
+
+            private void SnapTo(float target)
+            {
+                Alpha = target;
+                startAlpha = target;
+                targetAlpha = target;
+                duration = 0f;
+                elapsed = 0f;
+                transitioning = false;
             }
 
             internal void Tick(float deltaTime)

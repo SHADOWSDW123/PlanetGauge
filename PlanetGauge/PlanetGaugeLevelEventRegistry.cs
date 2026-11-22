@@ -30,6 +30,7 @@ namespace PlanetGauge
         internal const string HideAttributeTextKey = "hideAttributeText";
         internal const string HideRateTokenKey = "hideRateToken";
         internal const string HideForceRecoveryVisualsKey = "hideForceRecoveryVisuals";
+        internal const string DisableHudHideAnimationKey = "disableHudHideAnimation";
         internal const string MultiplierReuseNoteKey = "multiplierReuseNote";
         internal const string MultiplierReuseLocalizationKey = "planetGauge.multiplierReuseNote";
         internal const string RecoveryAmountNoteKey = "recoveryAmountNote";
@@ -92,6 +93,7 @@ namespace PlanetGauge
             SetPropertyLabel(HideAttributeTextKey, LocalizedStrings.HideAttributeTextLabel);
             SetPropertyLabel(HideRateTokenKey, LocalizedStrings.HideRateTokenLabel);
             SetPropertyLabel(HideForceRecoveryVisualsKey, LocalizedStrings.HideForceRecoveryVisualsLabel);
+            SetPropertyLabel(DisableHudHideAnimationKey, LocalizedStrings.DisableHudHideAnimationLabel);
             SetPropertyLabel(MultiplierPercentKey, LocalizedStrings.MultiplierPercentLabel);
             SetPropertyLabel(RecoveryAmountPercentKey, LocalizedStrings.RecoveryAmountLabel);
             SetPropertyLabel(WarningOffsetAngleKey, LocalizedStrings.WarningOffsetLabel);
@@ -547,6 +549,15 @@ namespace PlanetGauge
             AddHudHideShowCondition(hideForceRecoveryVisuals);
             AddProperty(info, hideForceRecoveryVisuals, 7);
 
+            ADOFAI.PropertyInfo disableHudHideAnimation = CreateProperty(
+                info,
+                DisableHudHideAnimationKey,
+                "Bool",
+                false,
+                LocalizedStrings.DisableHudHideAnimationLabel);
+            AddHudHideShowCondition(disableHudHideAnimation);
+            AddProperty(info, disableHudHideAnimation, 8);
+
             ADOFAI.PropertyInfo multiplier = CreateProperty(
                 info,
                 MultiplierPercentKey,
@@ -560,7 +571,7 @@ namespace PlanetGauge
             multiplier.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyIncrease.ToString()));
             multiplier.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyBoth.ToString()));
             MakeOptional(multiplier, false);
-            AddProperty(info, multiplier, 8);
+            AddProperty(info, multiplier, 9);
 
             ADOFAI.PropertyInfo multiplierNote = CreateNoteProperty(
                 info,
@@ -569,7 +580,7 @@ namespace PlanetGauge
             multiplierNote.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyDecrease.ToString()));
             multiplierNote.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyIncrease.ToString()));
             multiplierNote.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AmplifyBoth.ToString()));
-            AddProperty(info, multiplierNote, 9);
+            AddProperty(info, multiplierNote, 10);
 
             ADOFAI.PropertyInfo recoveryAmount = CreateProperty(
                 info,
@@ -583,7 +594,7 @@ namespace PlanetGauge
             recoveryAmount.showIfVals.Add(Tuple.Create(
                 AttributeModeKey,
                 PlanetGaugeAttributeMode.ForceRecovery.ToString()));
-            AddProperty(info, recoveryAmount, 10);
+            AddProperty(info, recoveryAmount, 11);
 
             ADOFAI.PropertyInfo warningOffset = CreateProperty(
                 info,
@@ -596,7 +607,7 @@ namespace PlanetGauge
             warningOffset.showIfVals.Add(Tuple.Create(
                 AttributeModeKey,
                 PlanetGaugeAttributeMode.ForceRecovery.ToString()));
-            AddProperty(info, warningOffset, 11);
+            AddProperty(info, warningOffset, 12);
 
             ADOFAI.PropertyInfo warningPulse = CreateProperty(
                 info,
@@ -610,7 +621,7 @@ namespace PlanetGauge
             warningPulse.showIfVals.Add(Tuple.Create(
                 AttributeModeKey,
                 PlanetGaugeAttributeMode.ForceRecovery.ToString()));
-            AddProperty(info, warningPulse, 12);
+            AddProperty(info, warningPulse, 13);
 
             ADOFAI.PropertyInfo recoveryAmountNote = CreateNoteProperty(
                 info,
@@ -619,7 +630,7 @@ namespace PlanetGauge
             recoveryAmountNote.showIfVals.Add(Tuple.Create(
                 AttributeModeKey,
                 PlanetGaugeAttributeMode.ForceRecovery.ToString()));
-            AddProperty(info, recoveryAmountNote, 13);
+            AddProperty(info, recoveryAmountNote, 14);
 
             ADOFAI.PropertyInfo failureProtection = CreateProperty(
                 info,
@@ -628,7 +639,7 @@ namespace PlanetGauge
                 true,
                 LocalizedStrings.FailureProtectionLabel);
             MakeOptional(failureProtection, false);
-            AddProperty(info, failureProtection, 14);
+            AddProperty(info, failureProtection, 15);
 
             ADOFAI.PropertyInfo recoveryCapEnabled = CreateProperty(
                 info,
@@ -637,7 +648,7 @@ namespace PlanetGauge
                 false,
                 LocalizedStrings.RecoveryCapEnabledLabel);
             MakeOptional(recoveryCapEnabled, false);
-            AddProperty(info, recoveryCapEnabled, 15);
+            AddProperty(info, recoveryCapEnabled, 16);
 
             ADOFAI.PropertyInfo recoveryCap = CreateProperty(
                 info,
@@ -650,7 +661,7 @@ namespace PlanetGauge
             recoveryCap.float_max = float.MaxValue;
             // PropertyInfo.ValueMatch는 Bool 조건에서 소문자 "true"를 요구한다.
             recoveryCap.showIfVals.Add(Tuple.Create(RecoveryCapEnabledKey, "true"));
-            AddProperty(info, recoveryCap, 16);
+            AddProperty(info, recoveryCap, 17);
 
             ADOFAI.PropertyInfo forceCap = CreateProperty(
                 info,
@@ -659,7 +670,7 @@ namespace PlanetGauge
                 true,
                 LocalizedStrings.ForceRecoveryCapLabel);
             forceCap.showIfVals.Add(Tuple.Create(RecoveryCapEnabledKey, "true"));
-            AddProperty(info, forceCap, 17);
+            AddProperty(info, forceCap, 18);
 
             return info;
         }

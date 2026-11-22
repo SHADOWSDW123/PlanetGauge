@@ -103,7 +103,7 @@ namespace PlanetGauge
             sightreadText.fontStyle = FontStyles.Bold;
             sightreadText.color = SightreadColor;
             sightreadText.raycastTarget = false;
-            if (TMP_Settings.defaultFontAsset != null) sightreadText.font = TMP_Settings.defaultFontAsset;
+            GaugeHudFontManager.ApplyFont(sightreadText);
             Sync();
         }
 
@@ -154,6 +154,7 @@ namespace PlanetGauge
             if (sightreadText != null)
             {
                 int mode = Main.SightreadMode;
+                GaugeHudFontManager.ApplyFont(sightreadText);
                 sightreadText.enabled = mode != 0;
                 if (mode != 0)
                 {
