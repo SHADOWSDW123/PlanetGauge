@@ -27,7 +27,9 @@ namespace PlanetGauge
         InvalidVersion = 4,
         VersionTooNew = 5,
         NoEvents = 6,
-        TileCountInsufficient = 7
+        TileCountInsufficient = 7,
+        FileTooLarge = 8,
+        TooManyEvents = 9
     }
 
     internal sealed class ParsedMapSettingsImport
@@ -49,6 +51,9 @@ namespace PlanetGauge
     {
         internal const string FileExtension = ".plgg";
         internal const string FileExtensionNoDot = "plgg";
+        internal const int MaxImportFileMegabytes = 4;
+        internal const long MaxImportFileBytes = MaxImportFileMegabytes * 1024L * 1024L;
+        internal const int MaxImportEventCount = PlanetGaugeJson.MaxArrayElements;
 
         internal const string PlanetGaugeVersionKey = "planetGaugeVersion";
         internal const string LevelNameKey = "levelName";
@@ -64,6 +69,11 @@ namespace PlanetGauge
         private const string AngleOffsetKey = "angleOffset";
         private const string RemovedAutoTileRecoveryKey = "autoTileRecovery";
         private const string DefaultFallbackFileName = "level";
+        private const int MaxVersionStringLength = 32;
+        private const int MaxVersionSuffixLength = 16;
+        private const int MaxVersionSegmentDigits = 6;
+        private const int MaxStatusFragmentLength = 120;
+        private const int MaxEnumErrorSnippetLength = 48;
 
         private enum StatusKind
         {
@@ -82,7 +92,9 @@ namespace PlanetGauge
             ImportVersionInvalid = 12,
             ImportVersionTooNew = 13,
             ImportNoEvents = 14,
-            ImportTileCountInsufficient = 15
+            ImportTileCountInsufficient = 15,
+            ImportFileTooLarge = 16,
+            ImportTooManyEvents = 17
         }
 
         private static readonly string[] PlggExtensions = { FileExtensionNoDot };
@@ -361,14 +373,24 @@ namespace PlanetGauge
                 }
 
                 editor = scnEditor.instance;
-                string jsonText = File.ReadAllText(selectedPath, Encoding.UTF8);
+                string jsonText;
+                MapSettingsImportFailureKind failureKind;
+                object[] failureArguments;
+                if (!TryReadBoundedImportFile(
+                    selectedPath,
+                    out jsonText,
+                    out failureKind,
+                    out failureArguments))
+                {
+                    SetImportFailureStatus(failureKind, failureArguments);
+                    return false;
+                }
+
                 string currentVersion = GetCurrentModVersion();
                 int currentTotalFloors = editor.floors.Count;
                 string currentLevelName = editor.levelData.song ?? string.Empty;
 
                 ParsedMapSettingsImport parsed;
-                MapSettingsImportFailureKind failureKind;
-                object[] failureArguments;
                 if (!TryParseAndValidateImport(
                     jsonText,
                     currentVersion,
@@ -463,6 +485,72 @@ namespace PlanetGauge
             return path + FileExtension;
         }
 
+        internal static bool TryReadBoundedImportFile(
+            string fullPath,
+            out string jsonText,
+            out MapSettingsImportFailureKind failureKind,
+            out object[] failureArguments)
+        {
+            jsonText = null;
+            failureKind = MapSettingsImportFailureKind.None;
+            failureArguments = null;
+
+            if (string.IsNullOrWhiteSpace(fullPath))
+            {
+                failureKind = MapSettingsImportFailureKind.FileNotFound;
+                return false;
+            }
+
+            FileInfo fileInfo = new FileInfo(fullPath);
+            if (!fileInfo.Exists)
+            {
+                failureKind = MapSettingsImportFailureKind.FileNotFound;
+                return false;
+            }
+
+            if (fileInfo.Length > MaxImportFileBytes)
+            {
+                failureKind = MapSettingsImportFailureKind.FileTooLarge;
+                failureArguments = new object[] { MaxImportFileMegabytes };
+                return false;
+            }
+
+            using (FileStream stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                if (stream.CanSeek && stream.Length > MaxImportFileBytes)
+                {
+                    failureKind = MapSettingsImportFailureKind.FileTooLarge;
+                    failureArguments = new object[] { MaxImportFileMegabytes };
+                    return false;
+                }
+
+                int initialCapacity = stream.CanSeek && stream.Length > 0
+                    ? (int)Math.Min(stream.Length, MaxImportFileBytes)
+                    : 4096;
+                using (MemoryStream memory = new MemoryStream(initialCapacity))
+                {
+                    byte[] buffer = new byte[8192];
+                    long totalBytes = 0;
+                    int read;
+                    while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+                    {
+                        totalBytes += read;
+                        if (totalBytes > MaxImportFileBytes)
+                        {
+                            failureKind = MapSettingsImportFailureKind.FileTooLarge;
+                            failureArguments = new object[] { MaxImportFileMegabytes };
+                            return false;
+                        }
+
+                        memory.Write(buffer, 0, read);
+                    }
+
+                    jsonText = Encoding.UTF8.GetString(memory.GetBuffer(), 0, (int)memory.Length);
+                    return true;
+                }
+            }
+        }
+
         internal static bool TryParseComparableVersion(string raw, out Version parsed)
         {
             parsed = null;
@@ -472,6 +560,11 @@ namespace PlanetGauge
             }
 
             string trimmed = raw.Trim();
+            if (trimmed.Length > MaxVersionStringLength)
+            {
+                return false;
+            }
+
             if (trimmed.StartsWith("v", StringComparison.OrdinalIgnoreCase))
             {
                 trimmed = trimmed.Substring(1);
@@ -492,21 +585,40 @@ namespace PlanetGauge
                     return false;
                 }
 
-                // 마지막 세그먼트는 0.3.6M, 0.5.0-beta 같은 접미사를 허용한다.
+                // 마지막 세그먼트는 0.3.6M, 0.5.0-beta 같은 안전한 버전 접미사만 허용한다.
                 int digitLength = 0;
-                while (digitLength < part.Length && char.IsDigit(part[digitLength]))
+                while (digitLength < part.Length
+                    && part[digitLength] >= '0'
+                    && part[digitLength] <= '9')
                 {
                     digitLength++;
                 }
 
-                if (digitLength == 0)
+                if (digitLength == 0 || digitLength > MaxVersionSegmentDigits)
                 {
                     return false;
                 }
 
-                if (digitLength < part.Length && i != rawParts.Length - 1)
+                if (digitLength < part.Length)
                 {
-                    return false;
+                    if (i != rawParts.Length - 1)
+                    {
+                        return false;
+                    }
+
+                    int suffixLength = part.Length - digitLength;
+                    if (suffixLength > MaxVersionSuffixLength)
+                    {
+                        return false;
+                    }
+
+                    for (int s = digitLength; s < part.Length; s++)
+                    {
+                        if (!IsAllowedVersionSuffixChar(part[s]))
+                        {
+                            return false;
+                        }
+                    }
                 }
 
                 int value;
@@ -524,6 +636,16 @@ namespace PlanetGauge
 
             parsed = new Version(numbers[0], numbers[1], numbers[2], numbers[3]);
             return true;
+        }
+
+        private static bool IsAllowedVersionSuffixChar(char ch)
+        {
+            return (ch >= '0' && ch <= '9')
+                || (ch >= 'A' && ch <= 'Z')
+                || (ch >= 'a' && ch <= 'z')
+                || ch == '-'
+                || ch == '_'
+                || ch == '+';
         }
 
         internal static List<LevelEvent> CollectSetPlanetGaugeEvents(IList<LevelEvent> sourceEvents)
@@ -688,15 +810,42 @@ namespace PlanetGauge
             failureKind = MapSettingsImportFailureKind.None;
             failureArguments = null;
 
+            if (jsonText != null && jsonText.Length > PlanetGaugeJson.MaxInputCharacters)
+            {
+                failureKind = MapSettingsImportFailureKind.FileTooLarge;
+                failureArguments = new object[] { MaxImportFileMegabytes };
+                return false;
+            }
+
             object parsedRoot;
             try
             {
                 parsedRoot = PlanetGaugeJson.Deserialize(jsonText);
             }
+            catch (PlanetGaugeJsonLimitException limitException)
+            {
+                if (limitException.LimitKind == PlanetGaugeJsonLimitKind.InputTooLarge)
+                {
+                    failureKind = MapSettingsImportFailureKind.FileTooLarge;
+                    failureArguments = new object[] { MaxImportFileMegabytes };
+                    return false;
+                }
+
+                if (limitException.LimitKind == PlanetGaugeJsonLimitKind.TooManyArrayElements)
+                {
+                    failureKind = MapSettingsImportFailureKind.TooManyEvents;
+                    failureArguments = new object[] { MaxImportEventCount };
+                    return false;
+                }
+
+                failureKind = MapSettingsImportFailureKind.InvalidJsonOrSchema;
+                failureArguments = new object[] { SanitizeMessageFragment(limitException.Message, MaxStatusFragmentLength) };
+                return false;
+            }
             catch (Exception exception)
             {
                 failureKind = MapSettingsImportFailureKind.InvalidJsonOrSchema;
-                failureArguments = new object[] { exception.Message };
+                failureArguments = new object[] { SanitizeMessageFragment(exception.Message, MaxStatusFragmentLength) };
                 return false;
             }
 
@@ -728,7 +877,11 @@ namespace PlanetGauge
             if (fileVersion > currentVersion)
             {
                 failureKind = MapSettingsImportFailureKind.VersionTooNew;
-                failureArguments = new object[] { fileVersionText.Trim(), currentModVersion };
+                failureArguments = new object[]
+                {
+                    SanitizeMessageFragment(fileVersionText.Trim(), MaxVersionStringLength),
+                    SanitizeMessageFragment(currentModVersion, MaxVersionStringLength)
+                };
                 return false;
             }
 
@@ -751,6 +904,13 @@ namespace PlanetGauge
             if (rawEvents.Count == 0)
             {
                 failureKind = MapSettingsImportFailureKind.NoEvents;
+                return false;
+            }
+
+            if (rawEvents.Count > MaxImportEventCount)
+            {
+                failureKind = MapSettingsImportFailureKind.TooManyEvents;
+                failureArguments = new object[] { MaxImportEventCount };
                 return false;
             }
 
@@ -1136,7 +1296,7 @@ namespace PlanetGauge
                         {
                         }
 
-                        error = "unknown enum value '" + enumText + "'.";
+                        error = "unknown enum value '" + SanitizeMessageFragment(enumText, MaxEnumErrorSnippetLength) + "'.";
                         return false;
                     }
 
@@ -1404,6 +1564,12 @@ namespace PlanetGauge
                 case MapSettingsImportFailureKind.TileCountInsufficient:
                     SetStatus(StatusKind.ImportTileCountInsufficient, false, arguments);
                     break;
+                case MapSettingsImportFailureKind.FileTooLarge:
+                    SetStatus(StatusKind.ImportFileTooLarge, false, arguments);
+                    break;
+                case MapSettingsImportFailureKind.TooManyEvents:
+                    SetStatus(StatusKind.ImportTooManyEvents, false, arguments);
+                    break;
                 case MapSettingsImportFailureKind.InvalidJsonOrSchema:
                 default:
                     SetStatus(StatusKind.ImportInvalidFormat, false, arguments);
@@ -1414,8 +1580,103 @@ namespace PlanetGauge
         private static void SetStatus(StatusKind kind, bool mapMismatchWarning, params object[] arguments)
         {
             lastStatusKind = kind;
-            lastStatusArguments = arguments;
+            lastStatusArguments = SanitizeStatusArguments(arguments);
             lastMapMismatchWarning = mapMismatchWarning;
+        }
+
+        private static object[] SanitizeStatusArguments(object[] arguments)
+        {
+            if (arguments == null || arguments.Length == 0)
+            {
+                return arguments;
+            }
+
+            object[] sanitized = new object[arguments.Length];
+            for (int i = 0; i < arguments.Length; i++)
+            {
+                string text = arguments[i] as string;
+                sanitized[i] = text != null
+                    ? (object)SanitizeMessageFragment(text, MaxStatusFragmentLength)
+                    : arguments[i];
+            }
+
+            return sanitized;
+        }
+
+        /// <summary>
+        /// 외부 입력·파일명·예외 문자열이 UMM IMGUI 상태 메시지에 삽입될 때
+        /// Rich-Text 태그, 줄바꿈/제어문자, 양방향(Bidi) 스푸핑 문자 및 과도한 길이를 무력화한다.
+        /// (레벨 데이터의 곡명 비교에는 사용하지 않으므로 ADOFAI 곡명의 &lt;color&gt; 태그에는 영향을 주지 않는다.)
+        /// </summary>
+        internal static string SanitizeMessageFragment(string raw, int maxLength)
+        {
+            if (string.IsNullOrEmpty(raw))
+            {
+                return string.Empty;
+            }
+
+            int safeMax = Math.Max(8, maxLength);
+            StringBuilder builder = new StringBuilder(Math.Min(raw.Length, safeMax + 4));
+            bool previousWasSpace = false;
+            bool truncated = false;
+
+            for (int i = 0; i < raw.Length; i++)
+            {
+                char ch = raw[i];
+                if (IsBidiControlChar(ch))
+                {
+                    continue;
+                }
+
+                if (ch == '\r' || ch == '\n' || ch == '\t' || char.IsControl(ch))
+                {
+                    if (!previousWasSpace && builder.Length > 0)
+                    {
+                        if (builder.Length >= safeMax)
+                        {
+                            truncated = true;
+                            break;
+                        }
+
+                        builder.Append(' ');
+                        previousWasSpace = true;
+                    }
+
+                    continue;
+                }
+
+                previousWasSpace = ch == ' ';
+                if (builder.Length >= safeMax)
+                {
+                    truncated = true;
+                    break;
+                }
+
+                if (ch == '<')
+                {
+                    builder.Append('\u2039'); // ‹
+                }
+                else if (ch == '>')
+                {
+                    builder.Append('\u203A'); // ›
+                }
+                else
+                {
+                    builder.Append(ch);
+                }
+            }
+
+            string cleaned = builder.ToString().Trim();
+            return truncated ? cleaned + "..." : cleaned;
+        }
+
+        private static bool IsBidiControlChar(char ch)
+        {
+            return ch == '\u061C'
+                || ch == '\u200E'
+                || ch == '\u200F'
+                || (ch >= '\u202A' && ch <= '\u202E')
+                || (ch >= '\u2066' && ch <= '\u2069');
         }
 
         private static string FormatStatusMessage(StatusKind kind, object[] args)
@@ -1454,6 +1715,10 @@ namespace PlanetGauge
                     return LocalizedStrings.MapSettingsImportNoEvents;
                 case StatusKind.ImportTileCountInsufficient:
                     return LocalizedStrings.Format(LocalizedStrings.MapSettingsImportTileCountInsufficient, args ?? new object[0]);
+                case StatusKind.ImportFileTooLarge:
+                    return LocalizedStrings.Format(LocalizedStrings.MapSettingsImportFileTooLarge, args ?? new object[0]);
+                case StatusKind.ImportTooManyEvents:
+                    return LocalizedStrings.Format(LocalizedStrings.MapSettingsImportTooManyEvents, args ?? new object[0]);
                 default:
                     return string.Empty;
             }

@@ -25,7 +25,14 @@ namespace PlanetGauge
         internal static int SightreadMode { get; private set; }
         internal static int LastSightreadMode { get; private set; } = 1;
         internal static bool IsSightreadSelectionLocked { get { return sightreadGameplayLocked; } }
-        internal static void SetSightreadGameplayLock(bool locked) { sightreadGameplayLocked = locked; }
+        internal static void SetSightreadGameplayLock(bool locked)
+        {
+            sightreadGameplayLocked = locked;
+            if (locked)
+            {
+                PlanetGaugeMapSettingsTransfer.ClearMessages();
+            }
+        }
 
         internal static PlanetGaugeSettings Settings { get; private set; }
 

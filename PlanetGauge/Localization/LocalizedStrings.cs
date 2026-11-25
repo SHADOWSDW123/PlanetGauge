@@ -165,6 +165,8 @@ namespace PlanetGauge
         internal static string MapSettingsImportVersionInvalid { get { return IsKorean ? KoreanStrings.MapSettingsImportVersionInvalid : EnglishStrings.MapSettingsImportVersionInvalid; } }
         internal static string MapSettingsImportTileCountInsufficient { get { return IsKorean ? KoreanStrings.MapSettingsImportTileCountInsufficient : EnglishStrings.MapSettingsImportTileCountInsufficient; } }
         internal static string MapSettingsImportNoEvents { get { return IsKorean ? KoreanStrings.MapSettingsImportNoEvents : EnglishStrings.MapSettingsImportNoEvents; } }
+        internal static string MapSettingsImportFileTooLarge { get { return IsKorean ? KoreanStrings.MapSettingsImportFileTooLarge : EnglishStrings.MapSettingsImportFileTooLarge; } }
+        internal static string MapSettingsImportTooManyEvents { get { return IsKorean ? KoreanStrings.MapSettingsImportTooManyEvents : EnglishStrings.MapSettingsImportTooManyEvents; } }
         internal static string MapSettingsImportMapMismatchWarning { get { return IsKorean ? KoreanStrings.MapSettingsImportMapMismatchWarning : EnglishStrings.MapSettingsImportMapMismatchWarning; } }
         internal static string XPlanetGaugeMode { get { return IsKorean ? KoreanStrings.XPlanetGaugeMode : EnglishStrings.XPlanetGaugeMode; } }
         internal static string PlanetGaugeSettingsCategory { get { return IsKorean ? KoreanStrings.PlanetGaugeSettingsCategory : EnglishStrings.PlanetGaugeSettingsCategory; } }

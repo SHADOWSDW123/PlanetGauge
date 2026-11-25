@@ -63,6 +63,8 @@ namespace PlanetGauge
         private string xKeyCaptureMessage;
         private GUIStyle categoryHeadingStyle;
         private GUISkin categoryHeadingSkin;
+        private GUIStyle plainLabelStyle;
+        private GUISkin plainLabelSkin;
 
         public float MainGaugeOffsetX;
         public float MainGaugeOffsetY = -158f;
@@ -1015,6 +1017,19 @@ namespace PlanetGauge
             return visible;
         }
 
+        private GUIStyle GetPlainLabelStyle()
+        {
+            if (plainLabelStyle == null || plainLabelSkin != GUI.skin)
+            {
+                plainLabelSkin = GUI.skin;
+                plainLabelStyle = new GUIStyle(GUI.skin.label);
+                plainLabelStyle.richText = false;
+                plainLabelStyle.wordWrap = true;
+            }
+
+            return plainLabelStyle;
+        }
+
         private void DrawMapSettingsTransferSection()
         {
             MapSettingsTransferVisible = DrawCategoryVisibilityHeader(
@@ -1053,19 +1068,24 @@ namespace PlanetGauge
             GUILayout.EndHorizontal();
             GUI.enabled = previousGuiEnabled;
 
-            if (!string.IsNullOrWhiteSpace(PlanetGaugeMapSettingsTransfer.LastMessage))
+            if (canOperate)
             {
-                GUILayout.Label(PlanetGaugeMapSettingsTransfer.LastMessage);
-            }
+                string lastMessage = PlanetGaugeMapSettingsTransfer.LastMessage;
+                if (!string.IsNullOrWhiteSpace(lastMessage))
+                {
+                    GUILayout.Label(lastMessage, GetPlainLabelStyle());
+                }
 
-            if (!string.IsNullOrWhiteSpace(PlanetGaugeMapSettingsTransfer.LastWarning))
-            {
-                Color previousColor = GUI.contentColor;
-                GUI.contentColor = new Color(1f, 0.72f, 0.2f, 1f);
-                GUILayout.Label(LocalizedStrings.Format(
-                    LocalizedStrings.Warning,
-                    PlanetGaugeMapSettingsTransfer.LastWarning));
-                GUI.contentColor = previousColor;
+                string lastWarning = PlanetGaugeMapSettingsTransfer.LastWarning;
+                if (!string.IsNullOrWhiteSpace(lastWarning))
+                {
+                    Color previousColor = GUI.contentColor;
+                    GUI.contentColor = new Color(1f, 0.72f, 0.2f, 1f);
+                    GUILayout.Label(
+                        LocalizedStrings.Format(LocalizedStrings.Warning, lastWarning),
+                        GetPlainLabelStyle());
+                    GUI.contentColor = previousColor;
+                }
             }
         }
 

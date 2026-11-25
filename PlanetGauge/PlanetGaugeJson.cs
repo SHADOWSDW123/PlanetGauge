@@ -6,13 +6,43 @@ using System.Text;
 
 namespace PlanetGauge
 {
+    internal enum PlanetGaugeJsonLimitKind
+    {
+        None = 0,
+        InputTooLarge = 1,
+        DepthExceeded = 2,
+        StringTooLong = 3,
+        PropertyNameTooLong = 4,
+        TooManyObjectProperties = 5,
+        TooManyArrayElements = 6,
+        TooManyTotalValues = 7
+    }
+
+    internal sealed class PlanetGaugeJsonLimitException : FormatException
+    {
+        internal PlanetGaugeJsonLimitException(PlanetGaugeJsonLimitKind limitKind, string message)
+            : base(message)
+        {
+            LimitKind = limitKind;
+        }
+
+        internal PlanetGaugeJsonLimitKind LimitKind { get; private set; }
+    }
+
     /// <summary>
     /// 외부 JSON 라이브러리 의존성 없이 .plgg 파일을 직렬화·역직렬화하는 RFC 8259 JSON 처리기다.
     /// 역직렬화 결과는 Dictionary&lt;string, object&gt;, List&lt;object&gt;, string, bool, long, double, null로 구성된다.
     /// </summary>
     internal static class PlanetGaugeJson
     {
-        private const int MaxDepth = 64;
+        internal const int MaxInputCharacters = 4 * 1024 * 1024;
+        internal const int MaxDepth = 64;
+        internal const int MaxStringLength = 65536;
+        internal const int MaxPropertyNameLength = 128;
+        internal const int MaxObjectProperties = 256;
+        internal const int MaxArrayElements = 20000;
+        internal const int MaxTotalValues = 600000;
+        private const int MaxErrorSnippetLength = 32;
 
         internal static string Serialize(object value)
         {
@@ -27,6 +57,13 @@ namespace PlanetGauge
             if (json == null)
             {
                 throw new FormatException("JSON input is null.");
+            }
+
+            if (json.Length > MaxInputCharacters)
+            {
+                throw new PlanetGaugeJsonLimitException(
+                    PlanetGaugeJsonLimitKind.InputTooLarge,
+                    "JSON input exceeds maximum allowed length (" + MaxInputCharacters + " characters).");
             }
 
             Parser parser = new Parser(json);
@@ -285,11 +322,13 @@ namespace PlanetGauge
         {
             private readonly string text;
             private int index;
+            private int totalValues;
 
             internal Parser(string text)
             {
                 this.text = text;
                 index = 0;
+                totalValues = 0;
                 if (this.text.Length > 0 && this.text[0] == '\uFEFF')
                 {
                     index = 1;
@@ -318,7 +357,17 @@ namespace PlanetGauge
             {
                 if (depth > MaxDepth)
                 {
-                    throw new FormatException("JSON nesting depth exceeded maximum limit.");
+                    throw new PlanetGaugeJsonLimitException(
+                        PlanetGaugeJsonLimitKind.DepthExceeded,
+                        "JSON nesting depth exceeded maximum limit.");
+                }
+
+                totalValues++;
+                if (totalValues > MaxTotalValues)
+                {
+                    throw new PlanetGaugeJsonLimitException(
+                        PlanetGaugeJsonLimitKind.TooManyTotalValues,
+                        "JSON value count exceeded maximum limit (" + MaxTotalValues + ").");
                 }
 
                 SkipWhitespace();
@@ -340,7 +389,7 @@ namespace PlanetGauge
 
                 if (ch == '"')
                 {
-                    return ParseString();
+                    return ParseString(MaxStringLength, PlanetGaugeJsonLimitKind.StringTooLong);
                 }
 
                 if (ch == 't')
@@ -366,7 +415,7 @@ namespace PlanetGauge
                     return ParseNumber();
                 }
 
-                throw new FormatException("Unexpected character '" + ch + "' at position " + index + ".");
+                throw new FormatException("Unexpected character " + DescribeCharacter(ch) + " at position " + index + ".");
             }
 
             private Dictionary<string, object> ParseObject(int depth)
@@ -380,15 +429,24 @@ namespace PlanetGauge
                     return result;
                 }
 
+                int propertyCount = 0;
                 while (true)
                 {
+                    propertyCount++;
+                    if (propertyCount > MaxObjectProperties)
+                    {
+                        throw new PlanetGaugeJsonLimitException(
+                            PlanetGaugeJsonLimitKind.TooManyObjectProperties,
+                            "JSON object exceeded maximum allowed property count (" + MaxObjectProperties + ").");
+                    }
+
                     SkipWhitespace();
                     if (index >= text.Length || text[index] != '"')
                     {
                         throw new FormatException("Expected property name string at position " + index + ".");
                     }
 
-                    string key = ParseString();
+                    string key = ParseString(MaxPropertyNameLength, PlanetGaugeJsonLimitKind.PropertyNameTooLong);
                     SkipWhitespace();
                     if (index >= text.Length || text[index] != ':')
                     {
@@ -434,6 +492,13 @@ namespace PlanetGauge
 
                 while (true)
                 {
+                    if (result.Count >= MaxArrayElements)
+                    {
+                        throw new PlanetGaugeJsonLimitException(
+                            PlanetGaugeJsonLimitKind.TooManyArrayElements,
+                            "JSON array exceeded maximum allowed element count (" + MaxArrayElements + ").");
+                    }
+
                     result.Add(ParseValue(depth));
                     SkipWhitespace();
                     if (index >= text.Length)
@@ -457,7 +522,7 @@ namespace PlanetGauge
                 }
             }
 
-            private string ParseString()
+            private string ParseString(int maxLength, PlanetGaugeJsonLimitKind limitKind)
             {
                 index++; // '"'
                 StringBuilder builder = new StringBuilder();
@@ -476,7 +541,7 @@ namespace PlanetGauge
 
                     if (ch != '\\')
                     {
-                        builder.Append(ch);
+                        AppendBoundedChar(builder, ch, maxLength, limitKind);
                         continue;
                     }
 
@@ -488,14 +553,14 @@ namespace PlanetGauge
                     char escaped = text[index++];
                     switch (escaped)
                     {
-                        case '"': builder.Append('"'); break;
-                        case '\\': builder.Append('\\'); break;
-                        case '/': builder.Append('/'); break;
-                        case 'b': builder.Append('\b'); break;
-                        case 'f': builder.Append('\f'); break;
-                        case 'n': builder.Append('\n'); break;
-                        case 'r': builder.Append('\r'); break;
-                        case 't': builder.Append('\t'); break;
+                        case '"': AppendBoundedChar(builder, '"', maxLength, limitKind); break;
+                        case '\\': AppendBoundedChar(builder, '\\', maxLength, limitKind); break;
+                        case '/': AppendBoundedChar(builder, '/', maxLength, limitKind); break;
+                        case 'b': AppendBoundedChar(builder, '\b', maxLength, limitKind); break;
+                        case 'f': AppendBoundedChar(builder, '\f', maxLength, limitKind); break;
+                        case 'n': AppendBoundedChar(builder, '\n', maxLength, limitKind); break;
+                        case 'r': AppendBoundedChar(builder, '\r', maxLength, limitKind); break;
+                        case 't': AppendBoundedChar(builder, '\t', maxLength, limitKind); break;
                         case 'u':
                             if (index + 4 > text.Length)
                             {
@@ -506,18 +571,34 @@ namespace PlanetGauge
                             ushort codeUnit;
                             if (!ushort.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out codeUnit))
                             {
-                                throw new FormatException("Invalid \\u escape sequence '\\u" + hex + "'.");
+                                throw new FormatException("Invalid \\u escape sequence at position " + index + ".");
                             }
 
                             index += 4;
-                            builder.Append((char)codeUnit);
+                            AppendBoundedChar(builder, (char)codeUnit, maxLength, limitKind);
                             break;
                         default:
-                            throw new FormatException("Invalid escape character '\\" + escaped + "' at position " + (index - 1) + ".");
+                            throw new FormatException("Invalid escape sequence at position " + (index - 1) + ".");
                     }
                 }
 
                 throw new FormatException("Unterminated JSON string.");
+            }
+
+            private static void AppendBoundedChar(
+                StringBuilder builder,
+                char ch,
+                int maxLength,
+                PlanetGaugeJsonLimitKind limitKind)
+            {
+                if (builder.Length >= maxLength)
+                {
+                    throw new PlanetGaugeJsonLimitException(
+                        limitKind,
+                        "JSON string exceeded maximum allowed length (" + maxLength + " characters).");
+                }
+
+                builder.Append(ch);
             }
 
             private object ParseNumber()
@@ -587,7 +668,8 @@ namespace PlanetGauge
                     }
                 }
 
-                string raw = text.Substring(start, index - start);
+                int length = index - start;
+                string raw = text.Substring(start, length);
                 if (!isFloating)
                 {
                     long intVal;
@@ -602,10 +684,23 @@ namespace PlanetGauge
                     || double.IsNaN(doubleVal)
                     || double.IsInfinity(doubleVal))
                 {
-                    throw new FormatException("Numeric value out of range at position " + start + ": " + raw);
+                    string snippet = raw.Length > MaxErrorSnippetLength
+                        ? raw.Substring(0, MaxErrorSnippetLength) + "..."
+                        : raw;
+                    throw new FormatException("Numeric value out of range at position " + start + ": " + snippet);
                 }
 
                 return doubleVal;
+            }
+
+            private static string DescribeCharacter(char ch)
+            {
+                if (ch < 0x20 || ch == '<' || ch == '>' || char.IsControl(ch))
+                {
+                    return "U+" + ((int)ch).ToString("X4", CultureInfo.InvariantCulture);
+                }
+
+                return "'" + ch + "'";
             }
 
             private void ExpectLiteral(string literal)
