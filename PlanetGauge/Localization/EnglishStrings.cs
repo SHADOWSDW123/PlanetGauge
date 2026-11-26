@@ -207,6 +207,12 @@ namespace PlanetGauge
         internal const string TargetTagLabel = "Target tag";
         internal const string SkinEnabledLabel = "Enabled";
         internal const string GaugeTypeLabel = "Gauge type";
+        internal const string ConditionalEventName = "Set PlanetGauge Conditional Events";
+        internal const string ConditionalDirectionLabel = "Condition";
+        internal const string ConditionBelowOrEqual = "Below or equal";
+        internal const string ConditionAboveOrEqual = "Above or equal";
+        internal const string TriggerHealthLabel = "Trigger health";
+        internal const string TriggerTagLabel = "Trigger tag";
 
         internal const string DebugGaugeLine = "Gauge: {0} / {1}  BaseMax: {2}";
         internal const string DebugRatesLine = "Recovery: {0}  Damage: {1}";
@@ -221,6 +227,8 @@ namespace PlanetGauge
         internal const string DebugSkinLine = "Skin: {0}";
         internal const string DebugSkinProgressLine = "SkinProgress: {0}  FrameOffset: {1},{2}  ForceOverlay: Disabled";
         internal const string DebugDecorationSkinLine = "DecorationSkin: {0}  Tags={1}  Images={2}  Legacy={3}  Alpha={4}  Progress={5}";
+        internal const string DebugConditionalTriggerLine = "ConditionalTriggers: {0}  Tags={1}  Effects={2}  Fired={3}  Last={4}";
+        internal const string DebugConditionalRulesLine = "ConditionalRules: {0}";
         internal const string DebugTotals = "Totals (applied)";
         internal const string DebugAuto = "Auto";
         internal const string DebugDefaultRate = "Default 100%";

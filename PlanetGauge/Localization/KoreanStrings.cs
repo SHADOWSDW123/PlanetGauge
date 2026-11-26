@@ -206,6 +206,12 @@ namespace PlanetGauge
         internal const string TargetTagLabel = "목표 태그";
         internal const string SkinEnabledLabel = "기능 가동";
         internal const string GaugeTypeLabel = "게이지 타입";
+        internal const string ConditionalEventName = "Planetgauge 조건부 이벤트 설정";
+        internal const string ConditionalDirectionLabel = "조건 방향";
+        internal const string ConditionBelowOrEqual = "이하";
+        internal const string ConditionAboveOrEqual = "이상";
+        internal const string TriggerHealthLabel = "트리거 체력";
+        internal const string TriggerTagLabel = "트리거 태그";
         internal const string DebugGaugeLine = EnglishStrings.DebugGaugeLine;
         internal const string DebugRatesLine = EnglishStrings.DebugRatesLine;
         internal const string DebugAttributesLine = EnglishStrings.DebugAttributesLine;
@@ -219,6 +225,8 @@ namespace PlanetGauge
         internal const string DebugSkinLine = EnglishStrings.DebugSkinLine;
         internal const string DebugSkinProgressLine = EnglishStrings.DebugSkinProgressLine;
         internal const string DebugDecorationSkinLine = EnglishStrings.DebugDecorationSkinLine;
+        internal const string DebugConditionalTriggerLine = EnglishStrings.DebugConditionalTriggerLine;
+        internal const string DebugConditionalRulesLine = EnglishStrings.DebugConditionalRulesLine;
         internal const string DebugTotals = EnglishStrings.DebugTotals;
         internal const string DebugAuto = EnglishStrings.DebugAuto;
         internal const string DebugDefaultRate = EnglishStrings.DebugDefaultRate;

@@ -103,6 +103,7 @@ namespace PlanetGauge
             autoTotal = 0f;
             GaugeVisualTransitions.Reset();
             GaugeHudVisibilityTransitions.Reset();
+            PlanetGaugeConditionalEventRuntime.ResetSession();
             styleRevision++;
         }
 
@@ -267,7 +268,12 @@ namespace PlanetGauge
                 && recoveryCapEnabled
                 && Current > recoveryCapPercent)
             {
+                float beforeCap = Current;
                 Current = recoveryCapPercent;
+                PlanetGaugeConditionalEventRuntime.OnGaugeChanged(
+                    beforeCap,
+                    Current,
+                    initialVfxScrubDepth > 0);
             }
 
             if (command.ApplyAttributeMode
@@ -420,6 +426,11 @@ namespace PlanetGauge
                 if (index >= 0) judgementTotals[index] += actual;
             }
 
+            PlanetGaugeConditionalEventRuntime.OnGaugeChanged(
+                previous,
+                Current,
+                initialVfxScrubDepth > 0);
+
             return shouldDie;
         }
 
@@ -430,6 +441,7 @@ namespace PlanetGauge
                 return false;
             }
 
+            float previous = Current;
             float delta = PlanetGaugeValueRules.SanitizeRecoveryAmount(amount);
             if (Mathf.Approximately(delta, 0f))
             {
@@ -444,6 +456,10 @@ namespace PlanetGauge
             if (next > 0f)
             {
                 Current = next;
+                PlanetGaugeConditionalEventRuntime.OnGaugeChanged(
+                    previous,
+                    Current,
+                    initialVfxScrubDepth > 0);
                 return false;
             }
 
@@ -452,12 +468,20 @@ namespace PlanetGauge
                 Current = Mathf.Max(NoFailMinimumGauge, next);
                 frozen = true;
                 RevealBlindfold();
+                PlanetGaugeConditionalEventRuntime.OnGaugeChanged(
+                    previous,
+                    Current,
+                    initialVfxScrubDepth > 0);
                 return false;
             }
 
             Current = 0f;
             frozen = true;
             RevealBlindfold();
+            PlanetGaugeConditionalEventRuntime.OnGaugeChanged(
+                previous,
+                Current,
+                initialVfxScrubDepth > 0);
             return true;
         }
 
@@ -473,6 +497,11 @@ namespace PlanetGauge
             {
                 judgementTotals[index] += Current - previous;
             }
+
+            PlanetGaugeConditionalEventRuntime.OnGaugeChanged(
+                previous,
+                Current,
+                initialVfxScrubDepth > 0);
         }
 
         internal static float PreviewForcedRecovery(float amount)

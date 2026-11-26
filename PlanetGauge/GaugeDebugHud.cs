@@ -186,6 +186,19 @@ namespace PlanetGauge
                 PlanetGaugeDecorationSkinRuntime.LegacyRenderDecorationCount,
                 PlanetGaugeDecorationSkinRuntime.DescribeAlphaRange(),
                 Format(PlanetGaugeDecorationSkinRuntime.Progress)));
+            builder.AppendLine(LocalizedStrings.Format(
+                LocalizedStrings.DebugConditionalTriggerLine,
+                PlanetGaugeConditionalEventRuntime.ActiveRuleCount,
+                PlanetGaugeConditionalEventRuntime.IndexedTagCount,
+                PlanetGaugeConditionalEventRuntime.IndexedEffectCount,
+                PlanetGaugeConditionalEventRuntime.TotalFireCount,
+                PlanetGaugeConditionalEventRuntime.LastFiredTag));
+            if (PlanetGaugeConditionalEventRuntime.HasActiveRule)
+            {
+                builder.AppendLine(LocalizedStrings.Format(
+                    LocalizedStrings.DebugConditionalRulesLine,
+                    PlanetGaugeConditionalEventRuntime.DescribeActiveRules()));
+            }
             builder.AppendLine(LocalizedStrings.DebugTotals);
             AppendTotal(builder, "TooEarly", HitMargin.TooEarly);
             AppendTotal(builder, "VeryEarly", HitMargin.VeryEarly);

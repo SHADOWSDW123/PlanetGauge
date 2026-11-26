@@ -102,16 +102,18 @@ namespace PlanetGauge
             {
                 bool settingsWasRegistered = PlanetGaugeLevelEventRegistry.IsRegistered;
                 bool skinWasRegistered = PlanetGaugeSkinLevelEventRegistry.IsRegistered;
+                bool conditionalWasRegistered = PlanetGaugeConditionalLevelEventRegistry.IsRegistered;
                 bool settingsRegistered = PlanetGaugeLevelEventRegistry.TryRegister();
                 bool skinRegistered = PlanetGaugeSkinLevelEventRegistry.TryRegister();
-                if ((!settingsRegistered || !skinRegistered) && Main.Logger != null)
+                bool conditionalRegistered = PlanetGaugeConditionalLevelEventRegistry.TryRegister();
+                if ((!settingsRegistered || !skinRegistered || !conditionalRegistered) && Main.Logger != null)
                 {
                     Main.Logger.Error(
                         "ADOStartup.SetupLevelEventsInfo 실행 후에도 레벨 이벤트 사전이 준비되지 않아 "
                         + "PlanetGauge 커스텀 이벤트를 등록하지 못했습니다.");
                 }
                 else if (Main.Logger != null
-                    && (!settingsWasRegistered || !skinWasRegistered))
+                    && (!settingsWasRegistered || !skinWasRegistered || !conditionalWasRegistered))
                 {
                     Main.Logger.Log("SetupLevelEventsInfo 완료 후 PlanetGauge 커스텀 이벤트를 등록했습니다.");
                 }
@@ -138,6 +140,7 @@ namespace PlanetGauge
                 {
                     PlanetGaugeLevelEventRegistry.EnsureIcon();
                     PlanetGaugeSkinLevelEventRegistry.EnsureIcon();
+                    PlanetGaugeConditionalLevelEventRegistry.EnsureIcon();
                 }
                 catch (Exception exception)
                 {
@@ -185,7 +188,12 @@ namespace PlanetGauge
                 events = editor.GetFloorEvents(floorID, targetType);
                 if (events == null || events.Count == 0)
                 {
-                    return;
+                    targetType = PlanetGaugeConditionalLevelEventRegistry.EventType;
+                    events = editor.GetFloorEvents(floorID, targetType);
+                    if (events == null || events.Count == 0)
+                    {
+                        return;
+                    }
                 }
             }
 
@@ -254,6 +262,28 @@ namespace PlanetGauge
             {
                 localized = LocalizedStrings.SkinEventName;
                 return true;
+            }
+
+            if (string.Equals(key, "editor." + PlanetGaugeConditionalLevelEventRegistry.NumericEventId, StringComparison.Ordinal)
+                || string.Equals(key, "editor." + PlanetGaugeConditionalLevelEventRegistry.EventName, StringComparison.Ordinal))
+            {
+                localized = LocalizedStrings.ConditionalEventName;
+                return true;
+            }
+
+            if (key != null && key.IndexOf(nameof(PlanetGaugeConditionalDirection), StringComparison.Ordinal) >= 0)
+            {
+                if (key.EndsWith(".BelowOrEqual", StringComparison.Ordinal))
+                {
+                    localized = LocalizedStrings.ConditionBelowOrEqual;
+                    return true;
+                }
+
+                if (key.EndsWith(".AboveOrEqual", StringComparison.Ordinal))
+                {
+                    localized = LocalizedStrings.ConditionAboveOrEqual;
+                    return true;
+                }
             }
 
             if (key != null && key.IndexOf(nameof(PlanetGaugeSkinGaugeType), StringComparison.Ordinal) >= 0)

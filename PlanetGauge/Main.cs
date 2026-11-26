@@ -114,6 +114,7 @@ namespace PlanetGauge
             harmony = new Harmony(modEntry.Info.Id);
             bool eventWasRegistered = PlanetGaugeLevelEventRegistry.IsRegistered;
             bool skinEventWasRegistered = PlanetGaugeSkinLevelEventRegistry.IsRegistered;
+            bool conditionalEventWasRegistered = PlanetGaugeConditionalLevelEventRegistry.IsRegistered;
             try
             {
                 harmony.PatchAll(typeof(Main).Assembly);
@@ -127,13 +128,14 @@ namespace PlanetGauge
 
                 bool eventRegistered = PlanetGaugeLevelEventRegistry.TryRegister();
                 bool skinEventRegistered = PlanetGaugeSkinLevelEventRegistry.TryRegister();
-                if ((!eventRegistered || !skinEventRegistered) && Logger != null)
+                bool conditionalEventRegistered = PlanetGaugeConditionalLevelEventRegistry.TryRegister();
+                if ((!eventRegistered || !skinEventRegistered || !conditionalEventRegistered) && Logger != null)
                 {
                     Logger.Log(
                         "레벨 이벤트 사전 초기화를 기다립니다. "
                         + "ADOStartup.SetupLevelEventsInfo 완료 후 PlanetGauge 커스텀 이벤트를 등록합니다.");
                 }
-                else if (Logger != null && (!eventWasRegistered || !skinEventWasRegistered))
+                else if (Logger != null && (!eventWasRegistered || !skinEventWasRegistered || !conditionalEventWasRegistered))
                 {
                     Logger.Log("PlanetGauge 커스텀 이벤트를 즉시 등록했습니다.");
                 }
@@ -163,6 +165,11 @@ namespace PlanetGauge
                 if (!skinEventWasRegistered)
                 {
                     PlanetGaugeSkinLevelEventRegistry.RollbackRegistration();
+                }
+
+                if (!conditionalEventWasRegistered)
+                {
+                    PlanetGaugeConditionalLevelEventRegistry.RollbackRegistration();
                 }
 
                 throw;
@@ -216,6 +223,41 @@ namespace PlanetGauge
 
             PlanetGaugeLevelEventRegistry.ValidateRequiredGameApi();
             PlanetGaugeMapSettingsTransfer.ValidateRequiredGameApi();
+            RequireMethod(
+                typeof(scnGame),
+                nameof(scnGame.ApplyEventsToFloors),
+                new[]
+                {
+                    typeof(System.Collections.Generic.List<scrFloor>),
+                    typeof(ADOFAI.LevelData),
+                    typeof(scrLevelMaker),
+                    typeof(System.Collections.Generic.List<ADOFAI.LevelEvent>)
+                });
+            RequireMethod(
+                typeof(scnGame),
+                nameof(scnGame.PrepVfx),
+                new[]
+                {
+                    typeof(System.Collections.Generic.List<scrFloor>),
+                    typeof(int),
+                    typeof(System.Collections.Generic.List<ADOFAI.LevelEvent>),
+                    typeof(bool)
+                });
+            RequireMethod(
+                typeof(ffxPlusBase),
+                nameof(ffxPlusBase.StartEffect),
+                new[] { typeof(scrPlanet) });
+            RequireMethod(
+                typeof(ffxPlusBase),
+                nameof(ffxPlusBase.StartEffectWithOffset),
+                new[] { typeof(scrPlanet) });
+            RequireField(typeof(ffxPlusBase), nameof(ffxPlusBase.runManually));
+            RequireField(typeof(ffxPlusBase), nameof(ffxPlusBase.sourceLevelEvent));
+            RequireField(typeof(ffxPlusBase), nameof(ffxPlusBase.degreeOffset));
+            RequireMethod(
+                typeof(RDUtils),
+                nameof(RDUtils.IsNoneConditionalTag),
+                new[] { typeof(string) });
 
             if (AccessTools.Method(typeof(scrDecorationManager), "LateUpdate") == null)
             {
@@ -272,6 +314,7 @@ namespace PlanetGauge
             GaugeSkinManager.Dispose();
             GaugeHudFontManager.Dispose();
             PlanetGaugeMapSettingsTransfer.ClearMessages();
+            PlanetGaugeConditionalEventRuntime.ClearAll();
 
             // 레벨/버튼이 이미 이 메타데이터를 참조할 수 있어 현재 프로세스에서는 등록 사전을 유지한다.
             // Harmony와 런타임 호스트는 제거되므로 비활성 상태에서는 이벤트가 실행되지 않는다.

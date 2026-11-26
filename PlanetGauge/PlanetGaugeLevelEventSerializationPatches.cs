@@ -42,6 +42,15 @@ namespace PlanetGauge
                 return false;
             }
 
+            if (string.Equals(
+                str,
+                PlanetGaugeConditionalLevelEventRegistry.EventName,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                __result = PlanetGaugeConditionalLevelEventRegistry.EventType;
+                return false;
+            }
+
             return true;
         }
     }
@@ -68,6 +77,10 @@ namespace PlanetGauge
             else if (__1 == PlanetGaugeSkinLevelEventRegistry.EventType)
             {
                 __2 = PlanetGaugeSkinLevelEventRegistry.EventInfo;
+            }
+            else if (__1 == PlanetGaugeConditionalLevelEventRegistry.EventType)
+            {
+                __2 = PlanetGaugeConditionalLevelEventRegistry.EventInfo;
             }
         }
     }
@@ -113,6 +126,13 @@ namespace PlanetGauge
             {
                 __1 = PlanetGaugeSkinLevelEventRegistry.NumericEventId.ToString();
             }
+            else if (string.Equals(
+                eventName,
+                PlanetGaugeConditionalLevelEventRegistry.EventName,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                __1 = PlanetGaugeConditionalLevelEventRegistry.NumericEventId.ToString();
+            }
         }
     }
 
@@ -128,9 +148,22 @@ namespace PlanetGauge
 
         private static void Prefix(LevelEvent __instance)
         {
-            if (!Main.IsEnabled
-                || __instance == null
-                || __instance.eventType != PlanetGaugeLevelEventRegistry.EventType)
+            if (!Main.IsEnabled || __instance == null)
+            {
+                return;
+            }
+
+            if (__instance.eventType == PlanetGaugeConditionalLevelEventRegistry.EventType)
+            {
+                float triggerHealth = __instance.Get<float>(
+                    PlanetGaugeConditionalLevelEventRegistry.TriggerHealthKey,
+                    PlanetGaugeConditionalLevelEventRegistry.DefaultTriggerHealth);
+                __instance[PlanetGaugeConditionalLevelEventRegistry.TriggerHealthKey] =
+                    PlanetGaugeConditionalLevelEventRegistry.SanitizeTriggerHealth(triggerHealth);
+                return;
+            }
+
+            if (__instance.eventType != PlanetGaugeLevelEventRegistry.EventType)
             {
                 return;
             }
@@ -180,6 +213,11 @@ namespace PlanetGauge
             {
                 __result["eventType"] = PlanetGaugeSkinLevelEventRegistry.EventName;
             }
+            else if (__instance.eventType == PlanetGaugeConditionalLevelEventRegistry.EventType)
+            {
+                __result["eventType"] = PlanetGaugeConditionalLevelEventRegistry.EventName;
+                __result.Remove("clearOtherConditions");
+            }
         }
 
         private static void SanitizeStoredFloat(
@@ -210,13 +248,30 @@ namespace PlanetGauge
             float __state,
             ref float __result)
         {
-            if (!Main.IsEnabled
-                || __instance == null
-                || !ReferenceEquals(__instance.levelEventInfo, PlanetGaugeLevelEventRegistry.EventInfo))
+            if (!Main.IsEnabled || __instance == null)
             {
                 return;
             }
 
+            if (ReferenceEquals(
+                __instance.levelEventInfo,
+                PlanetGaugeConditionalLevelEventRegistry.EventInfo))
+            {
+                if (string.Equals(
+                    __instance.name,
+                    PlanetGaugeConditionalLevelEventRegistry.TriggerHealthKey,
+                    StringComparison.Ordinal))
+                {
+                    __result = PlanetGaugeConditionalLevelEventRegistry.SanitizeTriggerHealth(__state);
+                }
+
+                return;
+            }
+
+            if (!ReferenceEquals(__instance.levelEventInfo, PlanetGaugeLevelEventRegistry.EventInfo))
+            {
+                return;
+            }
             if (string.Equals(
                 __instance.name,
                 PlanetGaugeLevelEventRegistry.MultiplierPercentKey,

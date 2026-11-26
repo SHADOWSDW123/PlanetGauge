@@ -44,6 +44,7 @@ namespace PlanetGauge
 
             PlanetGaugeLevelEventRegistry.RefreshLocalization();
             PlanetGaugeSkinLevelEventRegistry.RefreshLocalization();
+            PlanetGaugeConditionalLevelEventRegistry.RefreshLocalization();
             GaugeSkinManager.OnLanguageChanged();
         }
 
@@ -273,6 +274,12 @@ namespace PlanetGauge
         internal static string TargetTagLabel { get { return IsKorean ? KoreanStrings.TargetTagLabel : EnglishStrings.TargetTagLabel; } }
         internal static string SkinEnabledLabel { get { return IsKorean ? KoreanStrings.SkinEnabledLabel : EnglishStrings.SkinEnabledLabel; } }
         internal static string GaugeTypeLabel { get { return IsKorean ? KoreanStrings.GaugeTypeLabel : EnglishStrings.GaugeTypeLabel; } }
+        internal static string ConditionalEventName { get { return IsKorean ? KoreanStrings.ConditionalEventName : EnglishStrings.ConditionalEventName; } }
+        internal static string ConditionalDirectionLabel { get { return IsKorean ? KoreanStrings.ConditionalDirectionLabel : EnglishStrings.ConditionalDirectionLabel; } }
+        internal static string ConditionBelowOrEqual { get { return IsKorean ? KoreanStrings.ConditionBelowOrEqual : EnglishStrings.ConditionBelowOrEqual; } }
+        internal static string ConditionAboveOrEqual { get { return IsKorean ? KoreanStrings.ConditionAboveOrEqual : EnglishStrings.ConditionAboveOrEqual; } }
+        internal static string TriggerHealthLabel { get { return IsKorean ? KoreanStrings.TriggerHealthLabel : EnglishStrings.TriggerHealthLabel; } }
+        internal static string TriggerTagLabel { get { return IsKorean ? KoreanStrings.TriggerTagLabel : EnglishStrings.TriggerTagLabel; } }
         internal static string DebugGaugeLine { get { return IsKorean ? KoreanStrings.DebugGaugeLine : EnglishStrings.DebugGaugeLine; } }
         internal static string DebugRatesLine { get { return IsKorean ? KoreanStrings.DebugRatesLine : EnglishStrings.DebugRatesLine; } }
         internal static string DebugAttributesLine { get { return IsKorean ? KoreanStrings.DebugAttributesLine : EnglishStrings.DebugAttributesLine; } }
@@ -286,6 +293,8 @@ namespace PlanetGauge
         internal static string DebugSkinLine { get { return IsKorean ? KoreanStrings.DebugSkinLine : EnglishStrings.DebugSkinLine; } }
         internal static string DebugSkinProgressLine { get { return IsKorean ? KoreanStrings.DebugSkinProgressLine : EnglishStrings.DebugSkinProgressLine; } }
         internal static string DebugDecorationSkinLine { get { return IsKorean ? KoreanStrings.DebugDecorationSkinLine : EnglishStrings.DebugDecorationSkinLine; } }
+        internal static string DebugConditionalTriggerLine { get { return IsKorean ? KoreanStrings.DebugConditionalTriggerLine : EnglishStrings.DebugConditionalTriggerLine; } }
+        internal static string DebugConditionalRulesLine { get { return IsKorean ? KoreanStrings.DebugConditionalRulesLine : EnglishStrings.DebugConditionalRulesLine; } }
         internal static string DebugTotals { get { return IsKorean ? KoreanStrings.DebugTotals : EnglishStrings.DebugTotals; } }
         internal static string DebugAuto { get { return IsKorean ? KoreanStrings.DebugAuto : EnglishStrings.DebugAuto; } }
         internal static string DebugDefaultRate { get { return IsKorean ? KoreanStrings.DebugDefaultRate : EnglishStrings.DebugDefaultRate; } }
