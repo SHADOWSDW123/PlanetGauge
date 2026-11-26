@@ -18,6 +18,7 @@ namespace PlanetGauge
         private const float DefaultMainGaugeValueSizePercent = 120f;
         private const float DefaultAttributeTextSizePercent = 300f;
         private const float DefaultRateTokenSizePercent = 200f;
+        private const float DefaultDeltaRateTokenSizePercent = 250f;
         private const float MinMainGaugeWidthPercent = 25f;
         private const float MaxMainGaugeWidthPercent = 150f;
         private const float MinAttributeTextSizePercent = 125f;
@@ -50,6 +51,8 @@ namespace PlanetGauge
         private string attributeTextOffsetYInput;
         private string rateTokenOffsetXInput;
         private string rateTokenOffsetYInput;
+        private string deltaRateTokenOffsetXInput;
+        private string deltaRateTokenOffsetYInput;
         private string customFontScaleInput;
         private int debugKeyCaptureSlot;
         private string debugKeyCaptureMessage;
@@ -86,6 +89,11 @@ namespace PlanetGauge
         public float RateTokenScreenOffsetX;
         public float RateTokenScreenOffsetY;
         public float RateTokenSizePercent = DefaultRateTokenSizePercent;
+        public bool DeltaRateTokenAttachedToMainGauge = true;
+        public float DeltaRateTokenScreenOffsetX;
+        public float DeltaRateTokenScreenOffsetY;
+        public float DeltaRateTokenSizePercent = DefaultDeltaRateTokenSizePercent;
+        public bool AlwaysShowDeltaRateToken;
         public int HudTextDefaultsVersion;
         public KeyCode DebugKey1 = KeyCode.LeftShift; // 구 설정 파일 호환용. 현재 디버그 공통 키는 SightreadKey1/2다.
         public KeyCode DebugKey2 = KeyCode.F3;
@@ -527,6 +535,49 @@ namespace PlanetGauge
                     rateTokenOffsetYInput = null;
                 }
                 GUILayout.EndHorizontal();
+
+                GUILayout.Space(10f);
+                GUILayout.Label(LocalizedStrings.DeltaRateToken);
+                DeltaRateTokenSizePercent = DrawFloatSlider(
+                    LocalizedStrings.DeltaRateSize,
+                    DeltaRateTokenSizePercent,
+                    25f,
+                    500f,
+                    "%");
+                bool deltaRateTokenIndependent = !DeltaRateTokenAttachedToMainGauge;
+                deltaRateTokenIndependent = GUILayout.Toggle(
+                    deltaRateTokenIndependent,
+                    LocalizedStrings.IndependentPosition);
+                DeltaRateTokenAttachedToMainGauge = !deltaRateTokenIndependent;
+                if (deltaRateTokenIndependent)
+                {
+                    DeltaRateTokenScreenOffsetX = DrawPositionSlider(
+                        LocalizedStrings.DeltaRateX,
+                        DeltaRateTokenScreenOffsetX,
+                        ref deltaRateTokenOffsetXInput,
+                        "PlanetGauge.DeltaRateTokenOffsetX",
+                        -1000f,
+                        1000f);
+                    DeltaRateTokenScreenOffsetY = DrawPositionSlider(
+                        LocalizedStrings.DeltaRateY,
+                        DeltaRateTokenScreenOffsetY,
+                        ref deltaRateTokenOffsetYInput,
+                        "PlanetGauge.DeltaRateTokenOffsetY",
+                        -1000f,
+                        1000f);
+                }
+                GUILayout.BeginHorizontal();
+                GUILayout.Space(96f);
+                if (GUILayout.Button(LocalizedStrings.ResetDeltaRatePosition, GUILayout.Width(190f)))
+                {
+                    DeltaRateTokenAttachedToMainGauge = true;
+                    DeltaRateTokenScreenOffsetX = 0f;
+                    DeltaRateTokenScreenOffsetY = 0f;
+                    DeltaRateTokenSizePercent = DefaultDeltaRateTokenSizePercent;
+                    deltaRateTokenOffsetXInput = null;
+                    deltaRateTokenOffsetYInput = null;
+                }
+                GUILayout.EndHorizontal();
             }
 
             GUILayout.Space(10f);
@@ -553,6 +604,9 @@ namespace PlanetGauge
                 DisableResultsHudAnimation = GUILayout.Toggle(
                     DisableResultsHudAnimation,
                     LocalizedStrings.DisableResultsHudAnimation);
+                AlwaysShowDeltaRateToken = GUILayout.Toggle(
+                    AlwaysShowDeltaRateToken,
+                    LocalizedStrings.AlwaysShowDeltaRateToken);
             }
             else
             {
@@ -635,6 +689,13 @@ namespace PlanetGauge
             RateTokenSizePercent = SanitizeFloat(
                 RateTokenSizePercent,
                 DefaultRateTokenSizePercent,
+                25f,
+                500f);
+            DeltaRateTokenScreenOffsetX = SanitizePositionFloat(DeltaRateTokenScreenOffsetX, 0f);
+            DeltaRateTokenScreenOffsetY = SanitizePositionFloat(DeltaRateTokenScreenOffsetY, 0f);
+            DeltaRateTokenSizePercent = SanitizeFloat(
+                DeltaRateTokenSizePercent,
+                DefaultDeltaRateTokenSizePercent,
                 25f,
                 500f);
             CustomFontScalePercent = GaugeHudFontManager.SanitizeCustomFontScalePercent(
@@ -1095,6 +1156,13 @@ namespace PlanetGauge
                 FormatSightreadKey(SightreadKey1), FormatSightreadKey(SightreadKey2),
                 FormatSightreadKey(SightreadKey3), FormatSightreadKey(SightreadKey4),
                 FormatSightreadKey(SightreadKey5));
+        }
+
+        internal string GetDebugShortcutCombo()
+        {
+            return FormatSightreadKey(SightreadKey1)
+                + "+" + FormatSightreadKey(SightreadKey2)
+                + "+" + FormatSightreadKey(DebugKey2);
         }
 
         private string GetDebugShortcutLabel()

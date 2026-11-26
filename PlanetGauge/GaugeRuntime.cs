@@ -50,7 +50,8 @@ namespace PlanetGauge
                     current.ConfiguredIncreasePercent, current.ConfiguredDecreasePercent,
                     current.ConfiguredBothPercent, current.BlindfoldEnabled,
                     current.FailureProtection, current.RecoveryCapEnabled,
-                    current.RecoveryCapPercent, current.XPlanetGaugeEnabled);
+                    current.RecoveryCapPercent, current.XPlanetGaugeEnabled,
+                    current.CustomDeltasEnabled, current.CustomDeltas);
             }
         }
         internal static void NotifySightreadChanged() { styleRevision++; }
@@ -180,6 +181,8 @@ namespace PlanetGauge
             float configuredBoth = current.ConfiguredBothPercent;
             bool blindfoldEnabled = current.BlindfoldEnabled;
             bool xPlanetGaugeEnabled = current.XPlanetGaugeEnabled;
+            bool customDeltasEnabled = current.CustomDeltasEnabled;
+            PlanetGaugeJudgementDeltas customDeltas = current.CustomDeltas;
 
             if (command.ApplyMultiplier)
             {
@@ -201,6 +204,8 @@ namespace PlanetGauge
                     damageRate = PlanetGaugeRateChannel.Disabled;
                     blindfoldEnabled = false;
                     xPlanetGaugeEnabled = false;
+                    customDeltasEnabled = false;
+                    customDeltas = PlanetGaugeJudgementDeltas.Default;
                     GaugeHudVisibilityTransitions.RevealAll();
                 }
 
@@ -235,6 +240,12 @@ namespace PlanetGauge
                     case PlanetGaugeAttributeMode.XPlanetGauge:
                         xPlanetGaugeEnabled = command.AttributeEnabled;
                         break;
+                    case PlanetGaugeAttributeMode.AdjustJudgementDelta:
+                        customDeltasEnabled = command.AttributeEnabled;
+                        customDeltas = command.AttributeEnabled
+                            ? command.JudgementDeltas
+                            : PlanetGaugeJudgementDeltas.Default;
+                        break;
                 }
             }
 
@@ -248,7 +259,8 @@ namespace PlanetGauge
                 configuredIncrease, configuredDecrease, configuredBoth,
                 blindfoldEnabled,
                 failureProtection, recoveryCapEnabled, recoveryCapPercent,
-                xPlanetGaugeEnabled);
+                xPlanetGaugeEnabled,
+                customDeltasEnabled, customDeltas);
             EventSettings = nextSettings;
             if (HasVisualStyleChanged(current, nextSettings))
             {
@@ -579,31 +591,65 @@ namespace PlanetGauge
             }
         }
 
+        internal static float ComputeEffectiveDelta(
+            HitMargin judgement,
+            PlanetGaugeEventSettings settings,
+            bool xPlanetGaugeActive)
+        {
+            float rawDelta;
+            if (!TryGetRawDelta(judgement, settings, xPlanetGaugeActive, out rawDelta))
+            {
+                return 0f;
+            }
+
+            return TransformDeltaWithSettings(rawDelta, settings);
+        }
+
         private static bool TryGetDelta(HitMargin judgement, out float delta)
         {
+            return TryGetRawDelta(judgement, EffectiveEventSettings, IsXPlanetGaugeActive, out delta);
+        }
+
+        private static bool TryGetRawDelta(
+            HitMargin judgement,
+            PlanetGaugeEventSettings settings,
+            bool xPlanetGaugeActive,
+            out float delta)
+        {
+            bool custom = settings.CustomDeltasEnabled;
+            PlanetGaugeJudgementDeltas customDeltas = settings.CustomDeltas;
             switch (judgement)
             {
                 case HitMargin.PerfectMinus:
                 case HitMargin.PerfectPlus:
-                    delta = IsXPlanetGaugeActive
-                        ? XPlanetGaugePerfectDelta
-                        : PerfectDelta;
+                    if (xPlanetGaugeActive)
+                    {
+                        delta = custom ? customDeltas.Perfect : XPlanetGaugePerfectDelta;
+                    }
+                    else
+                    {
+                        delta = custom ? customDeltas.XPerfect : PerfectDelta;
+                    }
                     return true;
-                case HitMargin.XPerfect: delta = PerfectDelta; return true;
-                case HitMargin.EarlyPerfect: delta = EarlyPerfectDelta; return true;
-                case HitMargin.LatePerfect: delta = LatePerfectDelta; return true;
-                case HitMargin.VeryEarly: delta = VeryEarlyDelta; return true;
-                case HitMargin.VeryLate: delta = VeryLateDelta; return true;
-                case HitMargin.TooEarly: delta = TooEarlyDelta; return true;
-                case HitMargin.FailMiss: delta = FailMissDelta; return true;
-                case HitMargin.FailOverload: delta = FailOverloadDelta; return true;
+                case HitMargin.XPerfect: delta = custom ? customDeltas.XPerfect : PerfectDelta; return true;
+                case HitMargin.EarlyPerfect: delta = custom ? customDeltas.EarlyLatePerfect : EarlyPerfectDelta; return true;
+                case HitMargin.LatePerfect: delta = custom ? customDeltas.EarlyLatePerfect : LatePerfectDelta; return true;
+                case HitMargin.VeryEarly: delta = custom ? customDeltas.VeryEarlyLate : VeryEarlyDelta; return true;
+                case HitMargin.VeryLate: delta = custom ? customDeltas.VeryEarlyLate : VeryLateDelta; return true;
+                case HitMargin.TooEarly: delta = custom ? customDeltas.TooEarly : TooEarlyDelta; return true;
+                case HitMargin.FailMiss: delta = custom ? customDeltas.FailMiss : FailMissDelta; return true;
+                case HitMargin.FailOverload: delta = custom ? customDeltas.FailOverload : FailOverloadDelta; return true;
                 default: delta = 0f; return false;
             }
         }
 
         private static float TransformDelta(float delta)
         {
-            PlanetGaugeEventSettings settings = EffectiveEventSettings;
+            return TransformDeltaWithSettings(delta, EffectiveEventSettings);
+        }
+
+        private static float TransformDeltaWithSettings(float delta, PlanetGaugeEventSettings settings)
+        {
             if (delta > 0f)
             {
                 if (settings.RecoveryBlocked) return 0f;
@@ -642,6 +688,8 @@ namespace PlanetGauge
         {
             return previous.RecoveryBlocked != next.RecoveryBlocked
                 || previous.XPlanetGaugeEnabled != next.XPlanetGaugeEnabled
+                || previous.CustomDeltasEnabled != next.CustomDeltasEnabled
+                || (next.CustomDeltasEnabled && !previous.CustomDeltas.EqualsApproximate(next.CustomDeltas))
                 || previous.BlindfoldEnabled != next.BlindfoldEnabled
                 || previous.FailureProtection != next.FailureProtection
                 || previous.RecoveryCapEnabled != next.RecoveryCapEnabled

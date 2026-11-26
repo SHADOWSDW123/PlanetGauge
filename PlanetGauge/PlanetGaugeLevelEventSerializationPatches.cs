@@ -193,6 +193,13 @@ namespace PlanetGauge
                 PlanetGaugeLevelEventRegistry.RecoveryCapPercentKey,
                 100f,
                 PlanetGaugeValueRules.SanitizeRecoveryCap);
+            SanitizeStoredFloat(__instance, PlanetGaugeLevelEventRegistry.DeltaXPerfectKey, GaugeRuntime.PerfectDelta, v => PlanetGaugeValueRules.SanitizeJudgementDelta(v, GaugeRuntime.PerfectDelta));
+            SanitizeStoredFloat(__instance, PlanetGaugeLevelEventRegistry.DeltaPerfectKey, GaugeRuntime.XPlanetGaugePerfectDelta, v => PlanetGaugeValueRules.SanitizeJudgementDelta(v, GaugeRuntime.XPlanetGaugePerfectDelta));
+            SanitizeStoredFloat(__instance, PlanetGaugeLevelEventRegistry.DeltaEarlyLatePerfectKey, GaugeRuntime.EarlyPerfectDelta, v => PlanetGaugeValueRules.SanitizeJudgementDelta(v, GaugeRuntime.EarlyPerfectDelta));
+            SanitizeStoredFloat(__instance, PlanetGaugeLevelEventRegistry.DeltaVeryEarlyLateKey, GaugeRuntime.VeryEarlyDelta, v => PlanetGaugeValueRules.SanitizeJudgementDelta(v, GaugeRuntime.VeryEarlyDelta));
+            SanitizeStoredFloat(__instance, PlanetGaugeLevelEventRegistry.DeltaTooEarlyKey, GaugeRuntime.TooEarlyDelta, v => PlanetGaugeValueRules.SanitizeJudgementDelta(v, GaugeRuntime.TooEarlyDelta));
+            SanitizeStoredFloat(__instance, PlanetGaugeLevelEventRegistry.DeltaFailOverloadKey, GaugeRuntime.FailOverloadDelta, v => PlanetGaugeValueRules.SanitizeJudgementDelta(v, GaugeRuntime.FailOverloadDelta));
+            SanitizeStoredFloat(__instance, PlanetGaugeLevelEventRegistry.DeltaFailMissKey, GaugeRuntime.FailMissDelta, v => PlanetGaugeValueRules.SanitizeJudgementDelta(v, GaugeRuntime.FailMissDelta));
         }
 
         private static void Postfix(LevelEvent __instance, Dictionary<string, object> __result)
@@ -306,6 +313,34 @@ namespace PlanetGauge
                 StringComparison.Ordinal))
             {
                 __result = PlanetGaugeValueRules.SanitizeRecoveryCap(__state);
+            }
+            else if (string.Equals(__instance.name, PlanetGaugeLevelEventRegistry.DeltaXPerfectKey, StringComparison.Ordinal))
+            {
+                __result = PlanetGaugeValueRules.SanitizeJudgementDelta(__state, GaugeRuntime.PerfectDelta);
+            }
+            else if (string.Equals(__instance.name, PlanetGaugeLevelEventRegistry.DeltaPerfectKey, StringComparison.Ordinal))
+            {
+                __result = PlanetGaugeValueRules.SanitizeJudgementDelta(__state, GaugeRuntime.XPlanetGaugePerfectDelta);
+            }
+            else if (string.Equals(__instance.name, PlanetGaugeLevelEventRegistry.DeltaEarlyLatePerfectKey, StringComparison.Ordinal))
+            {
+                __result = PlanetGaugeValueRules.SanitizeJudgementDelta(__state, GaugeRuntime.EarlyPerfectDelta);
+            }
+            else if (string.Equals(__instance.name, PlanetGaugeLevelEventRegistry.DeltaVeryEarlyLateKey, StringComparison.Ordinal))
+            {
+                __result = PlanetGaugeValueRules.SanitizeJudgementDelta(__state, GaugeRuntime.VeryEarlyDelta);
+            }
+            else if (string.Equals(__instance.name, PlanetGaugeLevelEventRegistry.DeltaTooEarlyKey, StringComparison.Ordinal))
+            {
+                __result = PlanetGaugeValueRules.SanitizeJudgementDelta(__state, GaugeRuntime.TooEarlyDelta);
+            }
+            else if (string.Equals(__instance.name, PlanetGaugeLevelEventRegistry.DeltaFailOverloadKey, StringComparison.Ordinal))
+            {
+                __result = PlanetGaugeValueRules.SanitizeJudgementDelta(__state, GaugeRuntime.FailOverloadDelta);
+            }
+            else if (string.Equals(__instance.name, PlanetGaugeLevelEventRegistry.DeltaFailMissKey, StringComparison.Ordinal))
+            {
+                __result = PlanetGaugeValueRules.SanitizeJudgementDelta(__state, GaugeRuntime.FailMissDelta);
             }
         }
     }

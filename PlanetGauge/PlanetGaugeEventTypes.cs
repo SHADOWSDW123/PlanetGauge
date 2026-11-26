@@ -23,7 +23,57 @@ namespace PlanetGauge
         Blindfold = 5,
         ForceRecovery = 6,
         HideGaugeHud = 7,
-        XPlanetGauge = 8
+        XPlanetGauge = 8,
+        AdjustJudgementDelta = 9
+    }
+
+    internal readonly struct PlanetGaugeJudgementDeltas
+    {
+        internal static readonly PlanetGaugeJudgementDeltas Default = new PlanetGaugeJudgementDeltas(
+            GaugeRuntime.PerfectDelta,
+            GaugeRuntime.XPlanetGaugePerfectDelta,
+            GaugeRuntime.EarlyPerfectDelta,
+            GaugeRuntime.VeryEarlyDelta,
+            GaugeRuntime.TooEarlyDelta,
+            GaugeRuntime.FailOverloadDelta,
+            GaugeRuntime.FailMissDelta);
+
+        internal PlanetGaugeJudgementDeltas(
+            float xPerfect,
+            float perfect,
+            float earlyLatePerfect,
+            float veryEarlyLate,
+            float tooEarly,
+            float failOverload,
+            float failMiss)
+        {
+            XPerfect = PlanetGaugeValueRules.SanitizeJudgementDelta(xPerfect, GaugeRuntime.PerfectDelta);
+            Perfect = PlanetGaugeValueRules.SanitizeJudgementDelta(perfect, GaugeRuntime.XPlanetGaugePerfectDelta);
+            EarlyLatePerfect = PlanetGaugeValueRules.SanitizeJudgementDelta(earlyLatePerfect, GaugeRuntime.EarlyPerfectDelta);
+            VeryEarlyLate = PlanetGaugeValueRules.SanitizeJudgementDelta(veryEarlyLate, GaugeRuntime.VeryEarlyDelta);
+            TooEarly = PlanetGaugeValueRules.SanitizeJudgementDelta(tooEarly, GaugeRuntime.TooEarlyDelta);
+            FailOverload = PlanetGaugeValueRules.SanitizeJudgementDelta(failOverload, GaugeRuntime.FailOverloadDelta);
+            FailMiss = PlanetGaugeValueRules.SanitizeJudgementDelta(failMiss, GaugeRuntime.FailMissDelta);
+        }
+
+        internal float XPerfect { get; }
+        internal float Perfect { get; }
+        internal float EarlyLatePerfect { get; }
+        internal float VeryEarlyLate { get; }
+        internal float TooEarly { get; }
+        internal float FailOverload { get; }
+        internal float FailMiss { get; }
+
+        internal bool EqualsApproximate(PlanetGaugeJudgementDeltas other)
+        {
+            return Mathf.Approximately(XPerfect, other.XPerfect)
+                && Mathf.Approximately(Perfect, other.Perfect)
+                && Mathf.Approximately(EarlyLatePerfect, other.EarlyLatePerfect)
+                && Mathf.Approximately(VeryEarlyLate, other.VeryEarlyLate)
+                && Mathf.Approximately(TooEarly, other.TooEarly)
+                && Mathf.Approximately(FailOverload, other.FailOverload)
+                && Mathf.Approximately(FailMiss, other.FailMiss);
+        }
     }
 
     internal enum PlanetGaugeRateSource
@@ -66,7 +116,9 @@ namespace PlanetGauge
             true,
             false,
             100f,
-            false);
+            false,
+            false,
+            PlanetGaugeJudgementDeltas.Default);
 
         internal PlanetGaugeEventSettings(
             bool recoveryBlocked,
@@ -80,6 +132,37 @@ namespace PlanetGauge
             bool recoveryCapEnabled,
             float recoveryCapPercent,
             bool xPlanetGaugeEnabled)
+            : this(
+                recoveryBlocked,
+                recoveryRate,
+                damageRate,
+                configuredIncreasePercent,
+                configuredDecreasePercent,
+                configuredBothPercent,
+                blindfoldEnabled,
+                failureProtection,
+                recoveryCapEnabled,
+                recoveryCapPercent,
+                xPlanetGaugeEnabled,
+                false,
+                PlanetGaugeJudgementDeltas.Default)
+        {
+        }
+
+        internal PlanetGaugeEventSettings(
+            bool recoveryBlocked,
+            PlanetGaugeRateChannel recoveryRate,
+            PlanetGaugeRateChannel damageRate,
+            float configuredIncreasePercent,
+            float configuredDecreasePercent,
+            float configuredBothPercent,
+            bool blindfoldEnabled,
+            bool failureProtection,
+            bool recoveryCapEnabled,
+            float recoveryCapPercent,
+            bool xPlanetGaugeEnabled,
+            bool customDeltasEnabled,
+            PlanetGaugeJudgementDeltas customDeltas)
         {
             RecoveryBlocked = recoveryBlocked;
             RecoveryRate = recoveryRate;
@@ -92,6 +175,8 @@ namespace PlanetGauge
             RecoveryCapEnabled = recoveryCapEnabled;
             RecoveryCapPercent = recoveryCapPercent;
             XPlanetGaugeEnabled = xPlanetGaugeEnabled;
+            CustomDeltasEnabled = customDeltasEnabled;
+            CustomDeltas = customDeltasEnabled ? customDeltas : PlanetGaugeJudgementDeltas.Default;
         }
 
         internal bool RecoveryBlocked { get; }
@@ -109,6 +194,8 @@ namespace PlanetGauge
 
         internal float RecoveryCapPercent { get; }
         internal bool XPlanetGaugeEnabled { get; }
+        internal bool CustomDeltasEnabled { get; }
+        internal PlanetGaugeJudgementDeltas CustomDeltas { get; }
     }
 
     /// <summary>
@@ -136,10 +223,15 @@ namespace PlanetGauge
         internal bool HideRateToken;
         internal bool HideForceRecoveryVisuals;
         internal bool DisableHudHideAnimation;
+        internal PlanetGaugeJudgementDeltas JudgementDeltas;
     }
 
     internal static class PlanetGaugeValueRules
     {
+        internal static float SanitizeJudgementDelta(float value, float fallback)
+        {
+            return SanitizeFinite(value, fallback);
+        }
         internal static float SanitizeMultiplier(float value)
         {
             return SanitizeMinimum(value, 100f, 0f);

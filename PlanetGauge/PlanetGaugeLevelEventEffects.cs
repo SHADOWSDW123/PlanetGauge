@@ -62,6 +62,14 @@ namespace PlanetGauge
             bool disableHudHideAnimation = levelEvent.Get<bool>(
                 PlanetGaugeLevelEventRegistry.DisableHudHideAnimationKey,
                 false);
+            PlanetGaugeJudgementDeltas judgementDeltas = new PlanetGaugeJudgementDeltas(
+                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.DeltaXPerfectKey, GaugeRuntime.PerfectDelta),
+                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.DeltaPerfectKey, GaugeRuntime.XPlanetGaugePerfectDelta),
+                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.DeltaEarlyLatePerfectKey, GaugeRuntime.EarlyPerfectDelta),
+                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.DeltaVeryEarlyLateKey, GaugeRuntime.VeryEarlyDelta),
+                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.DeltaTooEarlyKey, GaugeRuntime.TooEarlyDelta),
+                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.DeltaFailOverloadKey, GaugeRuntime.FailOverloadDelta),
+                levelEvent.Get<float>(PlanetGaugeLevelEventRegistry.DeltaFailMissKey, GaugeRuntime.FailMissDelta));
 
             command = new PlanetGaugeEventCommand
             {
@@ -95,7 +103,8 @@ namespace PlanetGauge
                 HideAttributeText = hideAttributeText,
                 HideRateToken = hideRateToken,
                 HideForceRecoveryVisuals = hideForceRecoveryVisuals,
-                DisableHudHideAnimation = disableHudHideAnimation
+                DisableHudHideAnimation = disableHudHideAnimation,
+                JudgementDeltas = judgementDeltas
             };
         }
 

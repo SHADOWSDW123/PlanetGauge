@@ -250,6 +250,15 @@ namespace PlanetGauge
                 return true;
             }
 
+            if (string.Equals(
+                key,
+                PlanetGaugeLevelEventRegistry.DeltaAdjustLocalizationKey,
+                StringComparison.Ordinal))
+            {
+                localized = LocalizedStrings.DeltaAdjustNote;
+                return true;
+            }
+
             if (string.Equals(key, "editor." + PlanetGaugeLevelEventRegistry.NumericEventId, StringComparison.Ordinal)
                 || string.Equals(key, "editor." + PlanetGaugeLevelEventRegistry.EventName, StringComparison.Ordinal))
             {
@@ -354,6 +363,12 @@ namespace PlanetGauge
                 if (key.EndsWith(".XPlanetGauge", StringComparison.Ordinal))
                 {
                     localized = LocalizedStrings.XPlanetGaugeMode;
+                    return true;
+                }
+
+                if (key.EndsWith(".AdjustJudgementDelta", StringComparison.Ordinal))
+                {
+                    localized = LocalizedStrings.AdjustJudgementDelta;
                     return true;
                 }
             }

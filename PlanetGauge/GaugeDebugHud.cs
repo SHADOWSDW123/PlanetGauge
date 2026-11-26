@@ -113,10 +113,7 @@ namespace PlanetGauge
             PlanetGaugeEventSettings settings = GaugeRuntime.EventSettings;
             scrController controller = scrController.instance;
             StringBuilder builder = new StringBuilder(768);
-            builder.Append(Main.Settings.DebugKey1)
-                .Append("+")
-                .Append(Main.Settings.DebugKey2)
-                .AppendLine();
+            builder.AppendLine(Main.Settings.GetDebugShortcutCombo());
             builder.AppendLine(LocalizedStrings.Format(
                 LocalizedStrings.DebugGaugeLine,
                 Format(GaugeRuntime.Current),
@@ -199,6 +196,18 @@ namespace PlanetGauge
                     LocalizedStrings.DebugConditionalRulesLine,
                     PlanetGaugeConditionalEventRuntime.DescribeActiveRules()));
             }
+            PlanetGaugeEventSettings effectiveSettings = GaugeRuntime.EffectiveEventSettings;
+            bool xActive = GaugeRuntime.IsXPlanetGaugeActive;
+            builder.AppendLine(LocalizedStrings.Format(
+                LocalizedStrings.DebugCustomDeltasLine,
+                effectiveSettings.CustomDeltasEnabled,
+                FormatSigned(GaugeRuntime.ComputeEffectiveDelta(HitMargin.XPerfect, effectiveSettings, xActive)),
+                FormatSigned(GaugeRuntime.ComputeEffectiveDelta(HitMargin.PerfectMinus, effectiveSettings, xActive)),
+                FormatSigned(GaugeRuntime.ComputeEffectiveDelta(HitMargin.EarlyPerfect, effectiveSettings, xActive)),
+                FormatSigned(GaugeRuntime.ComputeEffectiveDelta(HitMargin.VeryEarly, effectiveSettings, xActive)),
+                FormatSigned(GaugeRuntime.ComputeEffectiveDelta(HitMargin.TooEarly, effectiveSettings, xActive)),
+                FormatSigned(GaugeRuntime.ComputeEffectiveDelta(HitMargin.FailOverload, effectiveSettings, xActive)),
+                FormatSigned(GaugeRuntime.ComputeEffectiveDelta(HitMargin.FailMiss, effectiveSettings, xActive))));
             builder.AppendLine(LocalizedStrings.DebugTotals);
             AppendTotal(builder, "TooEarly", HitMargin.TooEarly);
             AppendTotal(builder, "VeryEarly", HitMargin.VeryEarly);
@@ -231,6 +240,7 @@ namespace PlanetGauge
             {
                 AppendActive(builder, LocalizedStrings.DebugActiveHideGaugeHud);
             }
+            if (settings.CustomDeltasEnabled) AppendActive(builder, LocalizedStrings.DebugActiveAdjustDelta);
             if (builder.Length == 0) return LocalizedStrings.None;
             builder.Length -= 2;
             return builder.ToString();

@@ -205,6 +205,22 @@ namespace PlanetGauge
         internal const string RecoveryCapLabel = "Recovery cap";
         internal const string ForceRecoveryCapLabel = "Force health cap";
         internal const string TargetTagLabel = "Target tag";
+        internal const string AdjustJudgementDelta = "Adjust judgement delta";
+        internal const string DeltaAdjustNote = "Perfect delta adjustment only works when X-PlanetGauge is enabled!";
+        internal const string DeltaXPerfectLabel = "X-Perfect delta";
+        internal const string DeltaPerfectLabel = "Perfect delta";
+        internal const string DeltaEarlyLatePerfectLabel = "Early/Late Perfect delta";
+        internal const string DeltaVeryEarlyLateLabel = "Very Early/Late delta";
+        internal const string DeltaTooEarlyLabel = "Too Early delta";
+        internal const string DeltaFailOverloadLabel = "Overload delta";
+        internal const string DeltaFailMissLabel = "Miss delta";
+        internal const string DeltaAdjusted = "Delta Adjusted";
+        internal const string AlwaysShowDeltaRateToken = "Show judgement deltas regardless of attribute";
+        internal const string DeltaRateToken = "Judgement delta token";
+        internal const string DeltaRateSize = "Delta size";
+        internal const string DeltaRateX = "Delta X";
+        internal const string DeltaRateY = "Delta Y";
+        internal const string ResetDeltaRatePosition = "Reset delta position";
         internal const string SkinEnabledLabel = "Enabled";
         internal const string GaugeTypeLabel = "Gauge type";
         internal const string ConditionalEventName = "Set PlanetGauge Conditional Events";
@@ -229,6 +245,7 @@ namespace PlanetGauge
         internal const string DebugDecorationSkinLine = "DecorationSkin: {0}  Tags={1}  Images={2}  Legacy={3}  Alpha={4}  Progress={5}";
         internal const string DebugConditionalTriggerLine = "ConditionalTriggers: {0}  Tags={1}  Effects={2}  Fired={3}  Last={4}";
         internal const string DebugConditionalRulesLine = "ConditionalRules: {0}";
+        internal const string DebugCustomDeltasLine = "CustomDeltas: {0}  XP={1} P={2} EL={3} VEL={4} TE={5} OV={6} MS={7}";
         internal const string DebugTotals = "Totals (applied)";
         internal const string DebugAuto = "Auto";
         internal const string DebugDefaultRate = "Default 100%";
@@ -239,6 +256,7 @@ namespace PlanetGauge
         internal const string DebugActiveNoFailDisabled = "NoFailDisabled";
         internal const string DebugActiveRecoveryCap = "RecoveryCap";
         internal const string DebugActiveHideGaugeHud = "HideGaugeHud";
+        internal const string DebugActiveAdjustDelta = "AdjustDelta";
         internal const string DefaultSkinDescription = "Default";
         internal const string CustomSkinDescription = "Custom {0} Health={1}x{2} Bounds={3}{4}";
         internal const string NoFrameDescription = " Frame=None";

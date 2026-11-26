@@ -24,6 +24,7 @@ namespace PlanetGauge
         private const float DefaultValueSizeScale = 1.11f;
         private const float EffectFontSizeRatio = 0.46f;
         private const float RateFontSizeRatio = 0.54f;
+        private const float DeltaRateFontSizeRatio = 0.38f;
         private const float ColorTransitionDuration = 0.5f;
         private const float BaseChamferSize = 4f;
         private const float FixedMeterScale = 2f;
@@ -55,6 +56,14 @@ namespace PlanetGauge
         private static readonly Color32 FrozenRateColor = new Color32(127, 219, 255, 255);        // #7FDBFF
         private static readonly Color32 NoFailDisabledColor = new Color32(40, 80, 167, 255);      // #2850A7
         private static readonly Color32 IncreaseLimitedColor = new Color32(155, 89, 208, 255);    // #9B59D0
+        private static readonly Color32 DeltaAdjustedColor = new Color32(102, 217, 239, 255);      // #66D9EF
+
+        private const string DeltaMissColorHex = "D66EFF";
+        private const string DeltaRedColorHex = "FF1E1E";
+        private const string DeltaOrangeColorHex = "FF7043";
+        private const string DeltaYellowGreenColorHex = "B2FF59";
+        private const string DeltaGreenColorHex = "45E85A";
+        private const string DeltaWhiteColorHex = "FFFFFF";
 
         private readonly Vector3[] meterWorldCorners = new Vector3[4];
         private readonly List<GaugeOverlaySegment> warningSegments =
@@ -78,6 +87,10 @@ namespace PlanetGauge
         private RectTransform rateTextRect;
         private Outline rateOutline;
         private CanvasGroup rateCanvasGroup;
+        private TextMeshProUGUI deltaRateText;
+        private RectTransform deltaRateTextRect;
+        private Outline deltaRateOutline;
+        private CanvasGroup deltaRateCanvasGroup;
         private TextMeshProUGUI effectText;
         private RectTransform effectTextRect;
         private Outline effectOutline;
@@ -88,6 +101,7 @@ namespace PlanetGauge
         private bool lastValueColorIndependent;
         private int lastStyleRevision = -1;
         private bool lastXPlanetGaugeActive;
+        private bool lastAlwaysShowDeltaRateToken;
         private int lastLocalizationRevision = -1;
         private bool hasLastStyle;
         private int activeEffectCount;
@@ -149,6 +163,10 @@ namespace PlanetGauge
             rateTextRect = null;
             rateOutline = null;
             rateCanvasGroup = null;
+            deltaRateText = null;
+            deltaRateTextRect = null;
+            deltaRateOutline = null;
+            deltaRateCanvasGroup = null;
             effectText = null;
             effectTextRect = null;
             effectOutline = null;
@@ -216,6 +234,7 @@ namespace PlanetGauge
             skinRenderer = new GaugeSkinRenderer(rootObject.transform);
             CreateValueText();
             CreateRateText();
+            CreateDeltaRateText();
             CreateEffectText();
             hasLastStyle = false;
             activeEffectCount = 0;
@@ -327,6 +346,7 @@ namespace PlanetGauge
             if (rootObject != null)
             {
             GaugeHudFontManager.ApplyFont(rateText);
+            GaugeHudFontManager.ApplyFont(deltaRateText);
             }
 
             rateOutline = textObject.GetComponent<Outline>();
@@ -335,11 +355,46 @@ namespace PlanetGauge
             rateCanvasGroup = textObject.GetComponent<CanvasGroup>();
         }
 
+        private void CreateDeltaRateText()
+        {
+            GameObject textObject = new GameObject(
+                "GaugeDeltaRates",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(TextMeshProUGUI),
+                typeof(Outline),
+                typeof(CanvasGroup));
+            textObject.transform.SetParent(rootObject.transform, false);
+
+            deltaRateTextRect = textObject.GetComponent<RectTransform>();
+            deltaRateTextRect.anchorMin = new Vector2(0.5f, 0.5f);
+            deltaRateTextRect.anchorMax = new Vector2(0.5f, 0.5f);
+            deltaRateTextRect.pivot = new Vector2(0.5f, 0.5f);
+
+            deltaRateText = textObject.GetComponent<TextMeshProUGUI>();
+            deltaRateText.alignment = TextAlignmentOptions.Center;
+            deltaRateText.fontStyle = FontStyles.Bold;
+            deltaRateText.richText = true;
+            deltaRateText.textWrappingMode = TextWrappingModes.NoWrap;
+            deltaRateText.overflowMode = TextOverflowModes.Overflow;
+            deltaRateText.raycastTarget = false;
+            if (rootObject != null)
+            {
+                GaugeHudFontManager.ApplyFont(deltaRateText);
+            }
+
+            deltaRateOutline = textObject.GetComponent<Outline>();
+            deltaRateOutline.effectColor = new Color(0f, 0f, 0f, 0.95f);
+            deltaRateOutline.useGraphicAlpha = true;
+            deltaRateCanvasGroup = textObject.GetComponent<CanvasGroup>();
+        }
+
         private void UpdateStyle()
         {
             PlanetGaugeSettings settings = Main.Settings;
             GaugeHudFontManager.ApplyFont(valueText);
             GaugeHudFontManager.ApplyFont(rateText);
+            GaugeHudFontManager.ApplyFont(deltaRateText);
             GaugeHudFontManager.ApplyFont(effectText);
 
             PlanetGaugeEventSettings eventSettings = GaugeRuntime.EffectiveEventSettings;
@@ -347,6 +402,7 @@ namespace PlanetGauge
             Color32 userValueColor = settings.GetMainGaugeValueColor();
             bool styleChanged = !hasLastStyle
                 || lastXPlanetGaugeActive != GaugeRuntime.IsXPlanetGaugeActive
+                || lastAlwaysShowDeltaRateToken != settings.AlwaysShowDeltaRateToken
                 || !lastUserGaugeColor.Equals(userGaugeColor)
                 || !lastUserValueColor.Equals(userValueColor)
                 || lastValueColorIndependent != settings.MainGaugeValueColorIndependent
@@ -359,6 +415,7 @@ namespace PlanetGauge
                 lastValueColorIndependent = settings.MainGaugeValueColorIndependent;
                 lastStyleRevision = GaugeRuntime.StyleRevision;
                 lastXPlanetGaugeActive = GaugeRuntime.IsXPlanetGaugeActive;
+                lastAlwaysShowDeltaRateToken = settings.AlwaysShowDeltaRateToken;
                 lastLocalizationRevision = LocalizedStrings.Revision;
                 hasLastStyle = true;
 
@@ -376,6 +433,11 @@ namespace PlanetGauge
                 effectText.enabled = activeEffectCount > 0;
                 rateText.text = BuildRateText(eventSettings);
                 rateText.enabled = !string.IsNullOrEmpty(rateText.text);
+                bool showDeltaRate = settings.AlwaysShowDeltaRateToken || eventSettings.CustomDeltasEnabled;
+                deltaRateText.text = showDeltaRate
+                    ? BuildDeltaRateText(eventSettings, GaugeRuntime.IsXPlanetGaugeActive)
+                    : string.Empty;
+                deltaRateText.enabled = showDeltaRate && !string.IsNullOrEmpty(deltaRateText.text);
             }
 
             transitionElapsed = Mathf.Min(
@@ -482,6 +544,22 @@ namespace PlanetGauge
                 Mathf.Clamp(rateFontSize / 14f, 1f, 5f),
                 -Mathf.Clamp(rateFontSize / 14f, 1f, 5f));
 
+            float deltaRateFontSize = Mathf.Clamp(
+                BaseFontSize
+                    * DefaultValueSizeScale
+                    * DeltaRateFontSizeRatio
+                    * settings.DeltaRateTokenSizePercent / 100f,
+                3f,
+                240f);
+            float deltaRateHeight = deltaRateFontSize + 2f;
+            deltaRateText.fontSize = deltaRateFontSize;
+            deltaRateTextRect.sizeDelta = new Vector2(
+                Mathf.Max(barWidth, deltaRateFontSize * 28f),
+                deltaRateHeight);
+            deltaRateOutline.effectDistance = new Vector2(
+                Mathf.Clamp(deltaRateFontSize / 14f, 1f, 5f),
+                -Mathf.Clamp(deltaRateFontSize / 14f, 1f, 5f));
+
             float effectFontSize = Mathf.Clamp(
                 BaseFontSize
                     * DefaultValueSizeScale
@@ -503,6 +581,26 @@ namespace PlanetGauge
             float attachedX = settings.MainGaugeValueOffsetX;
             float stackBottom = barHeight * 0.5f + compactTextGap + textOffsetY;
             bool hasAttachedElement = false;
+
+            deltaRateTextRect.pivot = new Vector2(0.5f, 0.5f);
+            if (settings.DeltaRateTokenAttachedToMainGauge)
+            {
+                if (deltaRateText.enabled)
+                {
+                    deltaRateTextRect.anchoredPosition = new Vector2(
+                        attachedX,
+                        stackBottom + deltaRateHeight * 0.5f);
+                    stackBottom += deltaRateHeight + compactTextGap * 0.5f;
+                    hasAttachedElement = true;
+                }
+            }
+            else
+            {
+                SetScreenCenteredPosition(
+                    deltaRateTextRect,
+                    settings.DeltaRateTokenScreenOffsetX,
+                    settings.DeltaRateTokenScreenOffsetY);
+            }
 
             rateTextRect.pivot = new Vector2(0.5f, 0.5f);
             if (settings.RateTokenAttachedToMainGauge)
@@ -679,6 +777,9 @@ namespace PlanetGauge
             SetCanvasGroupAlpha(
                 rateCanvasGroup,
                 GaugeHudVisibilityTransitions.RateTokenAlpha);
+            SetCanvasGroupAlpha(
+                deltaRateCanvasGroup,
+                GaugeHudVisibilityTransitions.RateTokenAlpha);
         }
 
         private static void SetCanvasGroupAlpha(CanvasGroup canvasGroup, float alpha)
@@ -806,6 +907,11 @@ namespace PlanetGauge
                 AppendEffect(ref result, ref effectCount, IncreaseLimitedColor, LocalizedStrings.IncreaseLimited);
             }
 
+            if (settings.CustomDeltasEnabled)
+            {
+                AppendEffect(ref result, ref effectCount, DeltaAdjustedColor, LocalizedStrings.DeltaAdjusted);
+            }
+
             return result;
         }
 
@@ -830,6 +936,42 @@ namespace PlanetGauge
                         .ToString("0.#", CultureInfo.InvariantCulture) + "%</color>";
             }
             return result;
+        }
+
+        internal static string BuildDeltaRateText(
+            PlanetGaugeEventSettings settings,
+            bool xPlanetGaugeActive)
+        {
+            return FormatDeltaSlot(DeltaMissColorHex, GaugeRuntime.ComputeEffectiveDelta(HitMargin.FailMiss, settings, xPlanetGaugeActive))
+                + " " + FormatDeltaSlot(DeltaRedColorHex, GaugeRuntime.ComputeEffectiveDelta(HitMargin.TooEarly, settings, xPlanetGaugeActive))
+                + " " + FormatDeltaSlot(DeltaOrangeColorHex, GaugeRuntime.ComputeEffectiveDelta(HitMargin.VeryEarly, settings, xPlanetGaugeActive))
+                + " " + FormatDeltaSlot(DeltaYellowGreenColorHex, GaugeRuntime.ComputeEffectiveDelta(HitMargin.EarlyPerfect, settings, xPlanetGaugeActive))
+                + " " + FormatDeltaSlot(DeltaGreenColorHex, GaugeRuntime.ComputeEffectiveDelta(HitMargin.PerfectMinus, settings, xPlanetGaugeActive))
+                + " " + FormatDeltaSlot(DeltaWhiteColorHex, GaugeRuntime.ComputeEffectiveDelta(HitMargin.XPerfect, settings, xPlanetGaugeActive))
+                + " " + FormatDeltaSlot(DeltaGreenColorHex, GaugeRuntime.ComputeEffectiveDelta(HitMargin.PerfectPlus, settings, xPlanetGaugeActive))
+                + " " + FormatDeltaSlot(DeltaYellowGreenColorHex, GaugeRuntime.ComputeEffectiveDelta(HitMargin.LatePerfect, settings, xPlanetGaugeActive))
+                + " " + FormatDeltaSlot(DeltaOrangeColorHex, GaugeRuntime.ComputeEffectiveDelta(HitMargin.VeryLate, settings, xPlanetGaugeActive))
+                + " " + FormatDeltaSlot(DeltaRedColorHex, GaugeRuntime.ComputeEffectiveDelta(HitMargin.FailOverload, settings, xPlanetGaugeActive))
+                + " " + FormatDeltaSlot(DeltaMissColorHex, GaugeRuntime.ComputeEffectiveDelta(HitMargin.FailMiss, settings, xPlanetGaugeActive));
+        }
+
+        private static string FormatDeltaSlot(string colorHex, float value)
+        {
+            string formatted;
+            if (float.IsNaN(value) || float.IsInfinity(value) || Mathf.Approximately(value, 0f))
+            {
+                formatted = "0";
+            }
+            else if (value > 0f)
+            {
+                formatted = "+" + value.ToString("0.##", CultureInfo.InvariantCulture);
+            }
+            else
+            {
+                formatted = value.ToString("0.##", CultureInfo.InvariantCulture);
+            }
+
+            return "<color=#" + colorHex + ">" + formatted + "</color>";
         }
 
         private static string FormatRateToken(PlanetGaugeRateChannel channel)

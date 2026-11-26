@@ -31,6 +31,15 @@ namespace PlanetGauge
         internal const string HideRateTokenKey = "hideRateToken";
         internal const string HideForceRecoveryVisualsKey = "hideForceRecoveryVisuals";
         internal const string DisableHudHideAnimationKey = "disableHudHideAnimation";
+        internal const string DeltaXPerfectKey = "deltaXPerfect";
+        internal const string DeltaPerfectKey = "deltaPerfect";
+        internal const string DeltaEarlyLatePerfectKey = "deltaEarlyLatePerfect";
+        internal const string DeltaVeryEarlyLateKey = "deltaVeryEarlyLate";
+        internal const string DeltaTooEarlyKey = "deltaTooEarly";
+        internal const string DeltaFailOverloadKey = "deltaFailOverload";
+        internal const string DeltaFailMissKey = "deltaFailMiss";
+        internal const string DeltaAdjustNoteKey = "deltaAdjustNote";
+        internal const string DeltaAdjustLocalizationKey = "planetGauge.deltaAdjustNote";
         internal const string MultiplierReuseNoteKey = "multiplierReuseNote";
         internal const string MultiplierReuseLocalizationKey = "planetGauge.multiplierReuseNote";
         internal const string RecoveryAmountNoteKey = "recoveryAmountNote";
@@ -102,6 +111,13 @@ namespace PlanetGauge
             SetPropertyLabel(RecoveryCapEnabledKey, LocalizedStrings.RecoveryCapEnabledLabel);
             SetPropertyLabel(RecoveryCapPercentKey, LocalizedStrings.RecoveryCapLabel);
             SetPropertyLabel(ForceRecoveryCapKey, LocalizedStrings.ForceRecoveryCapLabel);
+            SetPropertyLabel(DeltaXPerfectKey, LocalizedStrings.DeltaXPerfectLabel);
+            SetPropertyLabel(DeltaPerfectKey, LocalizedStrings.DeltaPerfectLabel);
+            SetPropertyLabel(DeltaEarlyLatePerfectKey, LocalizedStrings.DeltaEarlyLatePerfectLabel);
+            SetPropertyLabel(DeltaVeryEarlyLateKey, LocalizedStrings.DeltaVeryEarlyLateLabel);
+            SetPropertyLabel(DeltaTooEarlyKey, LocalizedStrings.DeltaTooEarlyLabel);
+            SetPropertyLabel(DeltaFailOverloadKey, LocalizedStrings.DeltaFailOverloadLabel);
+            SetPropertyLabel(DeltaFailMissKey, LocalizedStrings.DeltaFailMissLabel);
         }
 
         private static void SetPropertyLabel(string propertyName, string label)
@@ -672,7 +688,41 @@ namespace PlanetGauge
             forceCap.showIfVals.Add(Tuple.Create(RecoveryCapEnabledKey, "true"));
             AddProperty(info, forceCap, 18);
 
+            AddDeltaProperty(info, DeltaXPerfectKey, GaugeRuntime.PerfectDelta, LocalizedStrings.DeltaXPerfectLabel, 19);
+            AddDeltaProperty(info, DeltaPerfectKey, GaugeRuntime.XPlanetGaugePerfectDelta, LocalizedStrings.DeltaPerfectLabel, 20);
+            AddDeltaProperty(info, DeltaEarlyLatePerfectKey, GaugeRuntime.EarlyPerfectDelta, LocalizedStrings.DeltaEarlyLatePerfectLabel, 21);
+            AddDeltaProperty(info, DeltaVeryEarlyLateKey, GaugeRuntime.VeryEarlyDelta, LocalizedStrings.DeltaVeryEarlyLateLabel, 22);
+            AddDeltaProperty(info, DeltaTooEarlyKey, GaugeRuntime.TooEarlyDelta, LocalizedStrings.DeltaTooEarlyLabel, 23);
+            AddDeltaProperty(info, DeltaFailOverloadKey, GaugeRuntime.FailOverloadDelta, LocalizedStrings.DeltaFailOverloadLabel, 24);
+            AddDeltaProperty(info, DeltaFailMissKey, GaugeRuntime.FailMissDelta, LocalizedStrings.DeltaFailMissLabel, 25);
+
+            ADOFAI.PropertyInfo deltaAdjustNote = CreateNoteProperty(
+                info,
+                DeltaAdjustNoteKey,
+                DeltaAdjustLocalizationKey);
+            deltaAdjustNote.showIfVals.Add(Tuple.Create(
+                AttributeModeKey,
+                PlanetGaugeAttributeMode.AdjustJudgementDelta.ToString()));
+            AddProperty(info, deltaAdjustNote, 26);
+
             return info;
+        }
+
+        private static void AddDeltaProperty(
+            LevelEventInfo info,
+            string key,
+            float defaultValue,
+            string label,
+            int order)
+        {
+            ADOFAI.PropertyInfo property = CreateProperty(info, key, "Float", defaultValue, label);
+            property.unit = "%";
+            property.float_min = float.MinValue;
+            property.float_max = float.MaxValue;
+            property.showIfVals.Add(Tuple.Create(
+                AttributeModeKey,
+                PlanetGaugeAttributeMode.AdjustJudgementDelta.ToString()));
+            AddProperty(info, property, order);
         }
 
         private static void AddAttributeShowConditions(ADOFAI.PropertyInfo property)
@@ -684,6 +734,7 @@ namespace PlanetGauge
             property.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.Blindfold.ToString()));
             property.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.HideGaugeHud.ToString()));
             property.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.XPlanetGauge.ToString()));
+            property.showIfVals.Add(Tuple.Create(AttributeModeKey, PlanetGaugeAttributeMode.AdjustJudgementDelta.ToString()));
         }
 
         private static void AddHudHideShowCondition(ADOFAI.PropertyInfo property)

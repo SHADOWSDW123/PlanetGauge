@@ -254,6 +254,22 @@ namespace PlanetGauge
         internal static string Blindfold { get { return IsKorean ? KoreanStrings.Blindfold : EnglishStrings.Blindfold; } }
         internal static string ForceRecovery { get { return IsKorean ? KoreanStrings.ForceRecovery : EnglishStrings.ForceRecovery; } }
         internal static string HideGaugeHud { get { return IsKorean ? KoreanStrings.HideGaugeHud : EnglishStrings.HideGaugeHud; } }
+        internal static string AdjustJudgementDelta { get { return IsKorean ? KoreanStrings.AdjustJudgementDelta : EnglishStrings.AdjustJudgementDelta; } }
+        internal static string DeltaAdjustNote { get { return IsKorean ? KoreanStrings.DeltaAdjustNote : EnglishStrings.DeltaAdjustNote; } }
+        internal static string DeltaXPerfectLabel { get { return IsKorean ? KoreanStrings.DeltaXPerfectLabel : EnglishStrings.DeltaXPerfectLabel; } }
+        internal static string DeltaPerfectLabel { get { return IsKorean ? KoreanStrings.DeltaPerfectLabel : EnglishStrings.DeltaPerfectLabel; } }
+        internal static string DeltaEarlyLatePerfectLabel { get { return IsKorean ? KoreanStrings.DeltaEarlyLatePerfectLabel : EnglishStrings.DeltaEarlyLatePerfectLabel; } }
+        internal static string DeltaVeryEarlyLateLabel { get { return IsKorean ? KoreanStrings.DeltaVeryEarlyLateLabel : EnglishStrings.DeltaVeryEarlyLateLabel; } }
+        internal static string DeltaTooEarlyLabel { get { return IsKorean ? KoreanStrings.DeltaTooEarlyLabel : EnglishStrings.DeltaTooEarlyLabel; } }
+        internal static string DeltaFailOverloadLabel { get { return IsKorean ? KoreanStrings.DeltaFailOverloadLabel : EnglishStrings.DeltaFailOverloadLabel; } }
+        internal static string DeltaFailMissLabel { get { return IsKorean ? KoreanStrings.DeltaFailMissLabel : EnglishStrings.DeltaFailMissLabel; } }
+        internal static string DeltaAdjusted { get { return IsAttributeDisplayKorean ? KoreanStrings.DeltaAdjusted : EnglishStrings.DeltaAdjusted; } }
+        internal static string AlwaysShowDeltaRateToken { get { return IsKorean ? KoreanStrings.AlwaysShowDeltaRateToken : EnglishStrings.AlwaysShowDeltaRateToken; } }
+        internal static string DeltaRateToken { get { return IsKorean ? KoreanStrings.DeltaRateToken : EnglishStrings.DeltaRateToken; } }
+        internal static string DeltaRateSize { get { return IsKorean ? KoreanStrings.DeltaRateSize : EnglishStrings.DeltaRateSize; } }
+        internal static string DeltaRateX { get { return IsKorean ? KoreanStrings.DeltaRateX : EnglishStrings.DeltaRateX; } }
+        internal static string DeltaRateY { get { return IsKorean ? KoreanStrings.DeltaRateY : EnglishStrings.DeltaRateY; } }
+        internal static string ResetDeltaRatePosition { get { return IsKorean ? KoreanStrings.ResetDeltaRatePosition : EnglishStrings.ResetDeltaRatePosition; } }
         internal static string AttributeModeLabel { get { return IsKorean ? KoreanStrings.AttributeModeLabel : EnglishStrings.AttributeModeLabel; } }
         internal static string AttributeEnabledLabel { get { return IsKorean ? KoreanStrings.AttributeEnabledLabel : EnglishStrings.AttributeEnabledLabel; } }
         internal static string DisableOtherAttributesLabel { get { return IsKorean ? KoreanStrings.DisableOtherAttributesLabel : EnglishStrings.DisableOtherAttributesLabel; } }
@@ -295,6 +311,7 @@ namespace PlanetGauge
         internal static string DebugDecorationSkinLine { get { return IsKorean ? KoreanStrings.DebugDecorationSkinLine : EnglishStrings.DebugDecorationSkinLine; } }
         internal static string DebugConditionalTriggerLine { get { return IsKorean ? KoreanStrings.DebugConditionalTriggerLine : EnglishStrings.DebugConditionalTriggerLine; } }
         internal static string DebugConditionalRulesLine { get { return IsKorean ? KoreanStrings.DebugConditionalRulesLine : EnglishStrings.DebugConditionalRulesLine; } }
+        internal static string DebugCustomDeltasLine { get { return IsKorean ? KoreanStrings.DebugCustomDeltasLine : EnglishStrings.DebugCustomDeltasLine; } }
         internal static string DebugTotals { get { return IsKorean ? KoreanStrings.DebugTotals : EnglishStrings.DebugTotals; } }
         internal static string DebugAuto { get { return IsKorean ? KoreanStrings.DebugAuto : EnglishStrings.DebugAuto; } }
         internal static string DebugDefaultRate { get { return IsKorean ? KoreanStrings.DebugDefaultRate : EnglishStrings.DebugDefaultRate; } }
@@ -305,6 +322,7 @@ namespace PlanetGauge
         internal static string DebugActiveNoFailDisabled { get { return IsKorean ? KoreanStrings.DebugActiveNoFailDisabled : EnglishStrings.DebugActiveNoFailDisabled; } }
         internal static string DebugActiveRecoveryCap { get { return IsKorean ? KoreanStrings.DebugActiveRecoveryCap : EnglishStrings.DebugActiveRecoveryCap; } }
         internal static string DebugActiveHideGaugeHud { get { return IsKorean ? KoreanStrings.DebugActiveHideGaugeHud : EnglishStrings.DebugActiveHideGaugeHud; } }
+        internal static string DebugActiveAdjustDelta { get { return IsKorean ? KoreanStrings.DebugActiveAdjustDelta : EnglishStrings.DebugActiveAdjustDelta; } }
         internal static string DefaultSkinDescription { get { return IsKorean ? KoreanStrings.DefaultSkinDescription : EnglishStrings.DefaultSkinDescription; } }
         internal static string CustomSkinDescription { get { return IsKorean ? KoreanStrings.CustomSkinDescription : EnglishStrings.CustomSkinDescription; } }
         internal static string NoFrameDescription { get { return IsKorean ? KoreanStrings.NoFrameDescription : EnglishStrings.NoFrameDescription; } }
